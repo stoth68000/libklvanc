@@ -20,9 +20,9 @@ struct packet_eia_608_s;
 struct vanc_context_s;
 struct vanc_callbacks_s
 {
-	int (*payload_information)(struct vanc_context_s *, struct packet_payload_information_s *);
-	int (*eia_708b)(struct vanc_context_s *, struct packet_eia_708b_s *);
-	int (*eia_608)(struct vanc_context_s *, struct packet_eia_608_s *);
+	int (*payload_information)(void *user_context, struct vanc_context_s *, struct packet_payload_information_s *);
+	int (*eia_708b)(void *user_context, struct vanc_context_s *, struct packet_eia_708b_s *);
+	int (*eia_608)(void *user_context, struct vanc_context_s *, struct packet_eia_608_s *);
 };
 
 /* Application specific context, the library allocates and stores user specific instance
@@ -30,9 +30,12 @@ struct vanc_callbacks_s
  */
 struct vanc_context_s
 {
-	void *priv;	/* Internal use by the library */
 	int verbose;
 	struct vanc_callbacks_s *callbacks;
+	void *callback_context;
+
+	/* Internal use by the library */
+	void *priv;
 };
 
 /* Create or destroy some basic application/library context */

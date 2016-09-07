@@ -28,7 +28,7 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 
 	if (ctx->callbacks && ctx->callbacks->eia_708b)
-		ctx->callbacks->eia_708b(ctx, pkt);
+		ctx->callbacks->eia_708b(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

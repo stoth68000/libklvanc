@@ -50,7 +50,7 @@ int parse_EIA_608(struct vanc_context_s *ctx, struct packet_header_s *hdr, void 
 	pkt->cc_data_2 = pkt->payload[2];
 
 	if (ctx->callbacks && ctx->callbacks->eia_608)
-		ctx->callbacks->eia_608(ctx, pkt);
+		ctx->callbacks->eia_608(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

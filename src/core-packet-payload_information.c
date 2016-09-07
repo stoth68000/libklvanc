@@ -118,7 +118,7 @@ int parse_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_header_s
 	pkt->barDataValue[1] |= sanitizeWord(hdr->payload[7]);
 
 	if (ctx->callbacks && ctx->callbacks->payload_information)
-		ctx->callbacks->payload_information(ctx, pkt);
+		ctx->callbacks->payload_information(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;
