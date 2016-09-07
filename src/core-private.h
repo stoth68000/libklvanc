@@ -51,5 +51,9 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 int dump_EIA_608(struct vanc_context_s *ctx, void *p);
 int parse_EIA_608(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
 
+/* core-packet-eia_608.c */
+int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
+int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+
 void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header_s *hdr);
 #endif

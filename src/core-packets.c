@@ -29,6 +29,7 @@ static struct type_s
 	int (*dump)(struct vanc_context_s *, void *);
 } types[] = {
 	{ 0x41, 0x05, VANC_TYPE_PAYLOAD_INFORMATION, "SMPTE 2016-3 AFD", "Payload Information", parse_PAYLOAD_INFORMATION, dump_PAYLOAD_INFORMATION, },
+	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE", "SCTE 104", parse_SCTE_104, dump_SCTE_104, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, dump_EIA_708B, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, dump_EIA_608, },
 };

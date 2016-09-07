@@ -17,12 +17,14 @@ extern "C" {
 struct packet_payload_information_s;
 struct packet_eia_708b_s;
 struct packet_eia_608_s;
+struct packet_scte_104_s;
 struct vanc_context_s;
 struct vanc_callbacks_s
 {
 	int (*payload_information)(void *user_context, struct vanc_context_s *, struct packet_payload_information_s *);
 	int (*eia_708b)(void *user_context, struct vanc_context_s *, struct packet_eia_708b_s *);
 	int (*eia_608)(void *user_context, struct vanc_context_s *, struct packet_eia_608_s *);
+	int (*scte_104)(void *user_context, struct vanc_context_s *, struct packet_scte_104_s *);
 };
 
 /* Application specific context, the library allocates and stores user specific instance
@@ -54,6 +56,7 @@ void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, 
 #include <libklvanc/vanc-payload_information.h>
 #include <libklvanc/vanc-eia_708b.h>
 #include <libklvanc/vanc-eia_608.h>
+#include <libklvanc/vanc-scte_104.h>
 #include <libklvanc/did.h>
 #include <libklvanc/pixels.h>
 

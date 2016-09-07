@@ -3,7 +3,7 @@
 #include <libklvanc/vanc.h>
 
 /* CALLBACKS for message notification */
-static int cb_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
+static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
@@ -14,7 +14,7 @@ static int cb_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_payl
 	return 0;
 }
 
-static int cb_EIA_708B(struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
+static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
@@ -25,7 +25,7 @@ static int cb_EIA_708B(struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt
 	return 0;
 }
 
-static int cb_EIA_608(struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
+static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
@@ -36,12 +36,23 @@ static int cb_EIA_608(struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
 	return 0;
 }
 
+static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+{
+	printf("%s:%s()\n", __FILE__, __func__);
+
+	/* Have the library display some debug */
+	printf("Asking libklvanc to dump a struct\n");
+	dump_SCTE_104(ctx, pkt);
+
+	return 0;
+}
 
 static struct vanc_callbacks_s callbacks = 
 {
+	.payload_information	= cb_PAYLOAD_INFORMATION,
 	.eia_708b		= cb_EIA_708B,
 	.eia_608		= cb_EIA_608,
-	.payload_information	= cb_PAYLOAD_INFORMATION,
+	.scte_104		= cb_SCTE_104,
 };
 /* END - CALLBACKS for message notification */
 

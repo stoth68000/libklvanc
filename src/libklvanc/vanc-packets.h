@@ -16,6 +16,7 @@ enum packet_type_e
 	VANC_TYPE_PAYLOAD_INFORMATION,
 	VANC_TYPE_EIA_708B,
 	VANC_TYPE_EIA_608,
+	VANC_TYPE_SCTE_104,
 };
 
 struct packet_header_s
