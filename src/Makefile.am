@@ -24,6 +24,8 @@ endif
 libklvanc_includedir = $(includedir)/libklvanc
 
 libklvanc_include_HEADERS  = libklvanc/vanc.h
+libklvanc_include_HEADERS += libklvanc/did.h
+libklvanc_include_HEADERS += libklvanc/pixels.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_708b.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_608.h
 libklvanc_include_HEADERS += libklvanc/vanc-module1.h
