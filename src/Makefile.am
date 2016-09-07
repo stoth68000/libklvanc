@@ -1,0 +1,32 @@
+
+AUTOMAKE_OPTIONS = foreign
+
+lib_LTLIBRARIES = libklvanc.la
+
+libklvanc_la_SOURCES  = core-buffer.c
+libklvanc_la_SOURCES += core-module1.c
+libklvanc_la_SOURCES += core-packet-eia_708b.c
+libklvanc_la_SOURCES += core-packet-eia_608.c
+libklvanc_la_SOURCES += core-packet-payload_information.c
+libklvanc_la_SOURCES += core-packets.c
+libklvanc_la_SOURCES += core-did.c
+libklvanc_la_SOURCES += core-pixels.c
+libklvanc_la_SOURCES += core.c
+
+libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
+	-D_FILE_OFFSET_BITS=64 -O3 --std=c99 -D_BSD_SOURCE -I../include -I/usr/local/include \
+	-DKL_USERSPACE -L/usr/local/lib
+
+if DEBUG
+  libklvanc_la_CFLAGS += -g
+endif
+
+libklvanc_includedir = $(includedir)/libklvanc
+
+libklvanc_include_HEADERS  = libklvanc/vanc.h
+libklvanc_include_HEADERS += libklvanc/vanc-eia_708b.h
+libklvanc_include_HEADERS += libklvanc/vanc-eia_608.h
+libklvanc_include_HEADERS += libklvanc/vanc-module1.h
+libklvanc_include_HEADERS += libklvanc/vanc-packets.h
+libklvanc_include_HEADERS += libklvanc/vanc-payload_information.h
+
