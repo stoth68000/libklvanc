@@ -25,6 +25,7 @@ src/libklvanc_la-core-module1.lo
 src/libklvanc_la-core-packet-eia_708b.lo
 src/libklvanc_la-core-did.lo
 src/libklvanc_la-core-packet-eia_608.lo
+src/libklvanc_la-core-packet-scte_104.lo
 src/libklvanc_la-core-pixels.lo
 src/libklvanc_la-core-packet-payload_information.lo
 src/libklvanc_la-core-packets.lo
