@@ -209,7 +209,7 @@ static int AnalyzeVANC(const char *fn)
 
 		fprintf(stdout, "\n");
 
-		if (g_verbose)
+		if (g_verbose > 1)
 			hexdump(buf, uiStride, 64);
 
 		convert_colorspace_and_parse_vanc(buf, uiStride, uiLine);
@@ -338,14 +338,16 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 
 	}
 
-	fprintf(stdout, "PixelFormat %x [%s] DisplayMode [%s] Wrote %d [potential] VANC lines\n",
-		pf,
-		pf == bmdFormat8BitYUV ? "bmdFormat8BitYUV" :
-		pf == bmdFormat10BitYUV ? "bmdFormat10BitYUV" :
-		pf == bmdFormat8BitARGB ? "bmdFormat8BitARGB" :
-		pf == bmdFormat8BitBGRA ? "bmdFormat8BitBGRA" :
-		pf == bmdFormat10BitRGB ? "bmdFormat10BitRGB" : "undefined",
-		display_mode_to_string(dm), written);
+	if (g_verbose) {
+		fprintf(stdout, "PixelFormat %x [%s] DisplayMode [%s] Wrote %d [potential] VANC lines\n",
+			pf,
+			pf == bmdFormat8BitYUV ? "bmdFormat8BitYUV" :
+			pf == bmdFormat10BitYUV ? "bmdFormat10BitYUV" :
+			pf == bmdFormat8BitARGB ? "bmdFormat8BitARGB" :
+			pf == bmdFormat8BitBGRA ? "bmdFormat8BitBGRA" :
+			pf == bmdFormat10BitRGB ? "bmdFormat10BitRGB" : "undefined",
+			display_mode_to_string(dm), written);
+	}
 
 	vanc->Release();
 
@@ -494,22 +496,25 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			if (frameTime->remoteFrameCount + 1 == currRFC)
 				isBad = 0;
 
-			fprintf(stdout,
-				"Frame received (#%10llu) [%s] - %s - Size: %li bytes (%7.2f ms) [remoteFrame: %d] ",
-				frameTime->frameCount,
-				timecodeString !=
-				NULL ? timecodeString : "No timecode",
-				rightEyeFrame !=
-				NULL ? "Valid Frame (3D left/right)" :
-				"Valid Frame",
-				videoFrame->GetRowBytes() *
-				videoFrame->GetHeight(), interval, currRFC);
+			if (g_verbose) {
+				fprintf(stdout,
+					"Frame received (#%10llu) [%s] - %s - Size: %li bytes (%7.2f ms) [remoteFrame: %d] ",
+					frameTime->frameCount,
+					timecodeString !=
+					NULL ? timecodeString : "No timecode",
+					rightEyeFrame !=
+					NULL ? "Valid Frame (3D left/right)" :
+					"Valid Frame",
+					videoFrame->GetRowBytes() *
+					videoFrame->GetHeight(), interval, currRFC);
+			
 
-			if (isBad) {
-				fprintf(stdout, " %lld frames lost", currRFC - frameTime->remoteFrameCount);
-				fprintf(stdout, "\n");
-			} else
-				fprintf(stdout, "\n");
+				if (isBad) {
+					fprintf(stdout, " %lld frames lost", currRFC - frameTime->remoteFrameCount);
+					fprintf(stdout, "\n");
+				} else
+					fprintf(stdout, "\n");
+			}
 
 			frameTime->remoteFrameCount = currRFC;
 
@@ -563,14 +568,17 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		unsigned long long t = msecsX10();
 		double interval = t - frameTime->lastTime;
 		interval /= 10;
-		fprintf(stdout,
-			"Audio received (#%10lu) - Size: %u sfc: %lu channels: %u depth: %u bytes  (%7.2f ms)\n",
-			audioFrameCount,
-			sampleSize,
-			audioFrame->GetSampleFrameCount(),
-			g_audioChannels,
-			g_audioSampleDepth / 8,
-			interval);
+
+		if (g_verbose) {
+			fprintf(stdout,
+				"Audio received (#%10lu) - Size: %u sfc: %lu channels: %u depth: %u bytes  (%7.2f ms)\n",
+				audioFrameCount,
+				sampleSize,
+				audioFrame->GetSampleFrameCount(),
+				g_audioChannels,
+				g_audioSampleDepth / 8,
+				interval);
+		}
 
 		if (audioOutputFile != -1) {
 			audioFrame->GetBytes(&audioFrameBytes);
@@ -594,7 +602,6 @@ static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s 
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
-	printf("Asking libklvanc to dump a struct\n");
 	dump_PAYLOAD_INFORMATION(ctx, pkt);
 
 	return 0;
@@ -605,7 +612,6 @@ static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struc
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
-	printf("Asking libklvanc to dump a struct\n");
 	dump_EIA_708B(ctx, pkt);
 
 	return 0;
@@ -616,7 +622,6 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
-	printf("Asking libklvanc to dump a struct\n");
 	dump_EIA_608(ctx, pkt);
 
 	return 0;
@@ -627,7 +632,6 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
-	printf("Asking libklvanc to dump a struct\n");
 	dump_SCTE_104(ctx, pkt);
 
 	return 0;
@@ -841,7 +845,8 @@ int _main(int argc, char *argv[])
                 fprintf(stderr, "Error initializing library context\n");
                 exit(1);
         }
-        vanchdl->verbose = 1;
+
+       	vanchdl->verbose = g_verbose;
         vanchdl->callbacks = &callbacks;
 
 
