@@ -66,6 +66,7 @@ static int audioOutputFile = -1;
 static int vancOutputFile = -1;
 static int g_showStartupMemory = 0;
 static int g_verbose = 0;
+static unsigned int g_linenr = 0;
 
 static IDeckLink *deckLink;
 static IDeckLinkInput *deckLinkInput;
@@ -195,6 +196,9 @@ static int AnalyzeVANC(const char *fn)
 		fread(buf, uiStride, 1, fh);
 		assert(uiStride < maxbuflen);
 		fread(&uiEOL, sizeof(unsigned int), 1, fh);
+
+		if (g_linenr && g_linenr != uiLine)
+			continue;
 
 		fprintf(stdout, "Line: %04d SOL: %x EOL: %x ", uiLine, uiSOL, uiEOL);
 		fprintf(stdout, "Width: %d Height: %d Stride: %d ", uiWidth, uiHeight, uiStride);
@@ -678,6 +682,7 @@ int usage(const char *progname, int status)
 		"    -a <filename>   raw audio output filanem\n"
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
+		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
 		"    -c <channels>   Audio Channels (2, 8 or 16 - def: 2)\n"
 		"    -s <depth>      Audio Sample Depth (16 or 32 - def: 16)\n"
 		"    -n <frames>     Number of frames to capture (def: unlimited)\n"
@@ -688,8 +693,14 @@ int usage(const char *progname, int status)
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
 		"    %s -m2 -n 50 -f video.raw -a audio.raw\n"
-		"    mplayer video.raw -demuxer rawvideo -rawvideo pal:uyvy -audiofile audio.raw -audio-demuxer 20 -rawaudio rate=48000\n\n",
-		basename((char *)progname));
+		"    mplayer video.raw -demuxer rawvideo -rawvideo pal:uyvy -audiofile audio.raw -audio-demuxer 20 -rawaudio rate=48000\n\n"
+		"Capture then interpret 10bit VANC (or 8bit VANC wth -p0), from 1280x720p60\n"
+		"    %s -m13 -p1 -V vanc.raw\n"
+		"    %s          -I vanc.raw\n\n",
+		basename((char *)progname),
+		basename((char *)progname),
+		basename((char *)progname)
+		);
 
 	exit(status);
 }
@@ -712,7 +723,7 @@ int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:")) != -1) {
 		switch (ch) {
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
@@ -742,6 +753,9 @@ int _main(int argc, char *argv[])
 			break;
 		case 'i':
 			portnr = atoi(optarg);
+			break;
+		case 'l':
+			g_linenr = atoi(optarg);
 			break;
 		case 'V':
 			g_vancOutputFilename = optarg;
