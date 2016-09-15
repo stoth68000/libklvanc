@@ -221,8 +221,11 @@ static int AnalyzeVANC(const char *fn)
 	return 0;
 }
 
+#define COMPRESS 0
+#if COMPRESS
 static int cdstlen = 16384;
 static uint8_t *cdstbuf = 0;
+#endif
 #define DECOMPRESS 0
 #if DECOMPRESS
 static int ddstlen = 16384;
@@ -265,7 +268,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 			write(vancOutputFile, &uiHeight, sizeof(unsigned int));
 			write(vancOutputFile, &uiStride, sizeof(unsigned int));
 			write(vancOutputFile, buf, uiStride);
-#if 0
+#if COMPRESS
 			if (cdstbuf == 0)
 				cdstbuf = (uint8_t *)malloc(cdstlen);
 
@@ -346,10 +349,12 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 
 	vanc->Release();
 
+#if COMPRESS
 	if (cdstbuf) {
 		free(cdstbuf);
 		cdstbuf = 0;
 	}
+#endif
 #if DECOMPRESS
 	if (ddstbuf) {
 		free(ddstbuf);
