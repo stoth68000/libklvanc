@@ -97,6 +97,8 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 	if (!p)
 		return -ENOMEM;
 
+	memcpy(&p->raw[0], arr, len * sizeof(unsigned short));
+	p->rawLengthWords = len;
 	p->adf[0] = *(arr + 0);
 	p->adf[1] = *(arr + 1);
 	p->adf[2] = *(arr + 2);

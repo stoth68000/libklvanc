@@ -30,6 +30,8 @@ struct packet_header_s
 	unsigned short		payload[8192];
 	unsigned int 		checksumValid;
 	unsigned int		lineNr; /* The vanc in this header came from line.... */
+	unsigned short		raw[8192];
+	unsigned int 		rawLengthWords;
 };
 
 #ifdef __cplusplus
