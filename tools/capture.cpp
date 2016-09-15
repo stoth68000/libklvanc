@@ -261,7 +261,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 			write(vancOutputFile, &uiHeight, sizeof(unsigned int));
 			write(vancOutputFile, &uiStride, sizeof(unsigned int));
 			write(vancOutputFile, buf, uiStride);
-
+#if 0
 			if (cdstbuf == 0)
 				cdstbuf = (uint8_t *)malloc(cdstlen);
 
@@ -298,7 +298,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 				}
 			}
 			deflateEnd(&zInfo);
-
+#endif
 #if DECOMPRESS
 			/* Decompress and verify */
 			if (ddstbuf == 0)
