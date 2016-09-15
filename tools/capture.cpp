@@ -683,6 +683,7 @@ int usage(const char *progname, int status)
 		"    -n <frames>     Number of frames to capture (def: unlimited)\n"
 		"    -v              Increase level of verbosity (def: 0)\n"
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
+		"    -i <number>     Capture from input port (def: 0)\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
@@ -704,40 +705,14 @@ int _main(int argc, char *argv[])
 	int displayModeCount = 0;
 	int exitStatus = 1;
 	int ch;
+	int portnr = 0;
 	bool foundDisplayMode = false;
 	HRESULT result;
 
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	if (!deckLinkIterator) {
-		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
-		goto bail;
-	}
-
-	/* Connect to the first DeckLink instance */
-	result = deckLinkIterator->Next(&deckLink);
-	if (result != S_OK) {
-		fprintf(stderr, "No capture devices found.\n");
-		goto bail;
-	}
-
-	if (deckLink->QueryInterface(IID_IDeckLinkInput, (void **)&deckLinkInput) != S_OK) {
-		fprintf(stderr, "No input capture devices found.\n");
-		goto bail;
-	}
-
-	delegate = new DeckLinkCaptureDelegate();
-	deckLinkInput->SetCallback(delegate);
-
-	/* Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on output */
-	result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
-	if (result != S_OK) {
-		fprintf(stderr, "Could not obtain the video output display mode iterator - result = %08x\n", result);
-		goto bail;
-	}
-
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:")) != -1) {
 		switch (ch) {
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
@@ -764,6 +739,9 @@ int _main(int argc, char *argv[])
 			break;
 		case 'I':
 			g_vancInputFilename = optarg;
+			break;
+		case 'i':
+			portnr = atoi(optarg);
 			break;
 		case 'V':
 			g_vancOutputFilename = optarg;
@@ -809,6 +787,35 @@ int _main(int argc, char *argv[])
 		case 'h':
 			usage(argv[0], 0);
 		}
+	}
+
+	if (!deckLinkIterator) {
+		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
+		goto bail;
+	}
+
+	for (int i = 0; i <= portnr; i++) {
+		/* Connect to the nth DeckLink instance */
+		result = deckLinkIterator->Next(&deckLink);
+		if (result != S_OK) {
+			fprintf(stderr, "No capture devices found.\n");
+			goto bail;
+		}
+	}
+
+	if (deckLink->QueryInterface(IID_IDeckLinkInput, (void **)&deckLinkInput) != S_OK) {
+		fprintf(stderr, "No input capture devices found.\n");
+		goto bail;
+	}
+
+	delegate = new DeckLinkCaptureDelegate();
+	deckLinkInput->SetCallback(delegate);
+
+	/* Obtain an IDeckLinkDisplayModeIterator to enumerate the display modes supported on output */
+	result = deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
+	if (result != S_OK) {
+		fprintf(stderr, "Could not obtain the video output display mode iterator - result = %08x\n", result);
+		goto bail;
 	}
 
         if (vanc_context_create(&vanchdl) < 0) {
