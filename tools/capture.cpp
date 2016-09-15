@@ -208,7 +208,7 @@ static int AnalyzeVANC(const char *fn)
 		if (g_verbose)
 			hexdump(buf, uiStride, 64);
 
-		convert_colorspace_and_parse_vanc(buf, uiWidth, uiLine);
+		convert_colorspace_and_parse_vanc(buf, uiStride, uiLine);
 	}
 
 	free(buf);
