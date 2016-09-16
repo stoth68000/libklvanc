@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
+
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 {
 	struct packet_scte_104_s *pkt = p;
@@ -16,11 +18,35 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
         struct splice_request_data *d = &pkt->sr_data;
 	struct single_operation_message *m = &pkt->so_msg;
 
-	printf("SCTE104: payloadDescriptor %02x\n", pkt->payloadDescriptorByte);
-	printf(" opID = %s\n", m->opID == INIT_REQUEST_DATA ? "init_request_data" : "UNSUPPORTED");
-	printf(" splice_insert_type = %s\n",
-		d->splice_insert_type == SPLICESTART_IMMEDIATE ? "spliceStart_immediate" :
-		d->splice_insert_type == SPLICEEND_IMMEDIATE ? "spliceEnd_immediate" : "UNSUPPORTED");
+	printf("SCTE104 struct\n");
+	PRINT_DEBUG_MEMBER_INT(pkt->payloadDescriptorByte);
+
+	PRINT_DEBUG_MEMBER_INT(m->opID);
+	printf("   opID = %s\n", m->opID == INIT_REQUEST_DATA ? "init_request_data" : "UNSUPPORTED");
+	PRINT_DEBUG_MEMBER_INT(m->messageSize);
+	printf("   message_size = %d bytes\n", m->messageSize);
+	PRINT_DEBUG_MEMBER_INT(m->result);
+	PRINT_DEBUG_MEMBER_INT(m->result_extension);
+	PRINT_DEBUG_MEMBER_INT(m->protocol_version);
+	PRINT_DEBUG_MEMBER_INT(m->AS_index);
+	PRINT_DEBUG_MEMBER_INT(m->message_number);
+	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
+
+	if (m->opID == INIT_REQUEST_DATA) {
+		PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
+		printf("   splice_insert_type = %s\n",
+			d->splice_insert_type == SPLICESTART_IMMEDIATE ? "spliceStart_immediate" :
+			d->splice_insert_type == SPLICEEND_IMMEDIATE ? "spliceEnd_immediate" : "UNSUPPORTED");
+		PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
+		PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
+		PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+		PRINT_DEBUG_MEMBER_INT(d->brk_duration);
+		printf("   break_duration = %d (1/10th seconds)\n", d->brk_duration);
+		PRINT_DEBUG_MEMBER_INT(d->avail_num);
+		PRINT_DEBUG_MEMBER_INT(d->avails_expected);
+		PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+	} else
+		printf("   unsupported m->opID = 0x%x\n", m->opID);
 
 	for (int i = 0; i < pkt->payloadLengthBytes; i++)
 		printf("%02x ", pkt->payload[i]);
