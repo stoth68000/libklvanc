@@ -13,6 +13,10 @@ extern "C" {
 #define SPLICESTART_IMMEDIATE 0x02
 #define SPLICEEND_IMMEDIATE   0x04
 
+#define SCTE104_SR_DATA_FIELD__UNIQUE_PROGRAM_ID(pkt) ((pkt)->sr_data.unique_program_id)
+#define SCTE104_SR_DATA_FIELD__SPLICE_EVENT_ID(pkt) ((pkt)->sr_data.splice_event_id)
+#define SCTE104_SR_DATA_FIELD__AUTO_RETURN_FLAGS(pkt) ((pkt)->sr_data.auto_return_flag)
+
 struct single_operation_message
 {
 	/* single_operation_message */
