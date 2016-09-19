@@ -109,6 +109,26 @@ static int test_EIA_708B(struct vanc_context_s *ctx)
 	return 0;
 }
 
+static int test_checksum()
+{
+	/* 3 words ADF, 31 words of message, 1 words checksum */
+	unsigned short arr[] = {
+		0x0000, 0x03ff, 0x03ff,
+		0x0241, 0x0107, 0x011c, 0x0108, 0x0200, 0x0101, 0x0200, 0x021b,
+		0x02ff, 0x02ff, 0x02ff, 0x02ff, 0x0200, 0x0200, 0x0200, 0x0200,
+		0x0200, 0x0104, 0x0200, 0x0200, 0x0200, 0x0102, 0x0200, 0x0101,
+		0x0200, 0x0200, 0x0200, 0x0200 ,0x0200, 0x0200, 0x0101
+	};
+
+	uint16_t sum = vanc_checksum_calculate(&arr[3], 31);
+	if (sum != 0x28c)
+		return -1;
+
+	printf("Checksum test passed.\n");
+
+	return 0;
+}
+
 int demo_main(int argc, char *argv[])
 {
 	struct vanc_context_s *ctx;
@@ -129,6 +149,10 @@ int demo_main(int argc, char *argv[])
 	ret = test_EIA_708B(ctx);
 	if (ret < 0)
 		fprintf(stderr, "EIA_708B failed to parse\n");
+
+	ret = test_checksum(ctx);
+	if (ret < 0)
+		fprintf(stderr, "Checksum calculation failed\n");
 
 	vanc_context_destroy(ctx);
 	printf("Library destroyed.\n");
