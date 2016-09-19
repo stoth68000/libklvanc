@@ -104,17 +104,18 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 	p->adf[2] = *(arr + 2);
 	p->did = sanitizeWord(*(arr + 3));
 	p->dbnsdid = sanitizeWord(*(arr + 4));
-	if (p->len > (sizeof(p->payload) / sizeof(unsigned short)))
+	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short)))
 		return -ENOMEM;
 
-	p->len = sanitizeWord(*(arr + 5));
+	p->payloadLengthWords = sanitizeWord(*(arr + 5));
 
 	int i;
-	for (i = 0; i < p->len; i++) {
+	for (i = 0; i < p->payloadLengthWords; i++) {
 		p->payload[i] = *(arr + 6 + i);
 	}
 	p->checksum = *(arr + 6 + i);
-	p->checksumValid = 0;
+	p->checksumValid = vanc_checksum_is_valid(arr + 3,
+		p->payloadLengthWords + 4 /* payload + header + len + crc */);
 
 	p->type = lookupTypeByDID(p->did, p->dbnsdid);
 
@@ -154,10 +155,10 @@ void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header
 		klvanc_didLookupSpecification(hdr->did, hdr->dbnsdid),
 		klvanc_didLookupDescription(hdr->did, hdr->dbnsdid),
 		hdr->lineNr);
-	printf(" ->len      = %d\n", hdr->len);
 	printf(" ->checksum = 0x%04x (%s)\n", hdr->checksum, hdr->checksumValid ? "VALID" : "INVALID");
+	printf(" ->payloadLengthWords = %d\n", hdr->payloadLengthWords);
 	printf(" ->payload  = ");
-	for (int i = 0; i < hdr->len; i++)
+	for (int i = 0; i < hdr->payloadLengthWords; i++)
 		printf("%02x ", sanitizeWord(hdr->payload[i]));
 	printf("\n");
 }
