@@ -12,6 +12,7 @@ libklvanc_la_SOURCES += core-packet-payload_information.c
 libklvanc_la_SOURCES += core-packets.c
 libklvanc_la_SOURCES += core-did.c
 libklvanc_la_SOURCES += core-pixels.c
+libklvanc_la_SOURCES += core-checksum.c
 libklvanc_la_SOURCES += core.c
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
@@ -33,4 +34,5 @@ libklvanc_include_HEADERS += libklvanc/vanc-scte_104.h
 libklvanc_include_HEADERS += libklvanc/vanc-module1.h
 libklvanc_include_HEADERS += libklvanc/vanc-packets.h
 libklvanc_include_HEADERS += libklvanc/vanc-payload_information.h
+libklvanc_include_HEADERS += libklvanc/vanc-checksum.h
 

@@ -16,7 +16,7 @@
  *
  * To be clear, on the words 111, 222 and 333 should be passed to this routine.
  * 000 03FF 03FF 111 222 333 CHKSUM
- * So pass the address of 111 with a wordCOunt of 3.
+ * So pass the address of 111 with a wordCount of 3.
  */
 uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount)
 {
@@ -30,3 +30,21 @@ uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount)
 	return s;
 }
 
+/* For a given list of words, excludint the ADF, ending in a checksum,
+ * calculate the checksum and verify the last word in the array is a correct
+ * calculation of all the prior words in the array.
+ *
+ * To be clear, on the words 111, 222, 333 and CHECKSUM should be passed to this routine.
+ * 000 03FF 03FF 111 222 333 CHECKSUM
+ * So pass the address of 111 with a wordCount of 3.
+ *
+ * Returns: Boolean true or false.
+ */
+int vanc_checksum_is_valid(uint16_t *words, int wordCount)
+{
+	uint16_t sum = vanc_checksum_calculate(words, wordCount - 1);
+	if (sum != *(words + (wordCount - 1)))
+		return 0;
+
+	return 1;
+}
