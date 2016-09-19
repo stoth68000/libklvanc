@@ -42,9 +42,20 @@ uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount)
  */
 int vanc_checksum_is_valid(uint16_t *words, int wordCount)
 {
+#define LOCAL_DEBUG 0
+#if 0
+	printf("%s(%p, %d): ", __func__, words, wordCount);
+	for (int i = 0; i < wordCount; i++)
+		printf("%04x ", *(words + i));
+	printf("\n");
+#endif
 	uint16_t sum = vanc_checksum_calculate(words, wordCount - 1);
-	if (sum != *(words + (wordCount - 1)))
+	if (sum != *(words + (wordCount - 1))) {
+#if LOCAL_DEBUG
+		fprintf(stderr, "Checksum calculated as %04x, but passed as %04x\n", sum, *(words + (wordCount - 1)));
+#endif
 		return 0;
+	}
 
 	return 1;
 }
