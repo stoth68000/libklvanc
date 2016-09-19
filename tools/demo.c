@@ -73,7 +73,7 @@ static int test_PAYLOAD_INFORMATION(struct vanc_context_s *ctx)
 		0x010, /* Payload Field */
 		0x000, /* Payload Field */
 		0x008, /* Payload Field */
-		0xFFF, /* Checksum */
+		0x2e2, /* Checksum is valid */
 	};
 
 	/* report that this was from line 13, informational only. */
