@@ -647,7 +647,7 @@ static struct vanc_callbacks_s callbacks =
 
 /* END - CALLBACKS for message notification */
 
-int usage(const char *progname, int status)
+static int usage(const char *progname, int status)
 {
 	fprintf(stderr, COPYRIGHT "\n");
 	fprintf(stderr, "Capture decklink SDI payload, capture vanc, analyze vanc.\n");
@@ -714,7 +714,7 @@ int usage(const char *progname, int status)
 	exit(status);
 }
 
-int _main(int argc, char *argv[])
+static int _main(int argc, char *argv[])
 {
 	IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 	DeckLinkCaptureDelegate *delegate;
