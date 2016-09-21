@@ -14,6 +14,7 @@ libklvanc_la_SOURCES += core-did.c
 libklvanc_la_SOURCES += core-pixels.c
 libklvanc_la_SOURCES += core-checksum.c
 libklvanc_la_SOURCES += core.c
+libklvanc_la_SOURCES += smpte2038.c
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 --std=c99 -D_BSD_SOURCE -I../include -I/usr/local/include \
@@ -28,6 +29,7 @@ libklvanc_includedir = $(includedir)/libklvanc
 libklvanc_include_HEADERS  = libklvanc/vanc.h
 libklvanc_include_HEADERS += libklvanc/did.h
 libklvanc_include_HEADERS += libklvanc/pixels.h
+libklvanc_include_HEADERS += libklvanc/smpte2038.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_708b.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_608.h
 libklvanc_include_HEADERS += libklvanc/vanc-scte_104.h

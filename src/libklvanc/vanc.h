@@ -60,6 +60,7 @@ void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, 
 #include <libklvanc/did.h>
 #include <libklvanc/pixels.h>
 #include <libklvanc/vanc-checksum.h>
+#include <libklvanc/smpte2038.h>
 
 #ifdef __cplusplus
 };
