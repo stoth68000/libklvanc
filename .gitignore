@@ -1,6 +1,4 @@
 *.o
-tools/klvanc_util
-tools/klvanc_capture
 .deps/
 .libs/
 Makefile.in
@@ -30,3 +28,4 @@ src/libklvanc_la-core-pixels.lo
 src/libklvanc_la-core-packet-payload_information.lo
 src/libklvanc_la-core-packets.lo
 src/libklvanc_la-core.lo
+src/libklvanc_la-core-checksum.lo
