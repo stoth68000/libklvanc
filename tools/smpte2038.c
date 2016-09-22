@@ -17,15 +17,34 @@
 #include "version.h"
 
 #define DEFAULT_FIFOSIZE 1048576
-#define PAGE_SIZE 4096
+#define MAX_PES_SIZE 16384
+#define DEFAULT_PID 0x80
+
+typedef void (*pes_extractor_callback)(void *cb_context, unsigned char *buf, int byteCount);
+struct pes_extractor_s
+{
+	uint16_t pid;
+	uint8_t *buf;
+	unsigned int buf_size;	/* Complete size of the buf allocation */
+	unsigned int buf_used;	/* Amount used, usually less than buf_size */
+	unsigned int pes_length;
+
+	int packet_size;
+	int appending;
+	void *cb_context;
+	pes_extractor_callback cb;
+};
 
 static struct app_context_s
 {
+	int verbose;
 	int running;
 	char *input_url;
 	struct url_opts_s *i_url;
+	unsigned int pid;
 
 	struct iso13818_udp_receiver_s *udprx;
+	struct pes_extractor_s pe;
 } app_context;
 
 static struct app_context_s *ctx = &app_context;
@@ -37,7 +56,8 @@ static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typ
         printf("\n");
 }
 
-int packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *packetCount, int packetSize, uint8_t *cc, uint16_t pid)
+/* Convert PES data into a series of TS packets */
+static int packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *packetCount, int packetSize, uint8_t *cc, uint16_t pid)
 {
 	if ((!buf) || (byteCount == 0) || (!pkts) || (!packetCount) || (packetSize != 188) || (!cc) || (pid > 0x1fff))
 		return -1;
@@ -76,42 +96,37 @@ int packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *p
 	return 0;
 }
 
-typedef void (*pes_extractor_callback)(void *cb_context, unsigned char *buf, int byteCount);
-struct pes_extractor_s
-{
-	uint16_t pid;
-	uint8_t *buf;
-	unsigned int buf_size;	/* Complete size of the buf allocation */
-	unsigned int buf_used;	/* Amount used, usually less than buf_size */
-	unsigned int pes_length;
-
-	int packet_size;
-	int appending;
-	void *cb_context;
-	pes_extractor_callback cb;
-};
-
+/* When the PES extractor has demultiplexed all data, we're call with the
+ * entire PES array. Parse it, dump it to console.
+ */
 pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCount)
 {
-	printf("%s()\n", __func__);
-	hexdump(buf, byteCount, 16);
+	if (ctx->verbose) {
+		printf("%s()\n", __func__);
+		if (ctx->verbose > 1)
+			hexdump(buf, byteCount, 16);
+	}
 
 	/* Parse the PES section, like any other tool might. */
 	struct smpte2038_anc_data_packet_s *result = 0;
 	smpte2038_parse_section(buf, byteCount, &result);
 	smpte2038_smpte2038_anc_data_packet_dump(result);
+
+	/* TODO: Push the vanc into the VANC processor */
+
 	return 0;
 }
 
-int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb)
+/* PES Extractor mechanism, so convert MULTIPLE TS packets containing PES VANC, into PES array. */
+static int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
 {
 	memset(pe, 0, sizeof(*pe));
-	pe->buf = (uint8_t *)calloc(PAGE_SIZE, 1);
+	pe->buf = (uint8_t *)calloc(MAX_PES_SIZE, 1);
 	if (!pe->buf)
 		return -1;
 
-	pe->pid = 0x88;
-	pe->buf_size = PAGE_SIZE;
+	pe->pid = pid;
+	pe->buf_size = MAX_PES_SIZE;
 	pe->cb_context = user_context;
 	pe->cb = cb;
 	pe->packet_size = 188;
@@ -176,7 +191,7 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 		pe->cb(pe->cb_context, pe->buf, pe->pes_length);
 }
 
-size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
+static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
 {
         if ((!pe) || (packetCount < 1) || (!pkt))
                 return 0;
@@ -192,7 +207,7 @@ size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
 
 
 #include "bitstream.h"
-static void smpte2038_generate_sample_708B_packet()
+static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
 	/* This is a fully formed 708B VANC message. We'll bury
 	 * this inside a SMPTE2038 wrapper and prepare a TS packet
@@ -282,7 +297,7 @@ static void smpte2038_generate_sample_708B_packet()
 	//hexdump(buf, bitstream_getlength_bytes(bs), 16);
 	bitstream_file_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
-	/* Now, also produce a transport packet, for pid 0x80 */
+	/* Now, also produce a transport packet, for pid */
 	uint8_t section[8192];
 	int section_length = bitstream_getlength_bytes(bs);
 	memset(section, 0xff, sizeof(section));
@@ -291,7 +306,7 @@ static void smpte2038_generate_sample_708B_packet()
 	uint8_t *pkts = 0;
 	uint32_t packetCount = 0;
 	uint8_t cc = 0;
-	packetizer(section, section_length, &pkts, &packetCount, 188, &cc, 0x88);
+	packetizer(section, section_length, &pkts, &packetCount, 188, &cc, ctx->pid);
 	for (uint32_t i = 0; i < packetCount; i++) {
 		//hexdump(pkts + (i * 188), 188, 16);
 	}
@@ -303,7 +318,7 @@ static void smpte2038_generate_sample_708B_packet()
 
 	/* Test the PES extractor */
 	struct pes_extractor_s pe;
-	pe_init(&pe, 0, (pes_extractor_callback)pes_cb);
+	pe_init(&pe, 0, (pes_extractor_callback)pes_cb, ctx->pid);
 	pe_push(&pe, pkts, packetCount);
 
 	free(pkts);
@@ -320,7 +335,13 @@ static void smpte2038_generate_sample_708B_packet()
 
 static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int byteCount)
 {
-//	struct app_context_s *ctx = userContext;
+	struct app_context_s *ctx = userContext;
+	if (ctx->verbose) {
+		printf("%s() pushing %d bytes\n", __func__, byteCount);
+		if (ctx->verbose > 1)
+			hexdump(buf, byteCount, 16);
+	}
+	pe_push(&ctx->pe, buf, byteCount / 188);
 	return 0;
 }
 
@@ -335,8 +356,12 @@ static int _usage(const char *progname, int status)
 	fprintf(stderr, "Detect and capture SMPTE2038 VANC frames from a UDP transport stream.\n");
 	fprintf(stderr, "Usage: %s [OPTIONS]\n"
 		"    -i <udp url. Eg. udp://224.0.0.1:5000>\n"
+		"    -P <pid 0xNNNN> VANC PID to process (def: 0x%x)\n"
+		"    -v Increase verbose level\n"
 		"    -g generate sample SMPTE2038 stream and parse it.\n",
-	basename((char *)progname));
+	basename((char *)progname),
+	DEFAULT_PID
+	);
 
 	exit(status);
 }
@@ -346,11 +371,13 @@ static int _main(int argc, char *argv[])
 	int opt;
 	int exitStatus = 0;
 	ctx->running = 1;
+	ctx->pid = DEFAULT_PID;
+	ctx->verbose = 0;
 
-	while ((opt = getopt(argc, argv, "?ghi:")) != -1) {
+	while ((opt = getopt(argc, argv, "?ghi:P:v")) != -1) {
 		switch (opt) {
 		case 'g':
-			smpte2038_generate_sample_708B_packet();
+			smpte2038_generate_sample_708B_packet(ctx);
 			exit(0);
 			break;
 		case 'i':
@@ -358,6 +385,13 @@ static int _main(int argc, char *argv[])
 			if (url_parse(ctx->input_url, &ctx->i_url) < 0) {
 				_usage(argv[0], 1);
                         }
+			break;
+                case 'P':
+                        if ((sscanf(optarg, "0x%x", &ctx->pid) != 1) || (ctx->pid > 0x1fff))
+				_usage(argv[0], 1);
+                        break;
+		case 'v':
+			ctx->verbose++;
 			break;
 		case '?':
 		case 'h':
@@ -369,6 +403,8 @@ static int _main(int argc, char *argv[])
 		fprintf(stderr, "Missing mandatory -i option\n");
 		_usage(argv[0], 1);
 	}
+
+	pe_init(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
 
         int fs = DEFAULT_FIFOSIZE;
 	if (ctx->i_url->has_fifosize)
