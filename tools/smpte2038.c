@@ -205,7 +205,10 @@ static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packet
         return packetCount;
 }
 
-
+/* Create a PES array containing 8 lines of VANC data.
+ * Write it to disk (/tmp) and attempt to parse it to check the
+ * parser is operating correctly.
+ */
 #include "bitstream.h"
 static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
@@ -293,11 +296,13 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	bs->buffer[4] = (len >> 8) & 0xff;
 	bs->buffer[5] = len & 0xff;
 
+	/* Do something useful with the PES, not that its fully assembled. */
+
 	/* The PES is ready. Les save a file copy. */
-	//hexdump(buf, bitstream_getlength_bytes(bs), 16);
+	hexdump(buf, bitstream_getlength_bytes(bs), 16);
 	bitstream_file_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
-	/* Now, also produce a transport packet, for pid */
+	/* Copy the data and convert it into a series of TS packets */
 	uint8_t section[8192];
 	int section_length = bitstream_getlength_bytes(bs);
 	memset(section, 0xff, sizeof(section));
@@ -310,29 +315,25 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	for (uint32_t i = 0; i < packetCount; i++) {
 		//hexdump(pkts + (i * 188), 188, 16);
 	}
+
+	/* Write all the TS packets to a temp file. */
 	FILE *fh = fopen("/tmp/bitstream-scte2038-EIA708B.ts", "wb");
 	if (fh) {
 		fwrite(pkts, packetCount, 188, fh);
 		fclose(fh);
 	}
 
-	/* Test the PES extractor */
+	/* Test the PES extractor, parse our TS packets and parse the VANC */
 	struct pes_extractor_s pe;
 	pe_init(&pe, 0, (pes_extractor_callback)pes_cb, ctx->pid);
 	pe_push(&pe, pkts, packetCount);
 
-	free(pkts);
-
-#if 0
-	/* Parse the PES section, like any other tool might. */
-	struct smpte2038_anc_data_packet_s *result = 0;
-	smpte2038_parse_section(section, bitstream_getlength_bytes(bs), &result);
-	smpte2038_smpte2038_anc_data_packet_dump(result);
-#endif
+	free(pkts); /* Calls to packetizer, the results have to be caller freed. */
 
 	bitstream_free(bs);
 }
 
+/* We're called with blocks of UDP data */
 static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int byteCount)
 {
 	struct app_context_s *ctx = userContext;
@@ -424,10 +425,13 @@ static int _main(int argc, char *argv[])
 
 	signal(SIGINT, signal_handler);
 
+	/* Start UDP receive and wait for CTRL-C */
 	iso13818_udp_receiver_thread_start(ctx->udprx);
 	while (ctx->running) {
 		usleep(100 * 1000);
 	}
+
+	/* Shutdown */
 	iso13818_udp_receiver_free(&ctx->udprx);
 
 no_mem:
