@@ -17,6 +17,7 @@
 #include "version.h"
 
 #define DEFAULT_FIFOSIZE 1048576
+#define PAGE_SIZE 4096
 
 static struct app_context_s
 {
@@ -36,10 +37,163 @@ static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typ
         printf("\n");
 }
 
+int packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *packetCount, int packetSize, uint8_t *cc, uint16_t pid)
+{
+	if ((!buf) || (byteCount == 0) || (!pkts) || (!packetCount) || (packetSize != 188) || (!cc) || (pid > 0x1fff))
+		return -1;
+
+	unsigned int offset = 0;
+
+	int max = packetSize - 4;
+	int packets = ((byteCount / max) + 1) * packetSize;
+	int cnt = 0;
+
+	uint8_t *arr = calloc(packets, packetSize);
+
+	unsigned int rem = byteCount - offset;
+	while (rem) {
+		if (rem > max)
+			rem = max;
+
+		uint8_t *p = arr + (cnt * packetSize);
+		*(p + 0) = 0x47;
+		*(p + 1) = pid >> 8;
+		*(p + 2) = pid;
+		*(p + 3) = 0x10 | (*cc & 0x0f);
+		memcpy(p + 4, buf + offset, rem);
+		memset(p + 4 + rem, 0xff, packetSize - rem - 4);
+		offset += rem;
+		(*cc)++;
+
+		if (cnt++ == 0)
+			*(p + 1) |= 0x40; /* PES Header */
+
+		rem = byteCount - offset;
+	}
+
+	*pkts = arr;
+	*packetCount = cnt;
+	return 0;
+}
+
+typedef void (*pes_extractor_callback)(void *cb_context, unsigned char *buf, int byteCount);
+struct pes_extractor_s
+{
+	uint16_t pid;
+	uint8_t *buf;
+	unsigned int buf_size;	/* Complete size of the buf allocation */
+	unsigned int buf_used;	/* Amount used, usually less than buf_size */
+	unsigned int pes_length;
+
+	int packet_size;
+	int appending;
+	void *cb_context;
+	pes_extractor_callback cb;
+};
+
+pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCount)
+{
+	printf("%s()\n", __func__);
+	hexdump(buf, byteCount, 16);
+
+	/* Parse the PES section, like any other tool might. */
+	struct smpte2038_anc_data_packet_s *result = 0;
+	smpte2038_parse_section(buf, byteCount, &result);
+	smpte2038_smpte2038_anc_data_packet_dump(result);
+	return 0;
+}
+
+int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb)
+{
+	memset(pe, 0, sizeof(*pe));
+	pe->buf = (uint8_t *)calloc(PAGE_SIZE, 1);
+	if (!pe->buf)
+		return -1;
+
+	pe->pid = 0x88;
+	pe->buf_size = PAGE_SIZE;
+	pe->cb_context = user_context;
+	pe->cb = cb;
+	pe->packet_size = 188;
+
+	return 0;
+}
+
+static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
+{
+        int section_offset = 4;
+#if 0
+	if (*(pkt + 1) & 0x40)
+                section_offset++;
+#endif
+
+        unsigned char adaption = (*(pkt + 3) >> 4) & 0x03;
+        if ((adaption == 2) || (adaption == 3)) {
+                if (section_offset == 4)
+                        section_offset++;
+                section_offset += *(pkt + 4);
+        }
+
+        if ((pe->appending == 0) &&
+		(*(pkt + 1) & 0x40) &&
+		(*(pkt + section_offset + 0) == 0) &&
+		(*(pkt + section_offset + 1) == 0) &&
+		(*(pkt + section_offset + 2) == 1) &&
+		(*(pkt + section_offset + 3) == 0xbd)
+	) {
+                pe->buf_used = 0;
+                pe->appending = 1;
+                pe->pes_length = *(pkt + section_offset + 4) << 8 | *(pkt + section_offset + 5);
+		pe->pes_length += 6; /* Header */
+#if 1
+                printf("%s() pes_length = %d (0x%x)\n", __func__, pe->pes_length, pe->pes_length);
+                printf("%s() section_offset = %d (0x%x)\n", __func__, section_offset, section_offset);
+#endif
+        }
+        if (!pe->appending)
+                return;
+
+        int clen = pe->pes_length - pe->buf_used + 3; /* 3 = tableid + length fields, don't forget these */
+        if (clen > (len - section_offset))
+                clen = len - section_offset;
+        memcpy(pe->buf + pe->buf_used, pkt + section_offset, clen);
+        pe->buf_used += clen;
+
+	printf("pe->pes_length = %x pe->buf_used = %x\n", pe->pes_length, pe->buf_used);
+
+        if (pe->pes_length > pe->buf_used) {
+                return; /* More data required */
+        }
+
+        printf("Buffer %d bytes long, section %d bytes long, %02x %02x %02x\n",
+                pe->buf_used,
+                pe->pes_length,
+                *(pe->buf + 0),
+                *(pe->buf + 1),
+                *(pe->buf + 2));
+
+	if (pe->cb)
+		pe->cb(pe->cb_context, pe->buf, pe->pes_length);
+}
+
+size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
+{
+        if ((!pe) || (packetCount < 1) || (!pkt))
+                return 0;
+
+        for (int i = 0; i < packetCount; i++) {
+		uint16_t pid = ((*(pkt + 1) << 8) | *(pkt + 2)) & 0x1fff;
+                if (pid == pe->pid) {
+                        pe_processPacket(pe, pkt + (i * pe->packet_size), pe->packet_size);
+                }
+        }
+        return packetCount;
+}
+
+
 #include "bitstream.h"
 static void smpte2038_generate_sample_708B_packet()
 {
-
 	/* This is a fully formed 708B VANC message. We'll bury
 	 * this inside a SMPTE2038 wrapper and prepare a TS packet
 	 * that could be used for sample/test data.
@@ -93,7 +247,7 @@ static void smpte2038_generate_sample_708B_packet()
 	bitstream_write_bits(bs, (pts & 0xefff), 15);		/* PTS[14:0] */
 	bitstream_write_bits(bs, 1, 1);			/* marker_bit */
 
-	int lineCount = 1;
+	int lineCount = 8;
 	for (int i = 0; i < lineCount; i++) {
 		/* VANC Payload */
 		bitstream_write_bits(bs, 0, 6);		/* fixed value '000000' */
@@ -124,34 +278,44 @@ static void smpte2038_generate_sample_708B_packet()
 	bs->buffer[4] = (len >> 8) & 0xff;
 	bs->buffer[5] = len & 0xff;
 
-	hexdump(buf, bitstream_getlength_bytes(bs), 16);
+	/* The PES is ready. Les save a file copy. */
+	//hexdump(buf, bitstream_getlength_bytes(bs), 16);
 	bitstream_file_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
 	/* Now, also produce a transport packet, for pid 0x80 */
 	uint8_t section[8192];
+	int section_length = bitstream_getlength_bytes(bs);
 	memset(section, 0xff, sizeof(section));
-	memcpy(section, bs->buffer, bitstream_getlength_bytes(bs));
+	memcpy(section, bs->buffer, section_length);
 
-	/* Create a sample TS packet, on pid 0x88 */
-	uint8_t pkt[188];
-	memset(pkt, 0xff, sizeof(pkt));
-	pkt[0] = 0x47;
-	pkt[1] = 0x40;
-	pkt[2] = 0x88;
-	pkt[3] = 0x10;
-	memcpy(&pkt[4], bs->buffer, bitstream_getlength_bytes(bs));
+	uint8_t *pkts = 0;
+	uint32_t packetCount = 0;
+	uint8_t cc = 0;
+	packetizer(section, section_length, &pkts, &packetCount, 188, &cc, 0x88);
+	for (uint32_t i = 0; i < packetCount; i++) {
+		//hexdump(pkts + (i * 188), 188, 16);
+	}
 	FILE *fh = fopen("/tmp/bitstream-scte2038-EIA708B.ts", "wb");
 	if (fh) {
-		fwrite(pkt, sizeof(pkt), 1, fh);
+		fwrite(pkts, packetCount, 188, fh);
 		fclose(fh);
 	}
-	hexdump(pkt, sizeof(pkt), 16);
 
-	bitstream_free(bs);
+	/* Test the PES extractor */
+	struct pes_extractor_s pe;
+	pe_init(&pe, 0, (pes_extractor_callback)pes_cb);
+	pe_push(&pe, pkts, packetCount);
 
+	free(pkts);
+
+#if 0
+	/* Parse the PES section, like any other tool might. */
 	struct smpte2038_anc_data_packet_s *result = 0;
 	smpte2038_parse_section(section, bitstream_getlength_bytes(bs), &result);
 	smpte2038_smpte2038_anc_data_packet_dump(result);
+#endif
+
+	bitstream_free(bs);
 }
 
 static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int byteCount)
