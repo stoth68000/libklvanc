@@ -170,9 +170,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 	VALIDATE(arr);
 	VALIDATE(len);
 
-	if (len > 8192) {
+	if (len > 16384) {
 		/* Safety */
-		fprintf(stderr, "%s() length %d exceeds 8192, ignoring.\n", __func__, len);
+		fprintf(stderr, "%s() length %d exceeds 16384, ignoring.\n", __func__, len);
 		return -EINVAL;
 	}
 

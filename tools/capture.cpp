@@ -151,7 +151,7 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 	/* Convert Blackmagic pixel format to nv20.
 	 * src pointer gets mangled during conversion, hence we need its own
 	 * ptr instead of passing vbiBufferPtr */
-	uint16_t decoded_words[8192];
+	uint16_t decoded_words[16384];
 	memset(&decoded_words[0], 0, sizeof(decoded_words));
 	uint16_t *p_anc = decoded_words;
 	klvanc_v210_line_to_nv20_c(src, p_anc, (uiWidth / 6) * 6);
