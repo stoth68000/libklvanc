@@ -94,29 +94,6 @@ printf("reg_used = %d\n", ctx->reg_used);
 	printf("complete. buf size = %d bytes\n", ctx->buflen_used);
 }
 
-/* Bits are clocked in MSB */
-#define bs_write_bits8(ctx, bits) \
-	bs_write_bit(ctx, bits & 0x80 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x40 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x20 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x10 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x08 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x04 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x02 ? 1 : 0); \
-	bs_write_bit(ctx, bits & 0x01 ? 1 : 0); \
-
-/* Bits are clocked in MSB */
-#define bs_write_bits16(ctx, bits)		\
-	bs_write_bits8(ctx, bits >> 8);		\
-	bs_write_bits8(ctx, bits);		\
-
-/* Bits are clocked in MSB */
-#define bs_write_bits32(ctx, bits)		\
-	bs_write_bits8(ctx, bits >> 24);	\
-	bs_write_bits8(ctx, bits >> 16);	\
-	bs_write_bits8(ctx, bits >>  8);	\
-	bs_write_bits8(ctx, bits);		\
-
 /* Clocked out from MSB */
 static __inline__ uint32_t bs_read_bit(struct bs_context_s *ctx)
 {
