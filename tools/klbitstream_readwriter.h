@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef KLBITSTREAM_READWRITER_H
 #define KLBITSTREAM_READWRITER_H
