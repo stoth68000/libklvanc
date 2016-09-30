@@ -25,7 +25,6 @@ SRC += capture.cpp
 SRC += smpte2038.c
 SRC += udp.c
 SRC += url.c
-SRC += bitstream.c
 
 bin_PROGRAMS  = klvanc_util
 bin_PROGRAMS += klvanc_capture

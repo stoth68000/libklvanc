@@ -209,7 +209,8 @@ static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packet
  * Write it to disk (/tmp) and attempt to parse it to check the
  * parser is operating correctly.
  */
-#include "bitstream.h"
+#include "klbitstream_readwriter.h"
+//#include "bitstream.h"
 static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
 	/* This is a fully formed 708B VANC message. We'll bury
@@ -232,81 +233,81 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	};
 
 	/* See smpte 2038-2008 - Page 5, Table 2 for description. */
-	wBitStream *bs  = bitstream_new();
+	struct bs_context_s *bs  = bs_alloc();
 
 	uint8_t buf[8192] = { 0 };
-	bitstream_attach(bs, buf, sizeof(buf));
+	bs_write_set_buffer(bs, buf, sizeof(buf));
 
 	/* PES Header - Bug: bitstream can't write 32bit values */
-	bitstream_write_bits(bs, 1, 24);	/* packet_start_code_prefix */
-	bitstream_write_bits(bs, 0xBD, 8);	/* stream_id */
-	bitstream_write_bits(bs, 0, 16);	/* PES_packet_length */
-	bitstream_write_bits(bs, 2, 2);		/* '10' fixed value */
-	bitstream_write_bits(bs, 0, 2);		/* PES_scrambling_control (not scrambled) */
-	bitstream_write_bits(bs, 0, 1);		/* PES_priority */
-	bitstream_write_bits(bs, 1, 1);		/* data_alignment_indicator (aligned) */
-	bitstream_write_bits(bs, 0, 1);		/* copyright (not-copyright) */
-	bitstream_write_bits(bs, 0, 1);		/* original-or-copy (copy) */
-	bitstream_write_bits(bs, 2, 2);		/* PTS_DTS_flags (PTS Present) */
-	bitstream_write_bits(bs, 0, 1);		/* ESCR_flag (not present) */
-	bitstream_write_bits(bs, 0, 1);		/* ES_RATE_flag (not present) */
-	bitstream_write_bits(bs, 0, 1);		/* DSM_TRICK_MODE_flag (not present) */
-	bitstream_write_bits(bs, 0, 1);		/* additional_copy_info_flag (not present) */
-	bitstream_write_bits(bs, 0, 1);		/* PES_CRC_flag (not present) */
-	bitstream_write_bits(bs, 0, 1);		/* PES_EXTENSION_flag (not present) */
-	bitstream_write_bits(bs, 5, 8);		/* PES_HEADER_DATA_length */
-	bitstream_write_bits(bs, 2, 4);		/* '0010' fixed value */
+	bs_write_bits(bs, 1, 24);		/* packet_start_code_prefix */
+	bs_write_bits(bs, 0xBD, 8);		/* stream_id */
+	bs_write_bits(bs, 0, 16);		/* PES_packet_length */
+	bs_write_bits(bs, 2, 2);		/* '10' fixed value */
+	bs_write_bits(bs, 0, 2);		/* PES_scrambling_control (not scrambled) */
+	bs_write_bits(bs, 0, 1);		/* PES_priority */
+	bs_write_bits(bs, 1, 1);		/* data_alignment_indicator (aligned) */
+	bs_write_bits(bs, 0, 1);		/* copyright (not-copyright) */
+	bs_write_bits(bs, 0, 1);		/* original-or-copy (copy) */
+	bs_write_bits(bs, 2, 2);		/* PTS_DTS_flags (PTS Present) */
+	bs_write_bits(bs, 0, 1);		/* ESCR_flag (not present) */
+	bs_write_bits(bs, 0, 1);		/* ES_RATE_flag (not present) */
+	bs_write_bits(bs, 0, 1);		/* DSM_TRICK_MODE_flag (not present) */
+	bs_write_bits(bs, 0, 1);		/* additional_copy_info_flag (not present) */
+	bs_write_bits(bs, 0, 1);		/* PES_CRC_flag (not present) */
+	bs_write_bits(bs, 0, 1);		/* PES_EXTENSION_flag (not present) */
+	bs_write_bits(bs, 5, 8);		/* PES_HEADER_DATA_length */
+	bs_write_bits(bs, 2, 4);		/* '0010' fixed value */
 
 	uint64_t pts = 0;
-	bitstream_write_bits(bs, (pts >> 30), 3);	/* PTS[32:30] */
-	bitstream_write_bits(bs, 1, 1);			/* marker_bit */
-	bitstream_write_bits(bs, (pts >> 15) & 0xefff, 15);	/* PTS[29:15] */
-	bitstream_write_bits(bs, 1, 1);			/* marker_bit */
-	bitstream_write_bits(bs, (pts & 0xefff), 15);		/* PTS[14:0] */
-	bitstream_write_bits(bs, 1, 1);			/* marker_bit */
+	bs_write_bits(bs, (pts >> 30), 3);	/* PTS[32:30] */
+	bs_write_bits(bs, 1, 1);			/* marker_bit */
+	bs_write_bits(bs, (pts >> 15) & 0xefff, 15);	/* PTS[29:15] */
+	bs_write_bits(bs, 1, 1);			/* marker_bit */
+	bs_write_bits(bs, (pts & 0xefff), 15);		/* PTS[14:0] */
+	bs_write_bits(bs, 1, 1);			/* marker_bit */
 
 	int lineCount = 8;
 	for (int i = 0; i < lineCount; i++) {
 		/* VANC Payload */
-		bitstream_write_bits(bs, 0, 6);		/* fixed value '000000' */
-		bitstream_write_bits(bs, 0, 1);		/* c_not_y_channel_flag (HD luminance) */
-		bitstream_write_bits(bs, 9, 11);	/* line_number (9) */
-		bitstream_write_bits(bs, 0, 12);	/* horizonal_offset (0 words from SAV) */
-		bitstream_write_bits(bs, arr[3], 10);	/* DID */
-		bitstream_write_bits(bs, arr[4], 10);	/* SDID */
-		bitstream_write_bits(bs, arr[5], 10);	/* data_count */
+		bs_write_bits(bs, 0, 6);		/* fixed value '000000' */
+		bs_write_bits(bs, 0, 1);		/* c_not_y_channel_flag (HD luminance) */
+		bs_write_bits(bs, 9, 11);	/* line_number (9) */
+		bs_write_bits(bs, 0, 12);	/* horizonal_offset (0 words from SAV) */
+		bs_write_bits(bs, arr[3], 10);	/* DID */
+		bs_write_bits(bs, arr[4], 10);	/* SDID */
+		bs_write_bits(bs, arr[5], 10);	/* data_count */
 		for (int i = 6; i < (sizeof(arr) / sizeof(unsigned short)); i++) {
 			/* This data_count AND checksum */
-			bitstream_write_bits(bs, arr[i], 10);
+			bs_write_bits(bs, arr[i], 10);
 		}
 
 		/* Byte alignment stuffing */
-		while (bs->position % 8) {
-			bitstream_write_bits(bs, 1, 1);	/* Stuffing byte */
+		while (bs->reg_used > 0) {
+			bs_write_bits(bs, 1, 1);	/* Stuffing byte */
 		}
 	}
 
 	/* Flush the remaining bits out into buffer, else we lose up to
 	 * the last 32 bits that are cached in the bitstream implementation.
 	 */
-	bitstream_flush(bs);
+	bs_write_buffer_complete(bs);
 
 	/* Now updated the PES packet length */
-	int len = bitstream_getlength_bytes(bs) - 6;
-	bs->buffer[4] = (len >> 8) & 0xff;
-	bs->buffer[5] = len & 0xff;
+	int len = bs_get_byte_count(bs) - 6;
+	bs_get_buffer(bs)[4] = (len >> 8) & 0xff;
+	bs_get_buffer(bs)[5] = len & 0xff;
 
 	/* Do something useful with the PES, not that its fully assembled. */
 
 	/* The PES is ready. Les save a file copy. */
-	hexdump(buf, bitstream_getlength_bytes(bs), 16);
-	bitstream_file_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
+	hexdump(buf, bs_get_byte_count(bs), 16);
+	bs_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
 	/* Copy the data and convert it into a series of TS packets */
 	uint8_t section[8192];
-	int section_length = bitstream_getlength_bytes(bs);
+	int section_length = bs_get_byte_count(bs);
 	memset(section, 0xff, sizeof(section));
-	memcpy(section, bs->buffer, section_length);
+	memcpy(section, bs_get_buffer(bs), section_length);
 
 	uint8_t *pkts = 0;
 	uint32_t packetCount = 0;
@@ -330,7 +331,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 
 	free(pkts); /* Calls to packetizer, the results have to be caller freed. */
 
-	bitstream_free(bs);
+	bs_free(bs);
 }
 
 /* We're called with blocks of UDP data */
