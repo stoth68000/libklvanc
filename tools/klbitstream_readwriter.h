@@ -59,7 +59,6 @@ static __inline__ void bs_write_set_buffer(struct bs_context_s *ctx, uint8_t *bu
 static __inline__ void bs_read_buffer_set(struct bs_context_s *ctx, uint8_t *buf, uint32_t lengthBytes)
 {
 	bs_write_set_buffer(ctx, buf, lengthBytes);
-	ctx->buflen_used = lengthBytes;
 }
 
 /* Clock into the LSB */
@@ -118,22 +117,14 @@ printf("%d ", bit);
 	return bit;
 }
 
-/* Bits are clocked out MSB */
-#define bs_read_bits8(ctx) \
-	(	bs_read_bit(ctx) << 7 | \
-		bs_read_bit(ctx) << 6 | \
-		bs_read_bit(ctx) << 5 | \
-		bs_read_bit(ctx) << 4 | \
-		bs_read_bit(ctx) << 3 | \
-		bs_read_bit(ctx) << 2 | \
-		bs_read_bit(ctx) << 1 | \
-		bs_read_bit(ctx) \
-	)
-
-#define bs_read_bits16(ctx) \
-	( bs_read_bits8(ctx) << 8 | bs_read_bits8(ctx) )
-
-#define bs_read_bits32(ctx) \
-	( bs_read_bits8(ctx) << 24 | bs_read_bits8(ctx) << 16 | bs_read_bits8(ctx) << 8 | bs_read_bits8(ctx) )
+static __inline__ uint32_t bs_read_bits(struct bs_context_s *ctx, uint32_t bitcount)
+{
+	uint32_t bits = 0;
+	for (int i = 1; i <= bitcount; i++) {
+		bits <<= 1;
+		bits |= bs_read_bit(ctx);
+	}
+	return bits;
+}
 
 #endif /* KLBITSTREAM_READWRITER_H */
