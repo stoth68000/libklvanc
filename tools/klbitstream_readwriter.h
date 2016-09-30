@@ -74,7 +74,7 @@ static __inline__ void bs_write_bit(struct bs_context_s *ctx, uint32_t bit)
 	if (ctx->reg_used == 8) {
 		*(ctx->buf + ctx->buflen_used++) = ctx->reg;
 		ctx->reg_used = 0;
-		printf("Wrote %02x, size = %d\n", *(ctx->buf + ctx->buflen_used - 1), ctx->buflen_used);
+//		printf("Wrote %02x, size = %d\n", *(ctx->buf + ctx->buflen_used - 1), ctx->buflen_used);
 	}
 }
 
@@ -87,11 +87,11 @@ static __inline__ void bs_write_bits(struct bs_context_s *ctx, uint32_t bits, ui
 static __inline__ void bs_write_buffer_complete(struct bs_context_s *ctx)
 {
 	if (ctx->reg_used > 0) {
-printf("reg_used = %d\n", ctx->reg_used);
+//printf("reg_used = %d\n", ctx->reg_used);
 		for (int i = ctx->reg_used; i <= 8; i++)
 			bs_write_bit(ctx, 0);
 	}
-	printf("complete. buf size = %d bytes\n", ctx->buflen_used);
+//	printf("complete. buf size = %d bytes\n", ctx->buflen_used);
 }
 
 /* Clocked out from MSB */
@@ -109,10 +109,11 @@ static __inline__ uint32_t bs_read_bit(struct bs_context_s *ctx)
 		ctx->reg <<= 1;
 		ctx->reg_used--;
 	}
-
+#if 0
 printf("%d ", bit);
 	if (ctx->reg_used == 0)
 		printf(" -- ");
+#endif
 	return bit;
 }
 
