@@ -172,7 +172,7 @@ static __inline__ void bs_write_buffer_complete(struct bs_context_s *ctx)
  */
 static __inline__ uint32_t bs_read_bit(struct bs_context_s *ctx)
 {
-	uint32_t bit;
+	uint32_t bit = 0;
 
 	if (ctx->reg_used == 0) {
 		ctx->reg = *(ctx->buf + ctx->buflen_used++);

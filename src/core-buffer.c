@@ -19,7 +19,7 @@ int vanc_buffer_dump(struct buffer_s *buf)
 int vanc_buffer_dump_list(struct xorg_list *head)
 {
 	VALIDATE(head);
-	struct buffer_s *iterator, *next;
+	struct buffer_s *iterator = NULL, *next;
 	xorg_list_for_each_entry_safe(iterator, next, head, list) {
 		vanc_buffer_dump(iterator);
 	}
