@@ -5,7 +5,6 @@ BLACKMAGIC_SDK_PATH = ../include/decklink-sdk
 
 CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 -O3 \
 	-D_BSD_SOURCE \
-	--std=c99 \
 	-I$(BLACKMAGIC_SDK_PATH) \
 	-I../src \
 	-I/usr/local/include \
