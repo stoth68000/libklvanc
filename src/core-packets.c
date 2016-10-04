@@ -269,7 +269,7 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	 * Its here for now.
 	 */
 	uint16_t x = ((header_length + srcByteCount + 5) / 6) * 6;
-	for (; i < x; i++)
+	for (; i <= x; i++)
 		*(v++) = 0x040;
  
 	/* Colorspace convert to V210 */
