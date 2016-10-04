@@ -62,6 +62,16 @@ void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, 
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
 
+/* Take an array of payload, create a fully formed VANC message.
+ * bitDepth of 10 is the only valid input value.
+ * did: 0x41, sdid: 0x07 = SCTE104
+ * generateParity = 1/0
+ */
+int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
+	const uint8_t *src, uint16_t srcByteCount,
+	uint16_t **dst, uint16_t *dstWordCount,
+	uint32_t bitDepth);
+
 #ifdef __cplusplus
 };
 #endif
