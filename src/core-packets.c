@@ -246,8 +246,11 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	for (int i = 0; i < srcByteCount; i++)
 		*(v++) = *(src + i);
 
-	/* Generate Parity */
-	for (int i = 3; i < (srcByteCount + 2); i++) {
+	/* Generate Parity
+	 * VANC header 0/3ff/3ff = 3
+	 * sdid/did/count = 3
+	 */
+	for (int i = 3; i < (srcByteCount + 3 + 3); i++) {
 		if (__builtin_parity(arr[i]))
 			arr[i] |= 0x100;
 		else
@@ -257,7 +260,7 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	/* Calculate checksum */
 	uint16_t sum = 0;
 	int i;
-	for (i = 3; i < (srcByteCount + 2); i++) {
+	for (i = 3; i < (srcByteCount + 3 + 3); i++) {
 		sum += arr[i];
 		sum &= 0x1ff;
 	}
@@ -269,13 +272,13 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	 * Its here for now.
 	 */
 	uint16_t x = ((header_length + srcByteCount + 5) / 6) * 6;
-	for (; i <= x; i++)
+	for (int j = 0; j < (x - i); j++)
 		*(v++) = 0x040;
  
 	/* Colorspace convert to V210 */
 	/* Let's handle this in the decklink output module */
 
-	*dstWordCount = v - arr;
+	*dstWordCount = v - arr - 1;
 	*dst = arr;
 
 	return 0;
