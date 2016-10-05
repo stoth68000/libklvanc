@@ -727,6 +727,7 @@ static int _main(int argc, char *argv[])
 	int ch;
 	int portnr = 0;
 	bool foundDisplayMode = false;
+	bool wantHelp = false;
 	HRESULT result;
 
 	pthread_mutex_init(&sleepMutex, NULL);
@@ -808,7 +809,7 @@ static int _main(int argc, char *argv[])
 			break;
 		case '?':
 		case 'h':
-			usage(argv[0], 0);
+			wantHelp = true;
 		}
 	}
 
@@ -839,6 +840,10 @@ static int _main(int argc, char *argv[])
 	if (result != S_OK) {
 		fprintf(stderr, "Could not obtain the video output display mode iterator - result = %08x\n", result);
 		goto bail;
+	}
+
+	if (wantHelp) {
+		usage(argv[0], 0);
 	}
 
         if (vanc_context_create(&vanchdl) < 0) {
