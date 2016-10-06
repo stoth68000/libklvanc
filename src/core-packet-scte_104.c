@@ -109,7 +109,16 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		d->avail_num           = pkt->payload[24];
 		d->avails_expected     = pkt->payload[25];
 		d->auto_return_flag    = pkt->payload[26];
-	} else {
+	}
+#if 0
+	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
+		/* We'll parse this message but we'll only look for INIT_REQUEST_DATA
+		 * sub messages, and construct a splice_request_data message.
+		 * The rest of the message types will be ignored.
+		 */
+	}
+#endif
+	else {
 		fprintf(stderr, "%s() Unsupported opID = %x, error.\n", __func__, m->opID);
 		free(pkt);
 		return -1;
