@@ -8,21 +8,189 @@
 
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
 
-int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
+static const char *spliceInsertTypeName(unsigned char type)
 {
-	struct packet_scte_104_s *pkt = p;
+	switch (type) {
+	case 0x0000:                return "reserved";
+	case SPLICESTART_NORMAL:    return "spliceStart_normal";
+	case SPLICESTART_IMMEDIATE: return "spliceStart_immediate";
+	case SPLICEEND_NORMAL:      return "spliceEnd_normal";
+	case SPLICEEND_IMMEDIATE:   return "spliceEnd_immediate";
+	case SPLICE_CANCEL:         return "splice_cancel";
+	default:                    return "Undefined";
+	}
+}
 
-	if (ctx->verbose)
-		printf("%s() %p\n", __func__, (void *)pkt);
+static const char *som_operationName(unsigned short opID)
+{
+	if ((opID >= 0x8000) && (opID <= 0xbfff))
+		return "User Defined";
+	if ((opID >= 0x0013) && (opID <= 0x00ff))
+		return "Reserved for future basic requests";
+	switch (opID) {
+	case 0x0000: return "general_response_data";
+	case 0x0001: return "initial_request_data";
+	case 0x0002: return "initial_response_data";
+	case 0x0003: return "alive_request_data";
+	case 0x0004: return "alive_response_data";
+	case 0x0005:
+	case 0x0006: return "User Defined";
+	case 0x0007: return "inject_response_data";
+	case 0x0008: return "inject_complete_response_data";
+	case 0x0009: return "config_request_data";
+	case 0x000a: return "config_response_data";
+	case 0x000b: return "provisioning_request_data";
+	case 0x000c: return "provisioning_response_data";
+	case 0x000f: return "fault_request_data";
+	case 0x0010: return "fault_response_data";
+	case 0x0011: return "AS_alive_request_data";
+	case 0x0012: return "AS_alive_response_data";
+	default:     return "Reserved";
+	}
+}
 
+static const char *mom_operationName(unsigned short opID)
+{
+	if ((opID >= 0xc000) && (opID <= 0xFFFE))
+		return "User Defined";
+
+	switch (opID) {
+	case 0x0100: return "inject_section_data_request";
+	case 0x0101: return "splice_data_request";
+	case 0x0102: return "splice_null_request_data";
+	case 0x0103: return "start_schedule_download_request_data";
+	case 0x0104: return "time_signal_request_data";
+	case 0x0105: return "transmit_schedule_request_data";
+	case 0x0106: return "component_mode_DPI_request_data";
+	case 0x0107: return "encrypted_DPI_request_data";
+	case 0x0108: return "insert_descriptor_request_data";
+	case 0x0109: return "insert_DTMF_descriptor_request_data";
+	case 0x010a: return "insert_avail_descriptor_request_data";
+	case 0x010b: return "insert_segmentation_descriptor_request_data";
+	case 0x010c: return "proprietary_command_request_data";
+	case 0x010d: return "schedule_component_mode_request_data";
+	case 0x010e: return "schedule_definition_data_request";
+	case 0x0300: return "delete_controlword_data_request";
+	case 0x0301: return "update_controlword_data_request";
+	default:     return "Reserved";
+	}
+}
+
+static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */, char *indent)
+{
+	printf("%s", indent);
+	for (unsigned int i = 0; i < len; i++)
+		printf("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n%s");
+	printf("\n");
+}
+
+static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_request_data *d)
+{
+	d->splice_insert_type  = *(p++);
+	d->splice_event_id     = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
+	d->unique_program_id   = *(p + 0) << 8 | *(p + 1); p += 2;
+	d->pre_roll_time       = *(p + 0) << 8 | *(p + 1); p += 2;
+	d->brk_duration        = *(p + 0) << 8 | *(p + 1); p += 2;
+	d->avail_num           = *(p++);
+	d->avails_expected     = *(p++);
+	d->auto_return_flag    = *(p++);
+
+	/* We only support spliceStart_immediate and spliceEnd_immediate */
+	switch (d->splice_insert_type) {
+	case SPLICESTART_IMMEDIATE:
+	case SPLICEEND_IMMEDIATE:
+		break;
+	default:
+		/* We don't support this splice command */
+		fprintf(stderr, "%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
+	}
+
+	return p;
+}
+
+static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
+{
+	ts->time_type = *(p++);
+	switch (ts->time_type) {
+	case 1:
+		ts->time_type_1.UTC_seconds      = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) << 8 | *(p + 3);
+		ts->time_type_1.UTC_microseconds = *(p + 4) << 8 | *(p + 5);
+		p += 6;
+		break;
+	case 2:
+		ts->time_type_2.hours   = *(p + 0);
+		ts->time_type_2.minutes = *(p + 1);
+		ts->time_type_2.seconds = *(p + 2);
+		ts->time_type_2.frames  = *(p + 3);
+		p += 4;
+		break;
+	case 3:
+		ts->time_type_3.GPI_number = *(p + 0);
+		ts->time_type_3.GPI_edge   = *(p + 1);
+		p += 2;
+		break;
+	case 0:
+		/* The spec says no time is defined, this is a legitimate state. */
+		break;
+	default:
+		fprintf(stderr, "%s() unsupported time_type 0x%x, assuming no time.\n", __func__, ts->time_type);
+	}
+
+	return p;
+}
+
+static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+{
+	struct multiple_operation_message *m = &pkt->mo_msg;
+
+	printf("SCTE104 multiple_operation_message struct\n");
+	PRINT_DEBUG_MEMBER_INT(pkt->payloadDescriptorByte);
+
+	PRINT_DEBUG_MEMBER_INT(m->rsvd);
+	printf("    rsvd = %s\n", m->rsvd == 0xFFFF ? "Multiple_Ops (Reserved)" : "UNSUPPORTED");
+	PRINT_DEBUG_MEMBER_INT(m->messageSize);
+	PRINT_DEBUG_MEMBER_INT(m->protocol_version);
+	PRINT_DEBUG_MEMBER_INT(m->AS_index);
+	PRINT_DEBUG_MEMBER_INT(m->message_number);
+	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
+	PRINT_DEBUG_MEMBER_INT(m->SCTE35_protocol_version);
+	PRINT_DEBUG_MEMBER_INT(m->num_ops);
+
+	for (int i = 0; i < m->num_ops; i++) {
+       		struct multiple_operation_message_operation *o = &m->ops[i];
+		printf("\n opID[%d] = %s\n", i, mom_operationName(o->opID));
+		PRINT_DEBUG_MEMBER_INT(o->opID);
+		PRINT_DEBUG_MEMBER_INT(o->data_length);
+		if (o->data_length)
+			hexdump(o->data, o->data_length, 32, "    ");
+		if (o->opID == MO_INIT_REQUEST_DATA) {
+			struct splice_request_data *d = &pkt->sr_data;
+			PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
+			printf("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
+			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
+			PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
+			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			PRINT_DEBUG_MEMBER_INT(d->brk_duration);
+			printf("    break_duration = %d (1/10th seconds)\n", d->brk_duration);
+			PRINT_DEBUG_MEMBER_INT(d->avail_num);
+			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
+			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+		}
+	}
+
+	return KLAPI_OK;
+}
+
+static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+{
         struct splice_request_data *d = &pkt->sr_data;
 	struct single_operation_message *m = &pkt->so_msg;
 
-	printf("SCTE104 struct\n");
+	printf("SCTE104 single_operation_message struct\n");
 	PRINT_DEBUG_MEMBER_INT(pkt->payloadDescriptorByte);
 
 	PRINT_DEBUG_MEMBER_INT(m->opID);
-	printf("   opID = %s\n", m->opID == INIT_REQUEST_DATA ? "init_request_data" : "UNSUPPORTED");
+	printf("   opID = %s\n", som_operationName(m->opID));
 	PRINT_DEBUG_MEMBER_INT(m->messageSize);
 	printf("   message_size = %d bytes\n", m->messageSize);
 	PRINT_DEBUG_MEMBER_INT(m->result);
@@ -32,11 +200,9 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 	PRINT_DEBUG_MEMBER_INT(m->message_number);
 	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
 
-	if (m->opID == INIT_REQUEST_DATA) {
+	if (m->opID == SO_INIT_REQUEST_DATA) {
 		PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
-		printf("   splice_insert_type = %s\n",
-			d->splice_insert_type == SPLICESTART_IMMEDIATE ? "spliceStart_immediate" :
-			d->splice_insert_type == SPLICEEND_IMMEDIATE ? "spliceEnd_immediate" : "UNSUPPORTED");
+		printf("   splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
 		PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
 		PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
 		PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
@@ -53,6 +219,19 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 	printf("\n");
 
 	return KLAPI_OK;
+}
+
+int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
+{
+	struct packet_scte_104_s *pkt = p;
+
+	if (ctx->verbose)
+		printf("%s() %p\n", __func__, (void *)pkt);
+
+	if (pkt->so_msg.opID == SO_INIT_REQUEST_DATA)
+		return dump_som(ctx, pkt);
+
+	return dump_mom(ctx, pkt);
 }
 
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
@@ -89,9 +268,16 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		pkt->payload[i] = hdr->payload[1 + i];
 
 	struct single_operation_message *m = &pkt->so_msg;
+	struct multiple_operation_message *mom = &pkt->mo_msg;
+
+	/* Make sure we put the opID in the SOM reegardless of
+	 * whether the message ius single or multiple.
+	 * We rely on checking som.opID during the dump process
+	 * to determinate the structure type.
+	 */
 	m->opID = pkt->payload[0] << 8 | pkt->payload[1];
 
-	if (m->opID == INIT_REQUEST_DATA) {
+	if (m->opID == SO_INIT_REQUEST_DATA) {
 		m->messageSize      = pkt->payload[2] << 8 | pkt->payload[3];
 		m->result           = pkt->payload[4] << 8 | pkt->payload[5];
 		m->result_extension = pkt->payload[6] << 8 | pkt->payload[7];
@@ -123,15 +309,53 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			free(pkt);
 			return -1;
 		}
-	}
-#if 0
+	} else
 	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
+		mom->rsvd                    = pkt->payload[0] << 8 | pkt->payload[1];
+		mom->messageSize             = pkt->payload[2] << 8 | pkt->payload[3];
+		mom->protocol_version        = pkt->payload[4];
+		mom->AS_index                = pkt->payload[5];
+		mom->message_number          = pkt->payload[6];
+		mom->DPI_PID_index           = pkt->payload[7] << 8 | pkt->payload[8];
+		mom->SCTE35_protocol_version = pkt->payload[9];
+
+		unsigned char *p = &pkt->payload[10];
+		p = parse_mom_timestamp(p, &mom->timestamp);
+		
+		mom->num_ops = *(p++);
+		mom->ops = calloc(mom->num_ops, sizeof(struct multiple_operation_message_operation));
+		if (!mom->ops) {
+			fprintf(stderr, "%s() unable to allocate momo ram, error.\n", __func__);
+			free(pkt);
+			return -1;
+		}
+
+		for (int i = 0; i < mom->num_ops; i++) {
+        		struct multiple_operation_message_operation *o = &mom->ops[i];
+			o->opID = *(p + 0) << 8 | *(p + 1);
+			o->data_length = *(p + 2) << 8 | *(p + 3);
+			o->data = malloc(o->data_length);
+			if (!o->data) {
+				fprintf(stderr, "%s() Unable to allocate memory for mom op, error.\n", __func__);
+			} else {
+				memcpy(o->data, p + 4, o->data_length);
+			}
+			p += (4 + o->data_length);
+
+			if (o->opID == MO_INIT_REQUEST_DATA)
+				parse_splice_request_data(o->data, &pkt->sr_data);
+
+#if 1
+			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
+			hexdump(o->data, o->data_length, 32, "");
+#endif
+		}
+
 		/* We'll parse this message but we'll only look for INIT_REQUEST_DATA
 		 * sub messages, and construct a splice_request_data message.
 		 * The rest of the message types will be ignored.
 		 */
 	}
-#endif
 	else {
 		fprintf(stderr, "%s() Unsupported opID = %x, error.\n", __func__, m->opID);
 		free(pkt);

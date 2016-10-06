@@ -9,9 +9,14 @@
 extern "C" {
 #endif  
 
-#define INIT_REQUEST_DATA     0x01
+#define SO_INIT_REQUEST_DATA     0x001
+#define MO_INIT_REQUEST_DATA     0x101
+
+#define SPLICESTART_NORMAL    0x01
 #define SPLICESTART_IMMEDIATE 0x02
+#define SPLICEEND_NORMAL      0x03
 #define SPLICEEND_IMMEDIATE   0x04
+#define SPLICE_CANCEL         0x05
 
 #define SCTE104_SR_DATA_FIELD__UNIQUE_PROGRAM_ID(pkt) ((pkt)->sr_data.unique_program_id)
 #define SCTE104_SR_DATA_FIELD__SPLICE_EVENT_ID(pkt) ((pkt)->sr_data.splice_event_id)
@@ -29,6 +34,49 @@ struct single_operation_message
 	unsigned char AS_index;
 	unsigned char message_number;
 	unsigned short DPI_PID_index;
+};
+
+struct multiple_operation_message_timestamp
+{
+	/* SCTE Spec table 11.2 */
+	unsigned char time_type;
+	union {
+		struct {
+			unsigned int UTC_seconds;
+			unsigned short UTC_microseconds;
+		} time_type_1;
+		struct {
+			unsigned char hours;
+			unsigned char minutes;
+			unsigned char seconds;
+			unsigned char frames;
+		} time_type_2;
+		struct {
+			unsigned char GPI_number;
+			unsigned char GPI_edge;
+		} time_type_3;
+	};
+};
+
+struct multiple_operation_message
+{
+	/* multiple_operation_message */
+	/* SCTE Spec table 7.2 */
+	unsigned short rsvd;
+	unsigned short messageSize;
+	unsigned char protocol_version;
+	unsigned char AS_index;
+	unsigned char message_number;
+	unsigned short DPI_PID_index;
+	unsigned char SCTE35_protocol_version;
+	struct multiple_operation_message_timestamp timestamp;
+	unsigned char num_ops;
+
+	struct multiple_operation_message_operation {
+		unsigned short opID;
+		unsigned short data_length;
+		unsigned char *data;
+	} *ops;
 };
 
 struct splice_request_data
@@ -60,6 +108,7 @@ struct packet_scte_104_s
 
 	struct single_operation_message so_msg;
 	struct splice_request_data sr_data;
+	struct multiple_operation_message mo_msg;
 };
 
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
