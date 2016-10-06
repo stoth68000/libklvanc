@@ -78,8 +78,10 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	 * are not continuation messages.
 	 * Eg. payloadDescriptor value 0x08.
 	 */
-	if (pkt->payloadDescriptorByte != 0x08)
+	if (pkt->payloadDescriptorByte != 0x08) {
+		free(pkt);
 		return -1;
+	}
 
 	/* First byte is the padloadDescriptor, the rest is the SCTE104 message...
 	 * up to 200 bytes in length item 5.3.3 page 7 */
@@ -87,17 +89,19 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		pkt->payload[i] = hdr->payload[1 + i];
 
 	struct single_operation_message *m = &pkt->so_msg;
-	m->opID             = pkt->payload[0] << 8 | pkt->payload[1];
-	m->messageSize      = pkt->payload[2] << 8 | pkt->payload[3];
-	m->result           = pkt->payload[4] << 8 | pkt->payload[5];
-	m->result_extension = pkt->payload[6] << 8 | pkt->payload[7];
-	m->protocol_version = pkt->payload[8];
-	m->AS_index         = pkt->payload[9];
-	m->message_number   = pkt->payload[10];
-	m->DPI_PID_index    = pkt->payload[11] << 8 | pkt->payload[12];
+	m->opID = pkt->payload[0] << 8 | pkt->payload[1];
 
-	struct splice_request_data *d = &pkt->sr_data;
 	if (m->opID == INIT_REQUEST_DATA) {
+		m->messageSize      = pkt->payload[2] << 8 | pkt->payload[3];
+		m->result           = pkt->payload[4] << 8 | pkt->payload[5];
+		m->result_extension = pkt->payload[6] << 8 | pkt->payload[7];
+		m->protocol_version = pkt->payload[8];
+		m->AS_index         = pkt->payload[9];
+		m->message_number   = pkt->payload[10];
+		m->DPI_PID_index    = pkt->payload[11] << 8 | pkt->payload[12];
+
+		struct splice_request_data *d = &pkt->sr_data;
+
 		d->splice_insert_type  = pkt->payload[13];
 		d->splice_event_id     = pkt->payload[14] << 24 |
 			pkt->payload[15] << 16 | pkt->payload[16] <<  8 | pkt->payload[17];
@@ -107,16 +111,30 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		d->avail_num           = pkt->payload[24];
 		d->avails_expected     = pkt->payload[25];
 		d->auto_return_flag    = pkt->payload[26];
-	} else
-		return -1;
 
-	/* We only support spliceStart_immediate and spliceEnd_immediate */
-	switch (d->splice_insert_type) {
-	case SPLICESTART_IMMEDIATE:
-	case SPLICEEND_IMMEDIATE:
-		break;
-	default:
-		/* We don't support this splice command */
+		/* We only support spliceStart_immediate and spliceEnd_immediate */
+		switch (d->splice_insert_type) {
+		case SPLICESTART_IMMEDIATE:
+		case SPLICEEND_IMMEDIATE:
+			break;
+		default:
+			/* We don't support this splice command */
+			fprintf(stderr, "%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
+			free(pkt);
+			return -1;
+		}
+	}
+#if 0
+	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
+		/* We'll parse this message but we'll only look for INIT_REQUEST_DATA
+		 * sub messages, and construct a splice_request_data message.
+		 * The rest of the message types will be ignored.
+		 */
+	}
+#endif
+	else {
+		fprintf(stderr, "%s() Unsupported opID = %x, error.\n", __func__, m->opID);
+		free(pkt);
 		return -1;
 	}
 
