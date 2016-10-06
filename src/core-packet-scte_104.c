@@ -78,8 +78,10 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	 * are not continuation messages.
 	 * Eg. payloadDescriptor value 0x08.
 	 */
-	if (pkt->payloadDescriptorByte != 0x08)
+	if (pkt->payloadDescriptorByte != 0x08) {
+		free(pkt);
 		return -1;
+	}
 
 	/* First byte is the padloadDescriptor, the rest is the SCTE104 message...
 	 * up to 200 bytes in length item 5.3.3 page 7 */
@@ -107,8 +109,11 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		d->avail_num           = pkt->payload[24];
 		d->avails_expected     = pkt->payload[25];
 		d->auto_return_flag    = pkt->payload[26];
-	} else
+	} else {
+		fprintf(stderr, "%s() Unsupported opID = %x, error.\n", __func__, m->opID);
+		free(pkt);
 		return -1;
+	}
 
 	/* We only support spliceStart_immediate and spliceEnd_immediate */
 	switch (d->splice_insert_type) {
@@ -117,6 +122,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		break;
 	default:
 		/* We don't support this splice command */
+		fprintf(stderr, "%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
+		free(pkt);
 		return -1;
 	}
 
