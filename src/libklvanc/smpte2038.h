@@ -1,3 +1,9 @@
+/**
+ * @file	smpte2038.h
+ * @author	Copyright (c) 2016 Kernel Labs Inc.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright (c) 2016 Kernel Labs Inc. */
 
 #ifndef SMPTE2038_H
@@ -9,6 +15,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct smpte2038_anc_data_line_s
 {
 	uint8_t		reserved_000000;
@@ -22,6 +31,9 @@ struct smpte2038_anc_data_line_s
 	uint16_t	checksum_word;
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct smpte2038_anc_data_packet_s
 {
 	uint32_t	packet_start_code_prefix;
@@ -48,8 +60,24 @@ struct smpte2038_anc_data_packet_s
 	struct smpte2038_anc_data_line_s *lines;
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	uint8_t *section - Brief description goes here.
+ * @param[in]	unsigned int byteCount - Brief description goes here.
+ * @param[in]	struct smpte2038_anc_data_packet_s **result - Brief description goes here.
+ */
 int  smpte2038_parse_section(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct smpte2038_anc_data_packet_s *h - Brief description goes here.
+ */
 void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Brief description goes here.
+ */
 void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt);
 
 #ifdef __cplusplus
