@@ -111,7 +111,7 @@ static __inline__ void bs_write_set_buffer(struct bs_context_s *ctx, uint8_t *bu
  * @param[in]   uint8_t *buf  Buffer the bistream will read from.
  * @param[in]   uint32_t *buf  Buffer size in bytes.
  */
-static __inline__ void bs_read_buffer_set(struct bs_context_s *ctx, uint8_t *buf, uint32_t lengthBytes)
+static __inline__ void bs_read_set_buffer(struct bs_context_s *ctx, uint8_t *buf, uint32_t lengthBytes)
 {
 	bs_write_set_buffer(ctx, buf, lengthBytes);
 }
@@ -138,7 +138,7 @@ static __inline__ void bs_write_bit(struct bs_context_s *ctx, uint32_t bit)
 }
 
 /**
- * @brief       Pad the bitsream buffer into byte alignment, stuff the 'bit' mutiple times to align.
+ * @brief       Pad the bitstream buffer into byte alignment, stuff the 'bit' mutiple times to align.
  * @param[in]   struct bs_context_s *ctx  bitstream context
  * @param[in]   uint32_t bit  A single bit.
  */
@@ -218,5 +218,18 @@ static __inline__ uint32_t bs_read_bits(struct bs_context_s *ctx, uint32_t bitco
 	}
 	return bits;
 }
+
+/**
+ * @brief       Read and discard all bits in the buffer until we're byte aligned again.\n
+ *              The sister function to bs_write_byte_stuff();
+ * @param[in]   struct bs_context_s *ctx  bitstream context
+ */
+static __inline__ void bs_read_byte_stuff(struct bs_context_s *ctx)
+{
+	while (ctx->reg_used > 0)
+		bs_read_bit(ctx);
+}
+
+
 
 #endif /* KLBITSTREAM_READWRITER_H */

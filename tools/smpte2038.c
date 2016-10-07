@@ -339,6 +339,10 @@ static int _main(int argc, char *argv[])
 	ctx->running = 1;
 	ctx->pid = DEFAULT_PID;
 	ctx->verbose = 0;
+	enum {
+		IT_UDP = 0,
+		IT_FILE
+	} inputType = IT_UDP;
 
 	while ((opt = getopt(argc, argv, "?ghi:P:v")) != -1) {
 		switch (opt) {
@@ -349,8 +353,13 @@ static int _main(int argc, char *argv[])
 		case 'i':
 			ctx->input_url = optarg;
 			if (url_parse(ctx->input_url, &ctx->i_url) < 0) {
-				_usage(argv[0], 1);
-                        }
+				/* NOT a valid URL, assume its a file */
+				if (access(optarg, R_OK) != 0)
+					_usage(argv[0], 0);
+
+				inputType = IT_FILE;
+			} else
+				inputType = IT_UDP;
 			break;
                 case 'P':
                         if ((sscanf(optarg, "0x%x", &ctx->pid) != 1) || (ctx->pid > 0x1fff))
@@ -371,33 +380,49 @@ static int _main(int argc, char *argv[])
 	}
 
 	pe_init(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
-
-        int fs = DEFAULT_FIFOSIZE;
-	if (ctx->i_url->has_fifosize)
-		fs = ctx->i_url->fifosize;
-
-	if (iso13818_udp_receiver_alloc(&ctx->udprx, fs,
-		ctx->i_url->hostname, ctx->i_url->port, (tsudp_receiver_callback)udp_cb, ctx, 0) < 0) {
-		fprintf(stderr, "Unable to allocate a UDP Receiver for %s:%d\n",
-		ctx->i_url->hostname, ctx->i_url->port);
-		goto no_mem;
-	}
-
-	/* Add a multicast NIC if reqd. */
-	if (ctx->i_url->has_ifname) {
-		iso13818_udp_receiver_join_multicast(ctx->udprx, ctx->i_url->ifname);
-	}
-
 	signal(SIGINT, signal_handler);
 
-	/* Start UDP receive and wait for CTRL-C */
-	iso13818_udp_receiver_thread_start(ctx->udprx);
-	while (ctx->running) {
-		usleep(100 * 1000);
-	}
+	if (inputType == IT_UDP) {
+      	  int fs = DEFAULT_FIFOSIZE;
+		if (ctx->i_url->has_fifosize)
+			fs = ctx->i_url->fifosize;
 
-	/* Shutdown */
-	iso13818_udp_receiver_free(&ctx->udprx);
+		if (iso13818_udp_receiver_alloc(&ctx->udprx, fs,
+			ctx->i_url->hostname, ctx->i_url->port, (tsudp_receiver_callback)udp_cb, ctx, 0) < 0) {
+			fprintf(stderr, "Unable to allocate a UDP Receiver for %s:%d\n",
+			ctx->i_url->hostname, ctx->i_url->port);
+			goto no_mem;
+		}
+
+		/* Add a multicast NIC if reqd. */
+		if (ctx->i_url->has_ifname) {
+			iso13818_udp_receiver_join_multicast(ctx->udprx, ctx->i_url->ifname);
+		}
+
+		/* Start UDP receive and wait for CTRL-C */
+		iso13818_udp_receiver_thread_start(ctx->udprx);
+		while (ctx->running) {
+			usleep(100 * 1000);
+		}
+
+		/* Shutdown */
+		iso13818_udp_receiver_free(&ctx->udprx);
+	} else
+	if (inputType == IT_FILE) {
+		FILE *fh = fopen(ctx->input_url, "rb");
+		if (fh) {
+
+			unsigned char pkt[188];
+			while (!feof(fh)) {
+				if (fread(pkt, 188, 1, fh) != 1)
+					break;
+
+				udp_cb(ctx, pkt, sizeof(pkt));
+			}
+			fclose(fh);
+		}
+
+	}
 
 no_mem:
 	return exitStatus;
