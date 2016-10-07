@@ -231,7 +231,10 @@ static int AnalyzeVANC(const char *fn)
 				if (packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts, &packetCount, 188, &g_cc, 0x726) == 0) {
 					FILE *fh = fopen(TS_OUTPUT_NAME, "a+");
 					if (fh) {
-						printf("Writing %d packets.\n", packetCount);
+						if (g_verbose) {
+							printf("Writing %d SMPTE2038 TS packet(s) to %s\n",
+								packetCount, TS_OUTPUT_NAME);
+						}
 						fwrite(pkts, packetCount, 188, fh);
 						fclose(fh);
 					}
@@ -641,10 +644,6 @@ static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s 
 	/* Have the library display some debug */
 	dump_PAYLOAD_INFORMATION(ctx, pkt);
 
-	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
-		}
-	}
 	return 0;
 }
 
@@ -655,10 +654,6 @@ static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struc
 	/* Have the library display some debug */
 	dump_EIA_708B(ctx, pkt);
 
-	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
-		}
-	}
 	return 0;
 }
 
@@ -668,11 +663,6 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 
 	/* Have the library display some debug */
 	dump_EIA_608(ctx, pkt);
-
-	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
-		}
-	}
 
 	return 0;
 }
@@ -684,8 +674,15 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	/* Have the library display some debug */
 	dump_SCTE_104(ctx, pkt);
 
+	return 0;
+}
+
+static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
+{
+	printf("%s:%s()\n", __FILE__, __func__);
+
 	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
+		if (smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {
 		}
 	}
 
@@ -698,6 +695,7 @@ static struct vanc_callbacks_s callbacks =
 	.eia_708b               = cb_EIA_708B,
 	.eia_608                = cb_EIA_608,
 	.scte_104               = cb_SCTE_104,
+	.all                    = cb_all,
 };
 
 /* END - CALLBACKS for message notification */
