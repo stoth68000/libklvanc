@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <libklvanc/vanc.h>
+#include <libklvanc/klbitstream_readwriter.h>
 #include "udp.h"
 #include "url.h"
 
@@ -212,7 +213,6 @@ static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packet
  * Write it to disk (/tmp) and attempt to parse it to check the
  * parser is operating correctly.
  */
-#include "klbitstream_readwriter.h"
 //#include "bitstream.h"
 static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
