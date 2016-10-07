@@ -212,7 +212,7 @@ printf("%d ", bit);
 static __inline__ uint32_t bs_read_bits(struct bs_context_s *ctx, uint32_t bitcount)
 {
 	uint32_t bits = 0;
-	for (int i = 1; i <= bitcount; i++) {
+	for (uint32_t i = 1; i <= bitcount; i++) {
 		bits <<= 1;
 		bits |= bs_read_bit(ctx);
 	}
