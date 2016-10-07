@@ -123,7 +123,7 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 	return KLAPI_OK;
 }
 
-void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid)
+void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid)
 {
 	if (onlyvalid && (*(vanc + 1) != 0x3ff) && (*(vanc + 2) != 0x3ff))
 		return;

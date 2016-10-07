@@ -106,7 +106,7 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
  * @param[in]	unsigned int linenr - Brief description goes here.
  * @param[in]	int onlyvalid - Brief description goes here.
  */
-void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
+void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
 #include <libklvanc/vanc-module1.h>
 #include <libklvanc/vanc-payload_information.h>
