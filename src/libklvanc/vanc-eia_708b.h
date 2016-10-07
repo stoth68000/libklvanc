@@ -1,10 +1,9 @@
 /**
  * @file	vanc-eia_708b.h
- * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @author	Steven Toth <stoth@kernellabs.com>
+ * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
  * @brief	TODO - Brief description goes here.
  */
-
-/* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_EIA_708B_H
 #define _VANC_EIA_708B_H

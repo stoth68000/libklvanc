@@ -1,10 +1,9 @@
 /**
  * @file	smpte2038.h
- * @author	Copyright (c) 2016 Kernel Labs Inc.
+ * @author	Steven Toth <stoth@kernellabs.com>
+ * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
  * @brief	TODO - Brief description goes here.
  */
-
-/* Copyright (c) 2016 Kernel Labs Inc. */
 
 #ifndef SMPTE2038_H
 #define SMPTE2038_H
