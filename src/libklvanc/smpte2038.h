@@ -2,7 +2,7 @@
  * @file	smpte2038.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	Functions to parse, create and inspect SMPTE2038 formatted packets.
  */
 
 #ifndef SMPTE2038_H
@@ -60,22 +60,24 @@ struct smpte2038_anc_data_packet_s
 };
 
 /**
- * @brief	TODO - Brief description goes here.
- * @param[in]	uint8_t *section - Brief description goes here.
- * @param[in]	unsigned int byteCount - Brief description goes here.
- * @param[in]	struct smpte2038_anc_data_packet_s **result - Brief description goes here.
+ * @brief	Inspect a section, if its deemed valid, create a VANC packet and return it to the caller.
+ * @param[in]	uint8_t *section - An array of memory that likely contains a valic (or invalid) VANC message.
+ * @param[in]	unsigned int byteCount - Length of section.
+ * @param[out]	struct smpte2038_anc_data_packet_s **result - Packet
+ * @result	0 - Success, **result is valid for future use.
+ * @result	< 0 - Error
  */
 int  smpte2038_parse_section(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
 
 /**
- * @brief	TODO - Brief description goes here.
- * @param[in]	struct smpte2038_anc_data_packet_s *h - Brief description goes here.
+ * @brief	Inspect structure and output textual information to console.
+ * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Packet
  */
 void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h);
 
 /**
- * @brief	TODO - Brief description goes here.
- * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Brief description goes here.
+ * @brief	Deallocate and release a previously allocated pkt, see smpte2038_parse_section().
+ * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Packet
  */
 void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt);
 
