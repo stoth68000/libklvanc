@@ -110,7 +110,10 @@ pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCoun
 	/* Parse the PES section, like any other tool might. */
 	struct smpte2038_anc_data_packet_s *result = 0;
 	smpte2038_parse_section(buf, byteCount, &result);
-	smpte2038_smpte2038_anc_data_packet_dump(result);
+	if (result)
+		smpte2038_smpte2038_anc_data_packet_dump(result);
+	else
+		fprintf(stderr, "Error parsing packet\n");
 
 	/* TODO: Push the vanc into the VANC processor */
 
