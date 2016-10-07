@@ -1,3 +1,9 @@
+/**
+ * @file	vanc.h
+ * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_H
@@ -14,11 +20,34 @@ extern "C" {
 /* A series of callbacks used by the VANC library to inform user applications
  * that certain messages have been fully decoded.
  */
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct packet_payload_information_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct packet_eia_708b_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct packet_eia_608_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct packet_scte_104_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct vanc_context_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct vanc_callbacks_s
 {
 	int (*payload_information)(void *user_context, struct vanc_context_s *, struct packet_payload_information_s *);
@@ -27,8 +56,9 @@ struct vanc_callbacks_s
 	int (*scte_104)(void *user_context, struct vanc_context_s *, struct packet_scte_104_s *);
 };
 
-/* Application specific context, the library allocates and stores user specific instance
- * information.
+/**
+ * @brief       Application specific context, the library allocates and stores user specific instance
+ *		information.
  */
 struct vanc_context_s
 {
@@ -41,15 +71,42 @@ struct vanc_context_s
 };
 
 /* Create or destroy some basic application/library context */
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s **ctx - Brief description goes here.
+ */
 int vanc_context_create(struct vanc_context_s **ctx);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx - Brief description goes here.
+ */
 int vanc_context_destroy(struct vanc_context_s *ctx);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx - Brief description goes here.
+ */
 int vanc_context_dump(struct vanc_context_s *ctx);
 
-/* Parse a line of payload, trigger callbacks as necessary. lineNr is passed around and only
- * used for reporting purposes, so we can figure out which line this came from in different
- * callbacks and various parts of the reporting stack.
+/**
+ * @brief	Parse a line of payload, trigger callbacks as necessary. lineNr is passed around and only
+ *		used for reporting purposes, so we can figure out which line this came from in different
+ *		callbacks and various parts of the reporting stack.
+ * @param[in]	struct vanc_context_s *ctx - Brief description goes here.
+ * @param[in]	unsigned int lineNr - Brief description goes here.
+ * @param[in]	unsigned short *arr - Brief description goes here.
+ * @param[in]	unsigned int len - Brief description goes here.
  */
 int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	uint16_t *vanc - Brief description goes here.
+ * @param[in]	int maxlen - Brief description goes here.
+ * @param[in]	unsigned int linenr - Brief description goes here.
+ * @param[in]	int onlyvalid - Brief description goes here.
+ */
 void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
 #include <libklvanc/vanc-module1.h>
@@ -62,10 +119,17 @@ void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, 
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
 
-/* Take an array of payload, create a fully formed VANC message.
- * bitDepth of 10 is the only valid input value.
- * did: 0x41, sdid: 0x07 = SCTE104
- * generateParity = 1/0
+/**
+ * @brief	Take an array of payload, create a fully formed VANC message.
+ *		bitDepth of 10 is the only valid input value.
+ *		did: 0x41, sdid: 0x07 = SCTE104
+ *		generateParity = 1/0
+ * @param[in]	uint8_t sdid, uint8_t did - Brief description goes here.
+ * @param[in]	const uint8_t *src - Brief description goes here.
+ * @param[in]	uint16_t srcByteCount - Brief description goes here.
+ * @param[in]	uint16_t **dst - Brief description goes here.
+ * @param[in]	uint16_t *dstWordCount - Brief description goes here.
+ * @param[in]	uint32_t bitDepth - Brief description goes here.
  */
 int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	const uint8_t *src, uint16_t srcByteCount,
