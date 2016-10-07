@@ -72,6 +72,7 @@ static unsigned int g_linenr = 0;
 
 /* SMPTE 2038 */
 static int g_packetizeSMPTE2038 = 0;
+static int g_packetizePID = 0;
 static struct smpte2038_packetizer_s *smpte2038_ctx = 0;
 static uint8_t g_cc = 0;
 /* END:SMPTE 2038 */
@@ -228,7 +229,8 @@ static int AnalyzeVANC(const char *fn)
 
 				uint8_t *pkts = 0;
 				uint32_t packetCount = 0;
-				if (ts_packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts, &packetCount, 188, &g_cc, 0x726) == 0) {
+				if (ts_packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts,
+					&packetCount, 188, &g_cc, g_packetizePID) == 0) {
 					FILE *fh = fopen(TS_OUTPUT_NAME, "a+");
 					if (fh) {
 						if (g_verbose) {
@@ -751,7 +753,7 @@ static int usage(const char *progname, int status)
 		"    -v              Increase level of verbosity (def: 0)\n"
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
 		"    -i <number>     Capture from input port (def: 0)\n"
-		"    -P              Packetsize all detected VANC into SMPTE2038 PES frames.\n"
+		"    -P pid 0xNNNN   Packetsize all detected VANC into SMPTE2038 TS packets using pid.\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
@@ -863,6 +865,11 @@ static int _main(int argc, char *argv[])
 			break;
 		case 'P':
 			g_packetizeSMPTE2038 = 1;
+			if ((sscanf(optarg, "0x%x", &g_packetizePID) != 1) || (g_packetizePID > 0x1fff)) {
+				wantHelp = true;
+			} else {
+				/* Success */
+			}
 			break;
 		case '?':
 		case 'h':
