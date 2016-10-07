@@ -198,7 +198,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 		if (!q)
 			break;
 
-		char *tag, *value;
+		char *tag = 0, *value = 0;
 		if (url_argsplit(q, &tag, &value) < 0) {
 			printf("split error\n");
 		}
