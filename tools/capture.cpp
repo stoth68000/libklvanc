@@ -879,7 +879,6 @@ static int _main(int argc, char *argv[])
 		}
 	}
 
-// MMM
  	if (g_packetizeSMPTE2038) {
 		unlink(TS_OUTPUT_NAME);
 		if (smpte2038_packetizer_alloc(&smpte2038_ctx) < 0) {
