@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libklvanc/smpte2038.h>
 
 static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */)
 {
@@ -11,45 +12,6 @@ static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typ
                 printf("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n");
         printf("\n");
 }
-
-struct smpte2038_anc_data_line_s
-{
-	uint8_t		reserved_000000;
-	uint8_t		c_not_y_channel_flag;
-	uint16_t	line_number;
-	uint16_t	horizontal_offset;
-	uint16_t	DID;
-	uint16_t	SDID;
-	uint16_t	data_count;
-	uint16_t	*user_data_words;
-	uint16_t	checksum_word;
-};
-
-struct smpte2038_anc_data_packet_s
-{
-	uint32_t	packet_start_code_prefix;
-	uint8_t		stream_id;
-	uint16_t	PES_packet_length;
-	uint8_t		reserved_10;
-	uint8_t		PES_scrambling_control;
-	uint8_t		PES_priority;
-	uint8_t		data_alignment_indicator;
-	uint8_t		copyright;
-	uint8_t		original_or_copy;
-	uint8_t		PTS_DTS_flags;
-	uint8_t		ESCR_flag;
-	uint8_t		ES_rate_flag;
-	uint8_t		DSM_trick_mode_flag;
-	uint8_t		additional_copy_info_flag;
-	uint8_t		PES_CRC_flag;
-	uint8_t		PES_extension_flag;
-	uint8_t		PES_header_data_length;
-	uint8_t		reserved_0010;
-	uint64_t	PTS;
-
-	int lineCount;
-	struct smpte2038_anc_data_line_s *lines;
-};
 
 void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt)
 {
@@ -252,5 +214,166 @@ printf("data_count = %x\n", l->data_count);
 	ret = 0;
 err:
 	return ret;
+}
+
+#define SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET 15
+#define SMPTE2038_PACKETIZER_DEBUG 0
+
+int smpte2038_packetizer_alloc(struct smpte2038_packetizer_s **ctx)
+{
+	struct smpte2038_packetizer_s *p = calloc(1, sizeof(*p));
+	if (!p)
+		return -1;
+
+	/* Leave enough space for us to prefix the PES header */
+	p->bufused = SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
+	p->buflen = 16384;
+	p->buffree = p->buflen - p->bufused;
+	p->buf = calloc(1, p->buflen);
+	if (!p->buf) {
+		free(p);
+		return -1;
+	}
+	p->bs = bs_alloc();
+
+	*ctx = p;
+	return 0;
+}
+
+static __inline void smpte2038_buffer_recalc(struct smpte2038_packetizer_s *ctx)
+{
+	ctx->buffree = ctx->buflen - ctx->bufused;
+}
+
+static void smpte2038_buffer_adjust(struct smpte2038_packetizer_s *ctx, uint32_t newsizeBytes)
+{
+#if SMPTE2038_PACKETIZER_DEBUG
+	printf("%s(%d)\n", __func__, newsizeBytes);
+#endif
+	if (newsizeBytes > (128 * 1024)) {
+		fprintf(stderr, "%s() buffer exceeds impossible limit, with %d additional bytes\n", __func__, newsizeBytes);
+		abort();
+	}
+	ctx->buf = realloc(ctx->buf, newsizeBytes);
+	ctx->buflen = newsizeBytes;
+	if (ctx->bufused > ctx->buflen)
+		ctx->bufused = ctx->buflen;
+
+	smpte2038_buffer_recalc(ctx);
+}
+
+void smpte2038_packetizer_free(struct smpte2038_packetizer_s **ctx)
+{
+	if (!ctx && (*ctx == 0))
+		return;
+
+	free((*ctx)->buf);
+	bs_free((*ctx)->bs);
+	memset(*ctx, 0, sizeof(struct smpte2038_packetizer_s));
+	free(*ctx);
+}
+
+int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx)
+{
+	ctx->bufused = SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
+	smpte2038_buffer_recalc(ctx);
+	memset(ctx->buf, 0xff, ctx->buflen);
+
+	return 0;
+}
+
+int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packet_header_s *pkt)
+{
+	uint16_t offset = 0; /* TODO: Horizontal offset */
+	uint32_t reqd = pkt->payloadLengthWords * sizeof(uint16_t);
+
+	if ((reqd + 64 /* PES fields - headroom */) > ctx->buffree)
+		smpte2038_buffer_adjust(ctx, ctx->buflen + 16384);
+
+	/* Prepare a new 2038 line and add it to the existing buffer */
+
+        bs_write_set_buffer(ctx->bs, ctx->buf + ctx->bufused, ctx->buffree);
+        bs_write_bits(ctx->bs, 0, 6);				/* '000000' */
+        bs_write_bits(ctx->bs, 0, 1);				/* c_not_y_channel_flag */
+        bs_write_bits(ctx->bs, pkt->lineNr, 11);		/* line_number */
+        bs_write_bits(ctx->bs, offset, 12);			/* horizontal_offset */
+        bs_write_bits(ctx->bs, pkt->did, 10);			/* DID */
+        bs_write_bits(ctx->bs, pkt->dbnsdid, 10);		/* SDID */
+        bs_write_bits(ctx->bs, pkt->payloadLengthWords, 10);	/* data_count */
+	for (int i = 0; i < pkt->payloadLengthWords; i++)
+        	bs_write_bits(ctx->bs, pkt->payload[i], 10);	/* user_data_word */
+       	bs_write_bits(ctx->bs, pkt->checksum, 10);		/* checksum_word */
+	bs_write_byte_stuff(ctx->bs, 1);			/* Stuffing byte if required to end on byte alignment. */
+
+	/* add stuffing_byte so the stream is easier to eyeball debug. */
+	for (int i = 0; i < 8; i++)
+		bs_write_bits(ctx->bs, 0xff, 8);
+
+	/* Close (actually its 'align') the bitstream buffer */
+	bs_write_buffer_complete(ctx->bs);
+
+	/* Finally, update our original buffer indexes to accomodate any writing by the bitstream. */
+	ctx->bufused += bs_get_byte_count(ctx->bs);
+	smpte2038_buffer_recalc(ctx);
+#if SMPTE2038_PACKETIZER_DEBUG
+	printf("bufused = %d buffree = %d\n", ctx->bufused, ctx->buffree);
+#endif
+	return 0;
+}
+
+/* return the size in bytes of the newly created buffer */
+int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx)
+{
+	if (ctx->bufused == SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET)
+		return -1;
+#if SMPTE2038_PACKETIZER_DEBUG
+	printf("%s() used = %d\n", __func__, ctx->bufused);
+#endif
+	/* Now generate a correct looking PES frame and output it */
+	/* See smpte 2038-2008 - Page 5, Table 2 for description. */
+
+	/* Set the bitstream to the start of the buffer, we need to be careful
+	 * and not tramplpe the VANC that starts at offset 15.
+	 */
+	bs_write_set_buffer(ctx->bs, ctx->buf, 15);
+
+	/* PES Header - Bug: bitstream can't write 32bit values */
+	bs_write_bits(ctx->bs, 1, 24);		/* packet_start_code_prefix */
+	bs_write_bits(ctx->bs, 0xBD, 8);		/* stream_id */
+	bs_write_bits(ctx->bs, 0, 16);		/* PES_packet_length */
+	bs_write_bits(ctx->bs, 2, 2);		/* '10' fixed value */
+	bs_write_bits(ctx->bs, 0, 2);		/* PES_scrambling_control (not scrambled) */
+	bs_write_bits(ctx->bs, 0, 1);		/* PES_priority */
+	bs_write_bits(ctx->bs, 1, 1);		/* data_alignment_indicator (aligned) */
+	bs_write_bits(ctx->bs, 0, 1);		/* copyright (not-copyright) */
+	bs_write_bits(ctx->bs, 0, 1);		/* original-or-copy (copy) */
+	bs_write_bits(ctx->bs, 2, 2);		/* PTS_DTS_flags (PTS Present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* ESCR_flag (not present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* ES_RATE_flag (not present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* DSM_TRICK_MODE_flag (not present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* additional_copy_info_flag (not present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* PES_CRC_flag (not present) */
+	bs_write_bits(ctx->bs, 0, 1);		/* PES_EXTENSION_flag (not present) */
+	bs_write_bits(ctx->bs, 5, 8);		/* PES_HEADER_DATA_length */
+	bs_write_bits(ctx->bs, 2, 4);		/* '0010' fixed value */
+
+	uint64_t pts = 0; /* TODO */
+	bs_write_bits(ctx->bs, (pts >> 30), 3);			/* PTS[32:30] */
+	bs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
+	bs_write_bits(ctx->bs, (pts >> 15) & 0xefff, 15);	/* PTS[29:15] */
+	bs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
+	bs_write_bits(ctx->bs, (pts & 0xefff), 15);		/* PTS[14:0] */
+	bs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
+
+	/* Close (actually its 'align') the bitstream buffer */
+	bs_write_buffer_complete(ctx->bs);
+
+#if SMPTE2038_PACKETIZER_DEBUG
+	hexdump(ctx->buf, ctx->bufused, 32);
+	printf("%d buffer length\n", ctx->bufused);
+	printf("%d bs used\n", ctx->bs->reg_used);
+#endif
+
+	return 0;
 }
 

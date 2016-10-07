@@ -8,6 +8,8 @@
 #ifndef SMPTE2038_H
 #define SMPTE2038_H
 
+#include <libklvanc/klbitstream_readwriter.h>
+#include <libklvanc/vanc-packets.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -84,6 +86,51 @@ void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s
  * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Packet
  */
 void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt);
+
+struct smpte2038_packetizer_s
+{
+	uint8_t *buf;
+	uint32_t buflen;
+	uint32_t bufused;
+	uint32_t buffree;
+	struct   bs_context_s *bs;
+};
+
+/**
+ * @brief	Allocate a context so we can use this with the rest of the library.
+ * @param[out]	struct smpte2038_packetizer_s **ctx - Context
+ * @return      0 - Success
+ * @return    < 0 - Error
+ */
+int smpte2038_packetizer_alloc(struct smpte2038_packetizer_s **ctx);
+
+/**
+ * @brief	Deallocate and release a previously allocated context, see smpte2038_packetizer_alloc().
+ * @param[in]	struct smpte2038_packetizer_s **ctx - Context
+ */
+void smpte2038_packetizer_free(struct smpte2038_packetizer_s **ctx);
+
+/**
+ * @brief	Initialize state, typically done at the beginning of each incoming SDI frame\n
+ *              must be done before attempting to append decoded VANC packets.
+ * @param[in]	struct smpte2038_packetizer_s **ctx - Context
+ * @return      0 - Success
+ * @return    < 0 - Error
+ */
+int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx);
+
+int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packet_header_s *pkt);
+
+/**
+ * @brief	Finalize VANC collection state. Typically done when the last VANC line in a frame\n
+ *              has been passed to smpte2038_packetizer_append().\n
+ *              Don't attempt to append without first calling smpte2038_packetizer_begin().
+ * @param[in]	struct smpte2038_packetizer_s **ctx - Context
+ * @param[in]	struct packet_header_s *pkt - A fully decoded VANC packet, from the vanc_*() callbacks.
+ * @return      0 - Success
+ * @return    < 0 - Error
+ */
+int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx);
 
 #ifdef __cplusplus
 };

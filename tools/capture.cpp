@@ -11,9 +11,11 @@
 #include <zlib.h>
 #include <libgen.h>
 #include <libklvanc/vanc.h>
+#include <libklvanc/smpte2038.h>
 
 #include "version.h"
 #include "DeckLinkAPI.h"
+#include "ts_packetizer.h"
 
 class DeckLinkCaptureDelegate : public IDeckLinkInputCallback
 {
@@ -67,6 +69,12 @@ static int vancOutputFile = -1;
 static int g_showStartupMemory = 0;
 static int g_verbose = 0;
 static unsigned int g_linenr = 0;
+
+/* SMPTE 2038 */
+static int g_packetizeSMPTE2038 = 0;
+static struct smpte2038_packetizer_s *smpte2038_ctx = 0;
+static uint8_t g_cc = 0;
+/* END:SMPTE 2038 */
 
 static IDeckLink *deckLink;
 static IDeckLinkInput *deckLinkInput;
@@ -164,6 +172,7 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 
 #define VANC_SOL_INDICATOR 0xEFBEADDE
 #define VANC_EOL_INDICATOR 0xEDFEADDE
+#define TS_OUTPUT_NAME "/tmp/smpte2038-sample.ts"
 static int AnalyzeVANC(const char *fn)
 {
 	FILE *fh = fopen(fn, "rb");
@@ -186,6 +195,7 @@ static int AnalyzeVANC(const char *fn)
 	unsigned char *buf = (unsigned char *)malloc(maxbuflen);
 
 	while (!feof(fh)) {
+
 		/* Warning: Balance these reads with the file writes in processVANC */
 		fread(&uiSOL, sizeof(unsigned int), 1, fh);
 		fread(&uiLine, sizeof(unsigned int), 1, fh);
@@ -212,6 +222,24 @@ static int AnalyzeVANC(const char *fn)
 		if (g_verbose > 1)
 			hexdump(buf, uiStride, 64);
 
+		if (uiLine == 1 && g_packetizeSMPTE2038) {
+			if (smpte2038_packetizer_end(smpte2038_ctx) == 0) {
+				printf("%s() PES buffer is complete\n", __func__);
+
+				uint8_t *pkts = 0;
+				uint32_t packetCount = 0;
+				if (packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts, &packetCount, 188, &g_cc, 0x726) == 0) {
+					FILE *fh = fopen(TS_OUTPUT_NAME, "a+");
+					if (fh) {
+						printf("Writing %d packets.\n", packetCount);
+						fwrite(pkts, packetCount, 188, fh);
+						fclose(fh);
+					}
+					free(pkts);
+				}
+			}
+			smpte2038_packetizer_begin(smpte2038_ctx);
+		}
 		convert_colorspace_and_parse_vanc(buf, uiStride, uiLine);
 	}
 
@@ -236,6 +264,9 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 	IDeckLinkVideoFrameAncillary *vanc;
 	if (frame->GetAncillaryData(&vanc) != S_OK)
 		return;
+
+	if (g_packetizeSMPTE2038)
+		smpte2038_packetizer_begin(smpte2038_ctx);
 
 	BMDDisplayMode dm = vanc->GetDisplayMode();
 	BMDPixelFormat pf = vanc->GetPixelFormat();
@@ -336,6 +367,12 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 			written++;
 		}
 
+	}
+
+	if (g_packetizeSMPTE2038) {
+		if (smpte2038_packetizer_end(smpte2038_ctx) == 0) {
+			printf("%s() PES buffer is complete\n", __func__);
+		}
 	}
 
 	if (g_verbose) {
@@ -604,6 +641,10 @@ static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s 
 	/* Have the library display some debug */
 	dump_PAYLOAD_INFORMATION(ctx, pkt);
 
+	if (g_packetizeSMPTE2038) {
+		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
+		}
+	}
 	return 0;
 }
 
@@ -614,6 +655,10 @@ static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struc
 	/* Have the library display some debug */
 	dump_EIA_708B(ctx, pkt);
 
+	if (g_packetizeSMPTE2038) {
+		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
+		}
+	}
 	return 0;
 }
 
@@ -624,6 +669,11 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 	/* Have the library display some debug */
 	dump_EIA_608(ctx, pkt);
 
+	if (g_packetizeSMPTE2038) {
+		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
+		}
+	}
+
 	return 0;
 }
 
@@ -633,6 +683,11 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 
 	/* Have the library display some debug */
 	dump_SCTE_104(ctx, pkt);
+
+	if (g_packetizeSMPTE2038) {
+		if (smpte2038_packetizer_append(smpte2038_ctx, &pkt->hdr) < 0) {
+		}
+	}
 
 	return 0;
 }
@@ -698,6 +753,7 @@ static int usage(const char *progname, int status)
 		"    -v              Increase level of verbosity (def: 0)\n"
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
 		"    -i <number>     Capture from input port (def: 0)\n"
+		"    -P              Attempt to packetsize the VANC into SMPTE2038 PES frames.\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
@@ -733,7 +789,7 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:P")) != -1) {
 		switch (ch) {
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
@@ -807,9 +863,21 @@ static int _main(int argc, char *argv[])
 				goto bail;
 			}
 			break;
+		case 'P':
+			g_packetizeSMPTE2038 = 1;
+			break;
 		case '?':
 		case 'h':
 			wantHelp = true;
+		}
+	}
+
+// MMM
+ 	if (g_packetizeSMPTE2038) {
+		unlink(TS_OUTPUT_NAME);
+		if (smpte2038_packetizer_alloc(&smpte2038_ctx) < 0) {
+			fprintf(stderr, "Unable to allocate a SMPTE2038 context.\n");
+			goto bail;
 		}
 	}
 
@@ -949,6 +1017,7 @@ static int _main(int argc, char *argv[])
 	fprintf(stdout, "Stopping Capture\n");
 
         vanc_context_destroy(vanchdl);
+	smpte2038_packetizer_free(&smpte2038_ctx);
 
 bail:
 
