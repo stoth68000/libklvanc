@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef KLBITSTREAM_READWRITER_H
 #define KLBITSTREAM_READWRITER_H
@@ -134,6 +135,17 @@ static __inline__ void bs_write_bit(struct bs_context_s *ctx, uint32_t bit)
 		ctx->reg_used = 0;
 //		printf("Wrote %02x, size = %d\n", *(ctx->buf + ctx->buflen_used - 1), ctx->buflen_used);
 	}
+}
+
+/**
+ * @brief       Pad the bitsream buffer into byte alignment, stuff the 'bit' mutiple times to align.
+ * @param[in]   struct bs_context_s *ctx  bitstream context
+ * @param[in]   uint32_t bit  A single bit.
+ */
+static __inline__ void bs_write_byte_stuff(struct bs_context_s *ctx, uint32_t bit)
+{
+	while (ctx->reg_used > 0)
+		bs_write_bit(ctx, bit);
 }
 
 /**
