@@ -30,3 +30,4 @@ src/libklvanc_la-core-packets.lo
 src/libklvanc_la-core.lo
 src/libklvanc_la-core-checksum.lo
 src/libklvanc_la-smpte2038.lo
+.doxygen/html
