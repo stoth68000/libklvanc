@@ -754,6 +754,7 @@ static int usage(const char *progname, int status)
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
 		"    -i <number>     Capture from input port (def: 0)\n"
 		"    -P pid 0xNNNN   Packetsize all detected VANC into SMPTE2038 TS packets using pid.\n"
+		"                    The packets are store in file %s\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
@@ -762,6 +763,7 @@ static int usage(const char *progname, int status)
 		"Capture then interpret 10bit VANC (or 8bit VANC wth -p0), from 1280x720p60\n"
 		"    %s -m13 -p1 -V vanc.raw\n"
 		"    %s          -I vanc.raw\n\n",
+		TS_OUTPUT_NAME,
 		basename((char *)progname),
 		basename((char *)progname),
 		basename((char *)progname)
