@@ -60,7 +60,11 @@ struct smpte2038_anc_data_packet_s
 };
 
 /**
- * @brief	Inspect a section, if its deemed valid, create a VANC packet and return it to the caller.
+ * @brief	Inspect a section, if its deemed valid, create a VANC packet and return it to the caller.\n
+ *              Typically this is a line of SDI data, 10bit video. We parse the content in this function,\n
+ *              if we find a VANC header signiture we'll create an ancillary packet to represet it,\n
+ *              we'll attempt to parse the structure and return a user representation of it.\n\n
+ *              Callers must release the returned struct using smpte2038_anc_data_packet_free().
  * @param[in]	uint8_t *section - An array of memory that likely contains a valic (or invalid) VANC message.
  * @param[in]	unsigned int byteCount - Length of section.
  * @param[out]	struct smpte2038_anc_data_packet_s **result - Packet
