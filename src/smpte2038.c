@@ -105,7 +105,7 @@ void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s
 	}
 }
 
-#define VALIDATE(obj, val) if ((obj) != (val)) goto err;
+#define VALIDATE(obj, val) if ((obj) != (val)) { printf("%s is invalid\n", #obj); goto err; }
 int smpte2038_parse_section(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result)
 {
 	int ret = -1;
