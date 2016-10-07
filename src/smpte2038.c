@@ -179,7 +179,7 @@ printf("\nlinenr = %d, rem = %d\n", ++linenr, rem);
 		l->line_number |= (*(p + 1) & 0xff) << 2;
 		l->line_number |= (*(p + 2) & 0xc0) >> 6;
 printf("line_number = %d\n", l->line_number);
-		VALIDATE(l->line_number, 9);
+		//VALIDATE(l->line_number, 9);
 
 		l->horizontal_offset |= (*(p + 2) & 0x3f) << 6;
 		l->horizontal_offset |= (*(p + 3) & 0xfc) >> 2;
