@@ -1,3 +1,9 @@
+/**
+ * @file	vanc-module1.h
+ * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_MODULE1_H
@@ -7,6 +13,10 @@
 extern "C" {
 #endif  
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx
+ */
 int vanc_module01_dump(struct vanc_context_s *ctx);
 
 #ifdef __cplusplus

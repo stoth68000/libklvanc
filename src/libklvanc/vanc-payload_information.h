@@ -1,3 +1,9 @@
+/**
+ * @file	vanc-payload_information.h
+ * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_PAYLOAD_INFORMATION_H
@@ -9,6 +15,9 @@
 extern "C" {
 #endif  
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 enum payload_aspect_ratio_e
 {
 	ASPECT_UNDEFINED = 0,
@@ -16,6 +25,9 @@ enum payload_aspect_ratio_e
 	ASPECT_16x9,
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 enum payload_afd_e
 {
 	AFD_UNDEFINED = 0,
@@ -30,6 +42,9 @@ enum payload_afd_e
 	AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER,
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct packet_payload_information_s
 {
 	struct packet_header_s hdr;
@@ -39,8 +54,22 @@ struct packet_payload_information_s
 	unsigned char barDataFlags;
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	enum payload_afd_e afd - Brief description goes here.
+ */
 const char *afd_to_string(enum payload_afd_e afd);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	enum payload_aspect_ratio_e ar - Brief description goes here.
+ */
 const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ */
 int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
