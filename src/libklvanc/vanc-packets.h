@@ -1,3 +1,9 @@
+/**
+ * @file	vanc-packets.h
+ * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_PACKETS_H
@@ -10,6 +16,9 @@
 extern "C" {
 #endif  
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 enum packet_type_e
 {
 	VANC_TYPE_UNDEFINED = 0,
@@ -19,6 +28,9 @@ enum packet_type_e
 	VANC_TYPE_SCTE_104,
 };
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct packet_header_s
 {
 	enum packet_type_e	type;
@@ -29,7 +41,7 @@ struct packet_header_s
 	unsigned short		payload[16384];
 	unsigned short		payloadLengthWords;
 	unsigned int 		checksumValid;
-	unsigned int		lineNr; /* The vanc in this header came from line.... */
+	unsigned int		lineNr; 		/**< The vanc in this header came from line.... */
 	unsigned short		raw[16384];
 	unsigned int 		rawLengthWords;
 };
