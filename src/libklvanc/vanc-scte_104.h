@@ -1,3 +1,9 @@
+/**
+ * @file	vanc-scte_104.h
+ * @author	Copyright Kernel Labs Inc 2014-2016. All Rights Reserved.
+ * @brief	TODO - Brief description goes here.
+ */
+
 /* Copyright Kernel Labs Inc 2014-2016. All Rights Reserved. */
 
 #ifndef _VANC_SCTE_104_H
@@ -9,19 +15,59 @@
 extern "C" {
 #endif  
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 #define SO_INIT_REQUEST_DATA     0x001
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define MO_INIT_REQUEST_DATA     0x101
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICESTART_NORMAL    0x01
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICESTART_IMMEDIATE 0x02
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICEEND_NORMAL      0x03
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICEEND_IMMEDIATE   0x04
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICE_CANCEL         0x05
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SCTE104_SR_DATA_FIELD__UNIQUE_PROGRAM_ID(pkt) ((pkt)->sr_data.unique_program_id)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SCTE104_SR_DATA_FIELD__SPLICE_EVENT_ID(pkt) ((pkt)->sr_data.splice_event_id)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SCTE104_SR_DATA_FIELD__AUTO_RETURN_FLAGS(pkt) ((pkt)->sr_data.auto_return_flag)
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct single_operation_message
 {
 	/* single_operation_message */
@@ -36,6 +82,9 @@ struct single_operation_message
 	unsigned short DPI_PID_index;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct multiple_operation_message_timestamp
 {
 	/* SCTE Spec table 11.2 */
@@ -58,6 +107,9 @@ struct multiple_operation_message_timestamp
 	};
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct multiple_operation_message
 {
 	/* multiple_operation_message */
@@ -79,6 +131,9 @@ struct multiple_operation_message
 	} *ops;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct splice_request_data
 {
 	/* SCTE 104 Table 8-5 */
@@ -92,6 +147,9 @@ struct splice_request_data
 	unsigned char auto_return_flag;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct packet_scte_104_s
 {
 	struct packet_header_s hdr;
@@ -111,6 +169,10 @@ struct packet_scte_104_s
 	struct multiple_operation_message mo_msg;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ */
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
