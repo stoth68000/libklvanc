@@ -276,7 +276,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	uint8_t *pkts = 0;
 	uint32_t packetCount = 0;
 	uint8_t cc = 0;
-	packetizer(section, section_length, &pkts, &packetCount, 188, &cc, ctx->pid);
+	ts_packetizer(section, section_length, &pkts, &packetCount, 188, &cc, ctx->pid);
 	for (uint32_t i = 0; i < packetCount; i++) {
 		//hexdump(pkts + (i * 188), 188, 16);
 	}

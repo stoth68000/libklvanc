@@ -6,7 +6,7 @@
 #include "ts_packetizer.h"
 
 /* Convert PES data into a series of TS packets */
-int packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *packetCount,
+int ts_packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t *packetCount,
 	int packetSize, uint8_t *cc, uint16_t pid)
 {
 	if ((!buf) || (byteCount == 0) || (!pkts) || (!packetCount) || (packetSize != 188) || (!cc) || (pid > 0x1fff))

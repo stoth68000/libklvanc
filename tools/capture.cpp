@@ -228,7 +228,7 @@ static int AnalyzeVANC(const char *fn)
 
 				uint8_t *pkts = 0;
 				uint32_t packetCount = 0;
-				if (packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts, &packetCount, 188, &g_cc, 0x726) == 0) {
+				if (ts_packetizer(smpte2038_ctx->buf, smpte2038_ctx->bufused, &pkts, &packetCount, 188, &g_cc, 0x726) == 0) {
 					FILE *fh = fopen(TS_OUTPUT_NAME, "a+");
 					if (fh) {
 						if (g_verbose) {
@@ -751,7 +751,7 @@ static int usage(const char *progname, int status)
 		"    -v              Increase level of verbosity (def: 0)\n"
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
 		"    -i <number>     Capture from input port (def: 0)\n"
-		"    -P              Attempt to packetsize the VANC into SMPTE2038 PES frames.\n"
+		"    -P              Packetsize all detected VANC into SMPTE2038 PES frames.\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
