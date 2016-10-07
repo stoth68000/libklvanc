@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 static struct did_s {
-	int did;
-	int sdid;
+	uint16_t did;
+	uint16_t sdid;
 	const char *spec;
 	const char *desc;
 } dids[] = {
@@ -29,7 +30,7 @@ static struct did_s {
 	{ 0x61, 0x07,   "S334", "ARIB Captioning - Analog"},
 };
 
-const char *klvanc_didLookupDescription(int did, int sdid)
+const char *klvanc_didLookupDescription(uint16_t did, uint16_t sdid)
 {
 	for (unsigned int i = 0; i < (sizeof(dids) / sizeof(struct did_s)); i++) {
 		if ((did == dids[i].did) && (sdid == dids[i].sdid))
@@ -39,7 +40,7 @@ const char *klvanc_didLookupDescription(int did, int sdid)
 	return "Undefined";
 }
 
-const char *klvanc_didLookupSpecification(int did, int sdid)
+const char *klvanc_didLookupSpecification(uint16_t did, uint16_t sdid)
 {
 	for (unsigned int i = 0; i < (sizeof(dids) / sizeof(struct did_s)); i++) {
 		if ((did == dids[i].did) && (sdid == dids[i].sdid))
