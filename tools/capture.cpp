@@ -13,6 +13,7 @@
 #include <libklvanc/vanc.h>
 #include <libklvanc/smpte2038.h>
 
+#include "hexdump.h"
 #include "version.h"
 #include "DeckLinkAPI.h"
 #include "ts_packetizer.h"
@@ -97,13 +98,6 @@ static struct frameTime_s {
 	unsigned long long frameCount;
 	unsigned long long remoteFrameCount;
 } frameTimes[2];
-
-static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */)
-{
-	for (unsigned int i = 0; i < len; i++)
-		printf("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n");
-	printf("\n");
-}
 
 static void showMemory(FILE * fd)
 {

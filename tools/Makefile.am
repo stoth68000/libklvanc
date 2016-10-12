@@ -25,6 +25,7 @@ SRC += udp.c
 SRC += url.c
 SRC += ts_packetizer.c
 SRC += klringbuffer.c
+SRC += pes_extractor.c
 
 bin_PROGRAMS  = klvanc_util
 bin_PROGRAMS += klvanc_capture

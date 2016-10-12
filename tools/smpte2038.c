@@ -16,26 +16,13 @@
 #include "url.h"
 #include "ts_packetizer.h"
 #include "klringbuffer.h"
+#include "pes_extractor.h"
 
 #include "version.h"
+#include "hexdump.h"
 
 #define DEFAULT_FIFOSIZE 1048576
-#define MAX_PES_SIZE 16384
 #define DEFAULT_PID 0x80
-
-typedef void (*pes_extractor_callback)(void *cb_context, unsigned char *buf, int byteCount);
-struct pes_extractor_s
-{
-	uint16_t pid;
-
-	KLRingBuffer *rb;
-	unsigned int buf_size;	/* Complete size of the buf allocation */
-
-	int packet_size;
-	int has_sync;
-	void *cb_context;
-	pes_extractor_callback cb;
-};
 
 static struct app_context_s
 {
@@ -50,13 +37,6 @@ static struct app_context_s
 } app_context;
 
 static struct app_context_s *ctx = &app_context;
-
-static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */)
-{
-        for (unsigned int i = 0; i < len; i++)
-                printf("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n");
-        printf("\n");
-}
 
 /* When the PES extractor has demultiplexed all data, we're call with the
  * entire PES array. Parse it, dump it to console.
@@ -80,125 +60,6 @@ pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCoun
 	/* TODO: Push the vanc into the VANC processor */
 
 	return 0;
-}
-
-/* PES Extractor mechanism, so convert MULTIPLE TS packets containing PES VANC, into PES array. */
-static int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
-{
-	memset(pe, 0, sizeof(*pe));
-	pe->rb = rb_new(MAX_PES_SIZE, 1048576);
-	if (!pe->rb)
-		return -1;
-
-	pe->pid = pid;
-	pe->buf_size = MAX_PES_SIZE;
-	pe->cb_context = user_context;
-	pe->cb = cb;
-	pe->packet_size = 188;
-
-	return 0;
-}
-
-/* Take a single transport packet.
- * Calculate where the data begins.
- * Place all the data into a ring buffer.
- * Walk the ring buffer, locating any PES private data packets,
- * callback for each packet we detect.
- * ONLY PES_PRIVATE packets are supported, type 0xBD with
- * a valid length field.
- * Other packet types would be trivial to add, but know that
- * only VIDEO ES streams may have the pes_length value of zero
- * according to the spec.
- */
-static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
-{
-        int offset = 4;
-#if 0
-	if (*(pkt + 1) & 0x40)
-                section_offset++;
-#endif
-
-        unsigned char adaption = (*(pkt + 3) >> 4) & 0x03;
-        if ((adaption == 2) || (adaption == 3)) {
-                if (offset == 4)
-                        offset++;
-                offset += *(pkt + 4);
-        }
-
-	/* Regardless, append all packete data from offset to end of packet into the buffer */
-	size_t wlen = pe->packet_size - offset;
-	size_t l = rb_write(pe->rb, (const char *)pkt + offset, wlen);
-	if (l != wlen) {
-		printf("Write error, l = %zu, wlen = %zu\n", l, wlen);
-		return;
-	}
-
-	/* Now, peek in the buffer, obtain packet sync and dequeue packets */
-
-	while (1) {
-		/* If we have no yet syncronized, make that happen */
-		if (!pe->has_sync && rb_used(pe->rb) > 16) {
-			unsigned char hdr[] = { 0, 0, 1, 0xbd };
-			unsigned char b[4];
-			rb_read(pe->rb, (char *)&b[0], sizeof(b));
-			for (size_t i = 0; i < rb_used(pe->rb); i++) {
-				if (memcmp(b, hdr, sizeof(hdr)) == 0) {
-					pe->has_sync = 1;
-					break;
-				}
-				b[0] = b[1];
-				b[1] = b[2];
-				b[2] = b[3];
-				rb_read(pe->rb, (char *)&b[3], 1);
-			}
-		}
-
-		if (!pe->has_sync) {
-			/* Need more data */
-			break;
-		}
-
-		/* We have at least one viable message, probably..... */
-		char l[2];
-		rb_peek(pe->rb, (char *)&l[0], sizeof(l));
-		uint16_t pes_length = l[0] << 8 | l[1];
-
-		if (rb_used(pe->rb) + 2 > pes_length) {
-			/* Dequeue and process a complete pes message */
-			unsigned char *msg = malloc(pes_length + 6);
-			if (msg) {
-				msg[0] = 0;
-				msg[1] = 0;
-				msg[2] = 1;
-				msg[3] = 0xbd;
-
-				/* Read the peeked length and the entire message */
-				rb_read(pe->rb, (char *)msg + 4, pes_length + 2);
-				hexdump(msg, pes_length + 6, 16);
-				if (pe->cb)
-					pe->cb(pe->cb_context, msg, pes_length + 6);
-				free(msg);
-			}
-		} else {
-			break; /* Need more data */
-		}
-
-		pe->has_sync = 0;
-	}
-}
-
-static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
-{
-        if ((!pe) || (packetCount < 1) || (!pkt))
-                return 0;
-
-        for (int i = 0; i < packetCount; i++) {
-		uint16_t pid = ((*(pkt + 1) << 8) | *(pkt + 2)) & 0x1fff;
-                if (pid == pe->pid) {
-                        pe_processPacket(pe, pkt + (i * pe->packet_size), pe->packet_size);
-                }
-        }
-        return packetCount;
 }
 
 /* Create a PES array containing 8 lines of VANC data.
