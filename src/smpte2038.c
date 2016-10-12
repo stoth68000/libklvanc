@@ -6,6 +6,8 @@
 #include <string.h>
 #include <libklvanc/smpte2038.h>
 
+#define VANC8(n) ((n) & 0xff)
+
 static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */)
 {
         for (unsigned int i = 0; i < len; i++)
@@ -63,9 +65,10 @@ void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s
 		SHOW_LINE_U32("\t\t", l->SDID);
 		SHOW_LINE_U32("\t\t", l->data_count);
 		printf("\t\t");
-		for (int j = 0; j < l->data_count; j++)
+		for (int j = 0; j < VANC8(l->data_count); j++)
 			printf("%03x ", l->user_data_words[j]);
 		printf("\n");
+		SHOW_LINE_U32("\t\t", l->checksum_word);
 	}
 }
 
@@ -171,7 +174,7 @@ printf("data_count = %x\n", l->data_count);
 		 * into the checksum field later, it makes for easier processing.
 		 */
 		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
-		for (uint16_t i = 0; i < l->data_count; i++)
+		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
 			l->user_data_words[i] = bs_read_bits(bs, 10);
 
 		l->checksum_word = bs_read_bits(bs, 10);
