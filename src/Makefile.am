@@ -37,4 +37,5 @@ libklvanc_include_HEADERS += libklvanc/vanc-module1.h
 libklvanc_include_HEADERS += libklvanc/vanc-packets.h
 libklvanc_include_HEADERS += libklvanc/vanc-payload_information.h
 libklvanc_include_HEADERS += libklvanc/vanc-checksum.h
+libklvanc_include_HEADERS += libklvanc/klbitstream_readwriter.h
 

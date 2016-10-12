@@ -196,6 +196,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 		/* The number of frames we attempted to parse */
 		attempts++;
 
+		if (ctx->callbacks && ctx->callbacks->all)
+			ctx->callbacks->all(ctx->callback_context, ctx, hdr);
+
 		/* formally decode the entire packet */
 		void *decodedPacket;
 		ret = parseByType(ctx, hdr, &decodedPacket);

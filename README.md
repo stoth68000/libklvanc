@@ -6,10 +6,9 @@
     make
 
 ## Dependencies
-* <none>
+* none
 
-## Documentation:
-*****************
+## Making Documentation:
 To make doxygen documentation in the .doxygen folder, run the following command:
 
         make docs

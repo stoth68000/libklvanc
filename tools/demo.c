@@ -47,12 +47,19 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	return 0;
 }
 
+static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
+{
+	printf("%s:%s()\n", __FILE__, __func__);
+	return 0;
+}
+
 static struct vanc_callbacks_s callbacks = 
 {
 	.payload_information	= cb_PAYLOAD_INFORMATION,
 	.eia_708b		= cb_EIA_708B,
 	.eia_608		= cb_EIA_608,
 	.scte_104		= cb_SCTE_104,
+	.all			= cb_all,
 };
 /* END - CALLBACKS for message notification */
 

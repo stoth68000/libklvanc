@@ -25,6 +25,12 @@ extern "C" {
 /* A series of callbacks used by the VANC library to inform user applications
  * that certain messages have been fully decoded.
  */
+
+/**
+ * @brief	TODO - Brief description goes here.
+ */
+struct packet_header_s;
+
 /**
  * @brief	TODO - Brief description goes here.
  */
@@ -59,6 +65,7 @@ struct vanc_callbacks_s
 	int (*eia_708b)(void *user_context, struct vanc_context_s *, struct packet_eia_708b_s *);
 	int (*eia_608)(void *user_context, struct vanc_context_s *, struct packet_eia_608_s *);
 	int (*scte_104)(void *user_context, struct vanc_context_s *, struct packet_scte_104_s *);
+	int (*all)(void *user_context, struct vanc_context_s *, struct packet_header_s *);
 };
 
 /**
