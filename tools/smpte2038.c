@@ -302,12 +302,19 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int byteCount)
 {
 	struct app_context_s *ctx = userContext;
-	if (ctx->verbose) {
-		printf("%s() pushing %d bytes\n", __func__, byteCount);
-		if (ctx->verbose > 1)
-			hexdump(buf, byteCount, 16);
+
+	for (int i = 0; i < byteCount; i += 188) {
+		uint16_t pid = ((*(buf + i + 1) << 8) | *(buf + i + 2)) & 0x1fff;
+		if (pid != ctx->pid)
+			continue;
+
+		if (ctx->verbose) {
+			printf("%s() pushing %d bytes\n", __func__, byteCount);
+			if (ctx->verbose > 1)
+				hexdump(buf + i, 188, 16);
+		}
+		pe_push(&ctx->pe, buf + i, 188);
 	}
-	pe_push(&ctx->pe, buf, byteCount / 188);
 	return 0;
 }
 
