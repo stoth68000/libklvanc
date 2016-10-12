@@ -38,8 +38,9 @@ static struct app_context_s
 
 static struct app_context_s *ctx = &app_context;
 
-/* When the PES extractor has demultiplexed all data, we're called with the
- * entire PES array. Parse it, dump it to console.
+/* When the PES extractor has depacketized a PES packet of data, we're
+ * called with the entire PES array. Parse it, dump it to console.
+ * We're called from the thread context of whoever calls pe_push().
  */
 pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCount)
 {
@@ -51,7 +52,7 @@ pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCoun
 
 	/* Parse the PES section, like any other tool might. */
 	struct smpte2038_anc_data_packet_s *result = 0;
-	smpte2038_parse_section(buf, byteCount, &result);
+	smpte2038_parse_pes_packet(buf, byteCount, &result);
 	if (result)
 		smpte2038_smpte2038_anc_data_packet_dump(result);
 	else

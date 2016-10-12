@@ -73,7 +73,7 @@ struct smpte2038_anc_data_packet_s
  * @result	0 - Success, **result is valid for future use.
  * @result	< 0 - Error
  */
-int  smpte2038_parse_section(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
+int  smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
 
 /**
  * @brief	Inspect structure and output textual information to console.
