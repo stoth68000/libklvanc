@@ -11,6 +11,12 @@ AC_CANONICAL_HOST
 AC_PROG_CC
 AC_PROG_CC_C99
 AC_PROG_CXX
+if test `uname -s` = "Darwin"
+then
+CFLAGS+=" -I/usr/local/include "
+LDFLAGS+="-L/usr/local/lib "
+fi
+CFLAGS+=" -DKL_USERSPACE "
 
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL

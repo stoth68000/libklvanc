@@ -17,8 +17,8 @@ libklvanc_la_SOURCES += core.c
 libklvanc_la_SOURCES += smpte2038.c
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
-	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I../include -I/usr/local/include \
-	-DKL_USERSPACE -L/usr/local/lib
+	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I../include \
+	-DKL_USERSPACE
 
 if DEBUG
   libklvanc_la_CFLAGS += -g
