@@ -269,12 +269,12 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	bs_write_bits(bs, (pts & 0xefff), 15);		/* PTS[14:0] */
 	bs_write_bits(bs, 1, 1);			/* marker_bit */
 
-	int lineCount = 8;
+	int lineCount = 1;
 	for (int i = 0; i < lineCount; i++) {
 		/* VANC Payload */
-		bs_write_bits(bs, 0, 6);		/* fixed value '000000' */
-		bs_write_bits(bs, 0, 1);		/* c_not_y_channel_flag (HD luminance) */
-		bs_write_bits(bs, 9, 11);	/* line_number (9) */
+		bs_write_bits(bs, 0, 6);	/* fixed value '000000' */
+		bs_write_bits(bs, 0, 1);	/* c_not_y_channel_flag (HD luminance) */
+		bs_write_bits(bs, 10 + i, 11);	/* line_number (9) */
 		bs_write_bits(bs, 0, 12);	/* horizonal_offset (0 words from SAV) */
 		bs_write_bits(bs, arr[3], 10);	/* DID */
 		bs_write_bits(bs, arr[4], 10);	/* SDID */
@@ -315,9 +315,10 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	uint8_t *pkts = 0;
 	uint32_t packetCount = 0;
 	uint8_t cc = 0;
+printf("ctx->pid = %x\n", ctx->pid);
 	packetizer(section, section_length, &pkts, &packetCount, 188, &cc, ctx->pid);
 	for (uint32_t i = 0; i < packetCount; i++) {
-		//hexdump(pkts + (i * 188), 188, 16);
+		hexdump(pkts + (i * 188), 188, 16);
 	}
 
 	/* Write all the TS packets to a temp file. */
