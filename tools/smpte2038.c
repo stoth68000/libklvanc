@@ -15,6 +15,7 @@
 #include "udp.h"
 #include "url.h"
 #include "ts_packetizer.h"
+#include "klringbuffer.h"
 
 #include "version.h"
 
@@ -26,13 +27,12 @@ typedef void (*pes_extractor_callback)(void *cb_context, unsigned char *buf, int
 struct pes_extractor_s
 {
 	uint16_t pid;
-	uint8_t *buf;
+
+	KLRingBuffer *rb;
 	unsigned int buf_size;	/* Complete size of the buf allocation */
-	unsigned int buf_used;	/* Amount used, usually less than buf_size */
-	unsigned int pes_length;
 
 	int packet_size;
-	int appending;
+	int has_sync;
 	void *cb_context;
 	pes_extractor_callback cb;
 };
@@ -86,8 +86,8 @@ pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCoun
 static int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
 {
 	memset(pe, 0, sizeof(*pe));
-	pe->buf = (uint8_t *)calloc(MAX_PES_SIZE, 1);
-	if (!pe->buf)
+	pe->rb = rb_new(MAX_PES_SIZE, 1048576);
+	if (!pe->rb)
 		return -1;
 
 	pe->pid = pid;
@@ -99,9 +99,20 @@ static int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor
 	return 0;
 }
 
+/* Take a single transport packet.
+ * Calculate where the data begins.
+ * Place all the data into a ring buffer.
+ * Walk the ring buffer, locating any PES private data packets,
+ * callback for each packet we detect.
+ * ONLY PES_PRIVATE packets are supported, type 0xBD with
+ * a valid length field.
+ * Other packet types would be trivial to add, but know that
+ * only VIDEO ES streams may have the pes_length value of zero
+ * according to the spec.
+ */
 static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
 {
-        int section_offset = 4;
+        int offset = 4;
 #if 0
 	if (*(pkt + 1) & 0x40)
                 section_offset++;
@@ -109,51 +120,71 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 
         unsigned char adaption = (*(pkt + 3) >> 4) & 0x03;
         if ((adaption == 2) || (adaption == 3)) {
-                if (section_offset == 4)
-                        section_offset++;
-                section_offset += *(pkt + 4);
+                if (offset == 4)
+                        offset++;
+                offset += *(pkt + 4);
         }
 
-        if ((pe->appending == 0) &&
-		(*(pkt + 1) & 0x40) &&
-		(*(pkt + section_offset + 0) == 0) &&
-		(*(pkt + section_offset + 1) == 0) &&
-		(*(pkt + section_offset + 2) == 1) &&
-		(*(pkt + section_offset + 3) == 0xbd)
-	) {
-                pe->buf_used = 0;
-                pe->appending = 1;
-                pe->pes_length = *(pkt + section_offset + 4) << 8 | *(pkt + section_offset + 5);
-		pe->pes_length += 6; /* Header */
-#if 1
-                printf("%s() pes_length = %d (0x%x)\n", __func__, pe->pes_length, pe->pes_length);
-                printf("%s() section_offset = %d (0x%x)\n", __func__, section_offset, section_offset);
-#endif
-        }
-        if (!pe->appending)
-                return;
+	/* Regardless, append all packete data from offset to end of packet into the buffer */
+	size_t wlen = pe->packet_size - offset;
+	size_t l = rb_write(pe->rb, (const char *)pkt + offset, wlen);
+	if (l != wlen) {
+		printf("Write error, l = %zu, wlen = %zu\n", l, wlen);
+		return;
+	}
 
-        int clen = pe->pes_length - pe->buf_used + 3; /* 3 = tableid + length fields, don't forget these */
-        if (clen > (len - section_offset))
-                clen = len - section_offset;
-        memcpy(pe->buf + pe->buf_used, pkt + section_offset, clen);
-        pe->buf_used += clen;
+	/* Now, peek in the buffer, obtain packet sync and dequeue packets */
 
-	printf("pe->pes_length = %x pe->buf_used = %x\n", pe->pes_length, pe->buf_used);
+	while (1) {
+		/* If we have no yet syncronized, make that happen */
+		if (!pe->has_sync && rb_used(pe->rb) > 16) {
+			unsigned char hdr[] = { 0, 0, 1, 0xbd };
+			unsigned char b[4];
+			rb_read(pe->rb, (char *)&b[0], sizeof(b));
+			for (size_t i = 0; i < rb_used(pe->rb); i++) {
+				if (memcmp(b, hdr, sizeof(hdr)) == 0) {
+					pe->has_sync = 1;
+					break;
+				}
+				b[0] = b[1];
+				b[1] = b[2];
+				b[2] = b[3];
+				rb_read(pe->rb, (char *)&b[3], 1);
+			}
+		}
 
-        if (pe->pes_length > pe->buf_used) {
-                return; /* More data required */
-        }
+		if (!pe->has_sync) {
+			/* Need more data */
+			break;
+		}
 
-        printf("Buffer %d bytes long, section %d bytes long, %02x %02x %02x\n",
-                pe->buf_used,
-                pe->pes_length,
-                *(pe->buf + 0),
-                *(pe->buf + 1),
-                *(pe->buf + 2));
+		/* We have at least one viable message, probably..... */
+		char l[2];
+		rb_peek(pe->rb, (char *)&l[0], sizeof(l));
+		uint16_t pes_length = l[0] << 8 | l[1];
 
-	if (pe->cb)
-		pe->cb(pe->cb_context, pe->buf, pe->pes_length);
+		if (rb_used(pe->rb) + 2 > pes_length) {
+			/* Dequeue and process a complete pes message */
+			unsigned char *msg = malloc(pes_length + 6);
+			if (msg) {
+				msg[0] = 0;
+				msg[1] = 0;
+				msg[2] = 1;
+				msg[3] = 0xbd;
+
+				/* Read the peeked length and the entire message */
+				rb_read(pe->rb, (char *)msg + 4, pes_length + 2);
+				hexdump(msg, pes_length + 6, 16);
+				if (pe->cb)
+					pe->cb(pe->cb_context, msg, pes_length + 6);
+				free(msg);
+			}
+		} else {
+			break; /* Need more data */
+		}
+
+		pe->has_sync = 0;
+	}
 }
 
 static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
@@ -174,7 +205,6 @@ static size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packet
  * Write it to disk (/tmp) and attempt to parse it to check the
  * parser is operating correctly.
  */
-//#include "bitstream.h"
 static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
 	/* This is a fully formed 708B VANC message. We'll bury
@@ -424,6 +454,9 @@ static int _main(int argc, char *argv[])
 		}
 
 	}
+
+	if (ctx->pe.rb)
+		rb_free(ctx->pe.rb);
 
 no_mem:
 	return exitStatus;
