@@ -33,12 +33,12 @@ static struct app_context_s
 	unsigned int pid;
 
 	struct iso13818_udp_receiver_s *udprx;
-	struct pes_extractor_s pe;
+	struct pes_extractor_s *pe;
 } app_context;
 
 static struct app_context_s *ctx = &app_context;
 
-/* When the PES extractor has demultiplexed all data, we're call with the
+/* When the PES extractor has demultiplexed all data, we're called with the
  * entire PES array. Parse it, dump it to console.
  */
 pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCount)
@@ -180,9 +180,10 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	}
 
 	/* Test the PES extractor, parse our TS packets and parse the VANC */
-	struct pes_extractor_s pe;
-	pe_init(&pe, 0, (pes_extractor_callback)pes_cb, ctx->pid);
-	pe_push(&pe, pkts, packetCount);
+	struct pes_extractor_s *pe;
+	pe_alloc(&pe, 0, (pes_extractor_callback)pes_cb, ctx->pid);
+	pe_push(pe, pkts, packetCount);
+	pe_free(&pe);
 
 	free(pkts); /* Calls to packetizer, the results have to be caller freed. */
 
@@ -199,7 +200,7 @@ static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int
 		if (ctx->verbose > 1)
 			hexdump(buf, 188, 16);
 	}
-	pe_push(&ctx->pe, buf, byteCount / 188);
+	pe_push(ctx->pe, buf, byteCount / 188);
 	return 0;
 }
 
@@ -271,7 +272,7 @@ static int _main(int argc, char *argv[])
 		_usage(argv[0], 1);
 	}
 
-	pe_init(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
+	pe_alloc(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
 	signal(SIGINT, signal_handler);
 
 	if (inputType == IT_UDP) {
@@ -316,8 +317,7 @@ static int _main(int argc, char *argv[])
 
 	}
 
-	if (ctx->pe.rb)
-		rb_free(ctx->pe.rb);
+	pe_free(&ctx->pe);
 
 no_mem:
 	return exitStatus;

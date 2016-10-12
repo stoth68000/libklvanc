@@ -9,19 +9,31 @@
 #define MAX_PES_SIZE 16384
 
 /* PES Extractor mechanism, so convert MULTIPLE TS packets containing PES VANC, into PES array. */
-int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
+int pe_alloc(struct pes_extractor_s **pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
 {
-	memset(pe, 0, sizeof(*pe));
-	pe->rb = rb_new(MAX_PES_SIZE, 1048576);
-	if (!pe->rb)
+	struct pes_extractor_s *p = calloc(1, sizeof(*p));
+	if (!p)
 		return -1;
 
-	pe->pid = pid;
-	pe->cb_context = user_context;
-	pe->cb = cb;
-	pe->packet_size = 188;
+	p->rb = rb_new(MAX_PES_SIZE, 1048576);
+	if (!p->rb) {
+		free(p);
+		return -1;
+	}
 
+	p->pid = pid;
+	p->cb_context = user_context;
+	p->cb = cb;
+	p->packet_size = 188;
+
+	*pe = p;
 	return 0;
+}
+
+void pe_free(struct pes_extractor_s **pe)
+{
+	rb_free((*pe)->rb);
+	free(*pe);
 }
 
 /* Take a single transport packet.
@@ -35,7 +47,7 @@ int pe_init(struct pes_extractor_s *pe, void *user_context, pes_extractor_callba
  * only VIDEO ES streams may have the pes_length value of zero
  * according to the spec.
  */
-void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
+static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
 {
 	int has_sync = 0;
         int offset = 4;
