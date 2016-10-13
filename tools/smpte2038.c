@@ -42,8 +42,10 @@ static struct app_context_s *ctx = &app_context;
  * called with the entire PES array. Parse it, dump it to console.
  * We're called from the thread context of whoever calls pe_push().
  */
-pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCount)
+pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 {
+	/* Warning: we're shadowing the global ctx at this point. */
+	struct app_context_s *ctx = cb_context;
 	if (ctx->verbose) {
 		printf("%s()\n", __func__);
 		if (ctx->verbose > 1)
@@ -69,6 +71,8 @@ pes_extractor_callback pes_cb(void *cb_context, unsigned char *buf, int byteCoun
  */
 static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 {
+	/* STEP 1. Generate some useful VANC packed into a PES frame. */
+
 	/* This is a fully formed 708B VANC message. We'll bury
 	 * this inside a SMPTE2038 wrapper and prepare a TS packet
 	 * that could be used for sample/test data.
@@ -144,7 +148,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	}
 
 	/* Flush the remaining bits out into buffer, else we lose up to
-	 * the last 32 bits that are cached in the bitstream implementation.
+	 * the last 7 bits that are cached in the bitstream implementation.
 	 */
 	bs_write_buffer_complete(bs);
 
@@ -153,13 +157,14 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	bs_get_buffer(bs)[4] = (len >> 8) & 0xff;
 	bs_get_buffer(bs)[5] = len & 0xff;
 
-	/* Do something useful with the PES, not that its fully assembled. */
+	/* STEP 2. Do something useful with the PES, now that its fully assembled. */
 
-	/* The PES is ready. Les save a file copy. */
+	/* The PES is ready. Save a file copy. */
 	hexdump(buf, bs_get_byte_count(bs), 16);
 	bs_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
-	/* Copy the data and convert it into a series of TS packets */
+	/* STEP 3. Maybe we should packetize the PES into TS packets. */
+
 	uint8_t section[8192];
 	int section_length = bs_get_byte_count(bs);
 	memset(section, 0xff, sizeof(section));
@@ -180,19 +185,22 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 		fclose(fh);
 	}
 
-	/* Test the PES extractor, parse our TS packets and parse the VANC */
+	/* STEP 4. Test the PES extractor, parse our TS packets, extract the PES
+	 * parse the SMPTE2038 lines. Expect out pes_cb to get called after the PES
+	 * has been fully assembled, our cb will parse the 2038 contained.
+	 */
 	struct pes_extractor_s *pe;
-	pe_alloc(&pe, 0, (pes_extractor_callback)pes_cb, ctx->pid);
+	pe_alloc(&pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
 	pe_push(pe, pkts, packetCount);
 	pe_free(&pe);
 
-	free(pkts); /* Calls to packetizer, the results have to be caller freed. */
+	free(pkts); /* Results from the packetizer have to be caller freed. */
 
 	bs_free(bs);
 }
 
 /* We're called with blocks of UDP data */
-static tsudp_receiver_callback udp_cb(void *userContext, unsigned char *buf, int byteCount)
+static tsudp_receiver_callback udp_cb(void *userContext, uint8_t *buf, int byteCount)
 {
 	struct app_context_s *ctx = userContext;
 
@@ -306,7 +314,7 @@ static int _main(int argc, char *argv[])
 		FILE *fh = fopen(ctx->input_url, "rb");
 		if (fh) {
 
-			unsigned char pkt[188];
+			uint8_t pkt[188];
 			while (!feof(fh)) {
 				if (fread(pkt, 188, 1, fh) != 1)
 					break;
