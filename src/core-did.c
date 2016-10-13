@@ -16,7 +16,7 @@ static struct did_s {
 } dids[] = {
 	{ 0x00, 0x00,   "S291", "Undefined Data"},
 	{ 0x41, 0x01,   "S352", "Payload Identification, VANC space"},
-	{ 0x41, 0x05,   "S352 / S2016-3", "AFD and Bar Data / Payload Identification, VANC space (Missconfigured upstream?)"},
+	{ 0x41, 0x05,   "S352 / S2016-3", "AFD and Bar Data / Payload Identification, VANC space (Misconfigured upstream?)"},
 	{ 0x41, 0x06,"S2016-4", "Pan-Scan Data"},
 	{ 0x41, 0x07,  "S2010", "ANSI/SCTE 104"},
 	{ 0x41, 0x08,  "S2031", "DVB/SCTE VBI data"},
