@@ -113,12 +113,12 @@ int vanc_context_dump(struct vanc_context_s *ctx);
  *		callbacks and various parts of the reporting stack.
  * @param[in]	struct vanc_context_s *ctx - Context.
  * @param[in]	unsigned int lineNr - SDI line number the array data came from. Used for information / tracking purposes only.
- * @param[in]	unsigned short *array - Array of SDI words (10bit) that the caller wants parsed.
- * @param[in]	unsigned int len - Number of words in array.
+ * @param[in]	unsigned short *words - Array of SDI words (10bit) that the caller wants parsed.
+ * @param[in]	unsigned int wordCount - Number of words in array.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len);
+int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned short *words, unsigned int wordCount);
 
 /**
  * @brief	TODO - Brief description goes here.
