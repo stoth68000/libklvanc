@@ -354,3 +354,28 @@ int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx)
 	return 0;
 }
 
+int smpte2038_convert_line_to_words(struct smpte2038_anc_data_line_s *l, uint16_t **words, uint16_t *wordCount)
+{
+	if (!l || !words || !wordCount)
+		return -1;
+
+	uint16_t *arr = malloc((7 + VANC8(l->data_count)) * sizeof(uint16_t));
+	if (!arr)
+		return -ENOMEM;
+
+	int i = 0;
+	arr[i++] = 0;
+	arr[i++] = 0x3ff;
+	arr[i++] = 0x3ff;
+	arr[i++] = l->DID;
+	arr[i++] = l->SDID;
+	arr[i++] = l->data_count;
+	for (int j = 0; j < VANC8(l->data_count); j++)
+		arr[i++] = l->user_data_words[j];
+	arr[i++] = l->checksum_word;
+
+	*words = arr;
+	*wordCount = i;
+	return 0;
+}
+

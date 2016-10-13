@@ -53,10 +53,52 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 	}
 
 	/* Parse the PES section, like any other tool might. */
-	struct smpte2038_anc_data_packet_s *result = 0;
-	smpte2038_parse_pes_packet(buf, byteCount, &result);
-	if (result)
-		smpte2038_anc_data_packet_dump(result);
+	struct smpte2038_anc_data_packet_s *pkt = 0;
+	smpte2038_parse_pes_packet(buf, byteCount, &pkt);
+	if (pkt) {
+
+		/* Dump the entire message in english to console, handy for debugging. */
+		smpte2038_anc_data_packet_dump(pkt);
+
+		/* For fun, convert all SMPTE2038 ANC Lines into raw VANC, then parse
+		 * it using the stand VANC library.
+		 */
+		printf("SMPTE2038 message has %d line(s), displaying...\n", pkt->lineCount);
+		for (int i = 0; i < pkt->lineCount; i++) {
+			struct smpte2038_anc_data_line_s *l = &pkt->lines[i];
+
+			uint16_t *words;
+			uint16_t wordCount;
+			if (smpte2038_convert_line_to_words(l, &words, &wordCount) < 0)
+				break;
+
+			if (ctx->verbose > 1) {
+				printf("LineEntry[%d]: ", i);
+				for (int j = 0; j < wordCount; j++)
+					printf("%03x ", words[j]);
+				printf("\n\n");
+			}
+
+			/* Heck, why don't we attempt to parse the vanc?
+			 * Production apps to craete the vanc context once.... obviously.
+			 */
+			struct vanc_context_s *vanchdl;
+			if (vanc_context_create(&vanchdl) < 0) {
+				fprintf(stderr, "Error initializing library context\n");
+				exit(1);
+			}
+			vanchdl->verbose = 1;
+			if (vanc_packet_parse(vanchdl, l->line_number, words, wordCount) < 0) {
+			}
+			vanc_context_destroy(vanchdl);
+
+			free(words); /* Caller must free the resource */
+
+		}
+
+		/* Don't forget to free the parsed SMPTE2038 packet */
+		smpte2038_anc_data_packet_free(pkt);
+	}
 	else
 		fprintf(stderr, "Error parsing packet\n");
 

@@ -137,6 +137,19 @@ int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packe
  */
 int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx);
 
+/**
+ * @brief	Convert type struct smpte2038_anc_data_line_s into a more traditional line of\n
+ *              vanc words, so that we may push it into the vanc parser.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct smpte2038_anc_data_line_s *line - A line of decomposed vanc, received from the SMPTE2038 parser.
+ * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int smpte2038_convert_line_to_words(struct smpte2038_anc_data_line_s *l, uint16_t **words, uint16_t *wordCount);
+
 #ifdef __cplusplus
 };
 #endif
