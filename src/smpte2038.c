@@ -57,16 +57,19 @@ void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s
 	SHOW_LINE_U32("  ", h->lineCount);
 	for (int i = 0; i < h->lineCount; i++) {
 		struct smpte2038_anc_data_line_s *l = &h->lines[i];
-		printf("LineEntry[%02d]\n", i);
+		printf("  LineEntry[%02d]\n", i);
 		SHOW_LINE_U32("\t\t", l->line_number);
 		SHOW_LINE_U32("\t\t", l->c_not_y_channel_flag);
 		SHOW_LINE_U32("\t\t", l->horizontal_offset);
 		SHOW_LINE_U32("\t\t", l->DID);
 		SHOW_LINE_U32("\t\t", l->SDID);
 		SHOW_LINE_U32("\t\t", l->data_count);
-		printf("\t\t");
-		for (int j = 0; j < VANC8(l->data_count); j++)
-			printf("%03x ", l->user_data_words[j]);
+		printf("\t\t\t");
+		for (int j = 1; j <= VANC8(l->data_count); j++) {
+			printf("%03x ", l->user_data_words[j - 1]);
+			if (j % 16 == 0)
+				printf("\n\t\t\t");
+		}
 		printf("\n");
 		SHOW_LINE_U32("\t\t", l->checksum_word);
 	}
