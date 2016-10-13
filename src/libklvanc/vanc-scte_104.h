@@ -106,6 +106,12 @@ struct multiple_operation_message_timestamp
 	};
 };
 
+struct multiple_operation_message_operation {
+	unsigned short opID;
+	unsigned short data_length;
+	unsigned char *data;
+};
+
 /**
  * @brief       TODO - Brief description goes here.
  */
@@ -122,12 +128,7 @@ struct multiple_operation_message
 	unsigned char SCTE35_protocol_version;
 	struct multiple_operation_message_timestamp timestamp;
 	unsigned char num_ops;
-
-	struct multiple_operation_message_operation {
-		unsigned short opID;
-		unsigned short data_length;
-		unsigned char *data;
-	} *ops;
+	struct multiple_operation_message_operation *ops;
 };
 
 /**
