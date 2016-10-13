@@ -122,9 +122,6 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 	bs_read_bits(bs, 4);
 	VALIDATE(h->PES_header_data_length, 5);
 
-printf("PTS_DTS_flags = %x\n", h->PTS_DTS_flags);
-printf("PES_extension_flag = %x\n", h->PES_extension_flag);
-printf("PES_packet_length = %x\n", h->PES_packet_length);
 	/* PTS Handling */
 	uint64_t a = (uint64_t)bs_read_bits(bs, 3) << 30;
 	bs_read_bits(bs, 1);
@@ -137,13 +134,10 @@ printf("PES_packet_length = %x\n", h->PES_packet_length);
 
 	h->PTS = a | b | c;
 
-printf("PTS = %ld\n", h->PTS);
-
 	/* Do we have any lines remaining in the packet? */
 	int linenr = 0;
 	int rem = (h->PES_packet_length + 6) - 15;
 	while (rem > 4) {
-printf("\nlinenr = %d, rem = %d\n", ++linenr, rem);
 		h->lineCount++;
 		h->lines = realloc(h->lines, h->lineCount * sizeof(struct smpte2038_anc_data_line_s));
 
@@ -157,21 +151,16 @@ printf("\nlinenr = %d, rem = %d\n", ++linenr, rem);
 		VALIDATE(l->c_not_y_channel_flag, 0);
 
 		l->line_number = bs_read_bits(bs, 11);
-printf("line_number = %d\n", l->line_number);
 		//VALIDATE(l->line_number, 9);
 
 		l->horizontal_offset = bs_read_bits(bs, 12);
-printf("horizontal_offset = %d\n", l->horizontal_offset);
-		VALIDATE(l->horizontal_offset, 0);
+		//VALIDATE(l->horizontal_offset, 0);
 
 		l->DID = bs_read_bits(bs, 10);
-printf("DID = %x\n", l->DID);
 
 		l->SDID = bs_read_bits(bs, 10);
-printf("SDID = %x\n", l->SDID);
 
 		l->data_count = bs_read_bits(bs, 10);
-printf("data_count = %x\n", l->data_count);
 
 		/* Lets put the checksum at the end of the array then pull it back
 		 * into the checksum field later, it makes for easier processing.
