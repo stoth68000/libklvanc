@@ -56,7 +56,7 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 	struct smpte2038_anc_data_packet_s *result = 0;
 	smpte2038_parse_pes_packet(buf, byteCount, &result);
 	if (result)
-		smpte2038_smpte2038_anc_data_packet_dump(result);
+		smpte2038_anc_data_packet_dump(result);
 	else
 		fprintf(stderr, "Error parsing packet\n");
 

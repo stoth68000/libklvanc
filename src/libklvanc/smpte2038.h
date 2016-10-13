@@ -79,7 +79,7 @@ int  smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct
  * @brief	Inspect structure and output textual information to console.
  * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Packet
  */
-void smpte2038_smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h);
+void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h);
 
 /**
  * @brief	Deallocate and release a previously allocated pkt, see smpte2038_parse_section().
