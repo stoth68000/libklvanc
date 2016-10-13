@@ -238,6 +238,7 @@ static int _main(int argc, char *argv[])
 {
 	int opt;
 	int exitStatus = 0;
+	int doGenerateSample = 0;
 	ctx->running = 1;
 	ctx->pid = DEFAULT_PID;
 	ctx->verbose = 0;
@@ -249,8 +250,7 @@ static int _main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "?ghi:P:v")) != -1) {
 		switch (opt) {
 		case 'g':
-			smpte2038_generate_sample_708B_packet(ctx);
-			exit(0);
+			doGenerateSample = 1;
 			break;
 		case 'i':
 			ctx->input_url = optarg;
@@ -274,6 +274,14 @@ static int _main(int argc, char *argv[])
 		case 'h':
 			_usage(argv[0], 0);
 		}
+	}
+
+	if (doGenerateSample) {
+		/* Do this outside of the switch else -v becomes highly
+		 * command line position dependant.
+		 */
+		smpte2038_generate_sample_708B_packet(ctx);
+		exit(0);
 	}
 
 	if (ctx->input_url == NULL) {
