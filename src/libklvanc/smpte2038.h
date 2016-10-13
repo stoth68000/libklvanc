@@ -21,6 +21,11 @@ extern "C" {
  */
 struct smpte2038_anc_data_line_s
 {
+	/* Based on data taken from the ADTEC EN-100 encodeer,
+	 * DID, SDID, DATA_COUNT, WORDS and CHECKSUM are
+	 * all marked with parity, don't forget to strip
+	 * bits 9:8 before you trust these values, esp. data_count.
+	 */
 	uint8_t		reserved_000000;
 	uint8_t		c_not_y_channel_flag;
 	uint16_t	line_number;
