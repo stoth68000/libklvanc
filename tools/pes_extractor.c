@@ -7,6 +7,7 @@
 #include "pes_extractor.h"
 
 #define MAX_PES_SIZE 16384
+#define LOCAL_DEBUG 0
 
 /* PES Extractor mechanism, so convert MULTIPLE TS packets containing PES VANC, into PES array. */
 int pe_alloc(struct pes_extractor_s **pe, void *user_context, pes_extractor_callback cb, uint16_t pid)
@@ -49,7 +50,9 @@ void pe_free(struct pes_extractor_s **pe)
  */
 static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int len)
 {
-	int has_sync = 0;
+#if LOCAL_DEBUG
+	printf("%s(len = %d)\n", __func__, len);
+#endif
         int offset = 4;
 #if 0
 	if (*(pkt + 1) & 0x40)
@@ -74,13 +77,13 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 	/* Now, peek in the buffer, obtain packet sync and dequeue packets */
 	while (1) {
 		/* If we have no yet syncronized, make that happen */
-		if (!has_sync && rb_used(pe->rb) > 16) {
+		if (!pe->has_sync && rb_used(pe->rb) > 16) {
 			unsigned char hdr[] = { 0, 0, 1, 0xbd };
 			unsigned char b[4];
 			rb_read(pe->rb, (char *)&b[0], sizeof(b));
 			for (size_t i = 0; i < rb_used(pe->rb); i++) {
 				if (memcmp(b, hdr, sizeof(hdr)) == 0) {
-					has_sync = 1;
+					pe->has_sync = 1;
 					break;
 				}
 				b[0] = b[1];
@@ -90,15 +93,22 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 			}
 		}
 
-		if (!has_sync) {
+		if (!pe->has_sync) {
 			/* Need more data */
+#if LOCAL_DEBUG
+			printf("Need more data #1\n");
+#endif
 			break;
 		}
 
 		/* We have at least one viable message, probably..... */
 		char l[2];
-		rb_peek(pe->rb, (char *)&l[0], sizeof(l));
-		uint16_t pes_length = l[0] << 8 | l[1];
+		if (rb_peek(pe->rb, (char *)&l[0], 2) != 2) {
+			fprintf(stderr, "Unable to peek two ring buffer bytes\n");
+			break;
+		}
+
+		uint16_t pes_length = ((l[0] & 0xff) << 8) | (l[1] & 0xff);
 
 		if (rb_used(pe->rb) + 2 > pes_length) {
 			/* Dequeue and process a complete pes message */
@@ -111,26 +121,37 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 
 				/* Read the peeked length and the entire message */
 				rb_read(pe->rb, (char *)msg + 4, pes_length + 2);
-				//hexdump(msg, pes_length + 6, 16);
+#if LOCAL_DEBUG
+				hexdump(msg, pes_length + 6, 16);
+#endif
 				if (pe->cb)
 					pe->cb(pe->cb_context, msg, pes_length + 6);
 				free(msg);
 			}
+			pe->has_sync = 0;
 		} else {
+#if LOCAL_DEBUG
+			printf("Need more data #2 - got 0x%x (%d) need 0x%x (%d)\n",
+				rb_used(pe->rb) + 2,
+				rb_used(pe->rb) + 2,
+				pes_length,
+				pes_length);
+#endif
 			break; /* Need more data */
 		}
-
-		has_sync = 0;
 	}
 }
 
 size_t pe_push(struct pes_extractor_s *pe, unsigned char *pkt, int packetCount)
 {
+#if LOCAL_DEBUG
+	printf("%s(packetCount = 0x%x)\n", __func__, packetCount);
+#endif
         if ((!pe) || (packetCount < 1) || (!pkt))
                 return 0;
 
         for (int i = 0; i < packetCount; i++) {
-		uint16_t pid = ((*(pkt + 1) << 8) | *(pkt + 2)) & 0x1fff;
+		uint16_t pid = ((*(pkt + (i * pe->packet_size) + 1) << 8) | *(pkt + (i * pe->packet_size) + 2)) & 0x1fff;
                 if (pid == pe->pid) {
                         pe_processPacket(pe, pkt + (i * pe->packet_size), pe->packet_size);
                 }

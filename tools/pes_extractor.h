@@ -28,6 +28,7 @@ struct pes_extractor_s
 	int packet_size;
 	void *cb_context;
 	pes_extractor_callback cb;
+	int has_sync;
 };
 
 /* PES Extractor mechanism, so convert MULTIPLE TS packets containing PES VANC, into PES array. */
