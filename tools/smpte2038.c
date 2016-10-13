@@ -160,6 +160,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	/* STEP 2. Do something useful with the PES, now that its fully assembled. */
 
 	/* The PES is ready. Save a file copy. */
+	printf("%s() We've constructed a fake PES, here it is:\n", __func__);
 	hexdump(buf, bs_get_byte_count(bs), 16);
 	bs_save(bs, "/tmp/bitstream-scte2038-EIA708B.raw");
 
@@ -175,6 +176,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	uint8_t cc = 0;
 	ts_packetizer(section, section_length, &pkts, &packetCount, 188, &cc, ctx->pid);
 	for (uint32_t i = 0; i < packetCount; i++) {
+		printf("%s() We've constructed some TS packets, here they are:\n", __func__);
 		hexdump(pkts + (i * 188), 188, 16);
 	}
 
