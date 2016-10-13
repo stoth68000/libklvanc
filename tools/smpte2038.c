@@ -168,7 +168,7 @@ static void smpte2038_generate_sample_708B_packet(struct app_context_s *ctx)
 	bs_write_bits(bs, (pts & 0xefff), 15);		/* PTS[14:0] */
 	bs_write_bits(bs, 1, 1);			/* marker_bit */
 
-	int lineCount = 1;
+	int lineCount = 4;
 	for (int i = 0; i < lineCount; i++) {
 		/* VANC Payload */
 		bs_write_bits(bs, 0, 6);	/* fixed value '000000' */
