@@ -111,7 +111,7 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 
 				/* Read the peeked length and the entire message */
 				rb_read(pe->rb, (char *)msg + 4, pes_length + 2);
-				hexdump(msg, pes_length + 6, 16);
+				//hexdump(msg, pes_length + 6, 16);
 				if (pe->cb)
 					pe->cb(pe->cb_context, msg, pes_length + 6);
 				free(msg);
