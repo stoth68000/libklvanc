@@ -170,7 +170,6 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 			l->user_data_words[i] = bs_read_bits(bs, 10);
 
 		l->checksum_word = bs_read_bits(bs, 10);
-		printf("checksum_word = %x\n", l->checksum_word);
 	
 		rem = (h->PES_packet_length + 6) - bs_get_byte_count(bs);
 
