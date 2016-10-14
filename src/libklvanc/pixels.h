@@ -21,9 +21,12 @@ void klvanc_v210_planar_unpack_c(const uint32_t * src, uint16_t * y, uint16_t * 
  * @brief	TODO - Brief description goes here.
  * @param[in]	const uint32_t * src - Brief description goes here.
  * @param[in]	uint16_t * dst - Brief description goes here.
+ * @param[in]	int dstSizeBytes - Size of the dst buffer allocation.
  * @param[in]	int width - Brief description goes here.
+ * @result 	0 - Success
+ * @result 	< 0 - Error
  */
-void klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int width);
+int klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int dstSizeBytes, int width);
 
 /**
  * @brief	TODO - Brief description goes here.

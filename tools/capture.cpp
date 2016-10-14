@@ -157,7 +157,8 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 	uint16_t decoded_words[16384];
 	memset(&decoded_words[0], 0, sizeof(decoded_words));
 	uint16_t *p_anc = decoded_words;
-	klvanc_v210_line_to_nv20_c(src, p_anc, (uiWidth / 6) * 6);
+	if (klvanc_v210_line_to_nv20_c(src, p_anc, sizeof(decoded_words), (uiWidth / 6) * 6) < 0)
+		return;
 
 	int ret = vanc_packet_parse(vanchdl, lineNr, decoded_words, sizeof(decoded_words) / (sizeof(unsigned short)));
 	if (ret < 0) {

@@ -34,12 +34,18 @@ void klvanc_v210_planar_unpack_c(const uint32_t * src, uint16_t * y, uint16_t * 
  * Twelve 10-bit unsigned components are packed into four 32-bit little-endian words.
  * See BlackMagic SDK page 280 for a detailed description.
  */
-void klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int width)
+int klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int dstSizeBytes, int width)
 {
+	if (!src || !dst || !width)
+		return -1;
+
+	if (dstSizeBytes < (width * 2))
+		return -1;
+
 	int w;
 	uint32_t val = 0;
 	uint16_t *uv = dst + width;
-	for (w = 0; w < width - 5; w += 6) {
+	for (w = 0; w < (width - 5); w += 6) {
 		READ_PIXELS(uv, dst, uv);
 		READ_PIXELS(dst, uv, dst);
 		READ_PIXELS(uv, dst, uv);
@@ -61,6 +67,8 @@ void klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int width)
 		*uv++ = val & 0x3ff;
 		*dst++ = (val >> 10) & 0x3ff;
 	}
+
+	return 0;
 }
 
 /* Downscale 10-bit lines to 8-bit lines for processing by libzvbi.
