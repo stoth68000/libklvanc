@@ -98,7 +98,7 @@ struct smpte2038_packetizer_s
 	uint32_t buflen;
 	uint32_t bufused;
 	uint32_t buffree;
-	struct   bs_context_s *bs;
+	struct   klbs_context_s *bs;
 };
 
 /**
