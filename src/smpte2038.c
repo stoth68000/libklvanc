@@ -135,7 +135,6 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 	h->PTS = a | b | c;
 
 	/* Do we have any lines remaining in the packet? */
-	int linenr = 0;
 	int rem = (h->PES_packet_length + 6) - 15;
 	while (rem > 4) {
 		h->lineCount++;
@@ -254,6 +253,9 @@ int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx)
 
 int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packet_header_s *pkt)
 {
+#if SMPTE2038_PACKETIZER_DEBUG
+	printf("%s()\n", __func__);
+#endif
 	uint16_t offset = 0; /* TODO: Horizontal offset */
 	uint32_t reqd = pkt->payloadLengthWords * sizeof(uint16_t);
 
@@ -265,7 +267,6 @@ int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packe
         bs_write_set_buffer(ctx->bs, ctx->buf + ctx->bufused, ctx->buffree);
         bs_write_bits(ctx->bs, 0, 6);				/* '000000' */
         bs_write_bits(ctx->bs, 0, 1);				/* c_not_y_channel_flag */
-printf("%s() lineNr = %d\n", __func__, pkt->lineNr);
         bs_write_bits(ctx->bs, pkt->lineNr, 11);		/* line_number */
         bs_write_bits(ctx->bs, offset, 12);			/* horizontal_offset */
         bs_write_bits(ctx->bs, pkt->did, 10);			/* DID */
