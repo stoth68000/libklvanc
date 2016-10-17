@@ -15,6 +15,7 @@ libklvanc_la_SOURCES += core-pixels.c
 libklvanc_la_SOURCES += core-checksum.c
 libklvanc_la_SOURCES += core.c
 libklvanc_la_SOURCES += smpte2038.c
+libklvanc_la_SOURCES += core-private.h xorg-list.h
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I../include \
