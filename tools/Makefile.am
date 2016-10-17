@@ -42,4 +42,4 @@ libklvanc_noinst_include_HEADERS += pes_extractor.h
 libklvanc_noinst_include_HEADERS += ts_packetizer.h
 libklvanc_noinst_include_HEADERS += udp.h
 libklvanc_noinst_include_HEADERS += url.h
-libklvanc_noinst_include_HEADERS +=version.h
+libklvanc_noinst_include_HEADERS += version.h
