@@ -7,7 +7,7 @@ CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_B
 	-D_BSD_SOURCE \
 	-I$(BLACKMAGIC_SDK_PATH) \
 	-I$(top_srcdir)/src \
-	-L$(top_srcdir)/src/.libs -lklvanc -lpthread \
+	-L$(top_builddir)/src/.libs -lklvanc -lpthread \
 	-DKL_USERSPACE -lz -ldl -lklvanc
 
 if DEBUG
