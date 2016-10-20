@@ -18,7 +18,7 @@ libklvanc_la_SOURCES += smpte2038.c
 libklvanc_la_SOURCES += core-private.h xorg-list.h
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
-	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I../include \
+	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
 	-DKL_USERSPACE
 
 if DEBUG

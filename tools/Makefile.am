@@ -6,8 +6,8 @@ BLACKMAGIC_SDK_PATH = $(top_srcdir)/include/decklink-sdk
 CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 -O3 \
 	-D_BSD_SOURCE \
 	-I$(BLACKMAGIC_SDK_PATH) \
-	-I../src \
-	-L../src/.libs -lklvanc -lpthread \
+	-I$(top_srcdir)/src \
+	-L$(top_builddir)/src/.libs -lklvanc -lpthread \
 	-DKL_USERSPACE -lz -ldl -lklvanc
 
 if DEBUG
