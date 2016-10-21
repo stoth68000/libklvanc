@@ -47,6 +47,8 @@ struct packet_eia_708b_s
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @return	0 - Success
+ * @return	< 0 - Error
  */
 int dump_EIA_708B(struct vanc_context_s *ctx, void *p);
 

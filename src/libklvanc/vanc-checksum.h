@@ -37,6 +37,8 @@ uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount);
  * @brief	TODO - Brief description goes here.
  * @param[in]	uint16_t *words - Brief description goes here.
  * @param[in]	int wordCount - Brief description goes here.
+ * @return	0 - Success
+ * @return	< 0 - Error
  */
 int vanc_checksum_is_valid(uint16_t *words, int wordCount);
 
