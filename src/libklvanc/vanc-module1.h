@@ -36,6 +36,8 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx
+ * @return	0 - Success
+ * @return	< 0 - Error
  */
 int vanc_module01_dump(struct vanc_context_s *ctx);
 
