@@ -77,18 +77,24 @@ struct packet_payload_information_s
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	enum payload_afd_e afd - Brief description goes here.
+ * @return	Success - User facing printable string.
+ * @return	Error - NULL
  */
 const char *afd_to_string(enum payload_afd_e afd);
 
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	enum payload_aspect_ratio_e ar - Brief description goes here.
+ * @return	Success - User facing printable string.
+ * @return	Error - NULL
  */
 const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar);
 
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @return	0 - Success
+ * @return	< 0 - Error
  */
 int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p);
 
