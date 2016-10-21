@@ -21,7 +21,8 @@
 
 /**
  * @file        klbitstream_readwriter.h
- * @author      Kernel Labs Inc
+ * @author      Steven Toth <stoth@kernellabs.com>
+ * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
  * @brief       Simplistic bitstream reader/writer capable of supporting 1..32
  *              1..32 bit writes or reads.
  *              Buffers are used exclusively in either read or write mode, and cannot be combined.
