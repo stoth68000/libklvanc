@@ -251,13 +251,17 @@ static void smpte2038_buffer_adjust(struct smpte2038_packetizer_s *ctx, uint32_t
 
 void smpte2038_packetizer_free(struct smpte2038_packetizer_s **ctx)
 {
-	if (!ctx && (*ctx == 0))
+	if (!ctx)
+		return;
+	if (*ctx == 0)
 		return;
 
-	free((*ctx)->buf);
-	klbs_free((*ctx)->bs);
-	memset(*ctx, 0, sizeof(struct smpte2038_packetizer_s));
-	free(*ctx);
+	struct smpte2038_packetizer_s *p = *ctx;
+	if (p->buf)
+		free(p->buf);
+	klbs_free(p->bs);
+	memset(p, 0, sizeof(struct smpte2038_packetizer_s));
+	free(p);
 }
 
 int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx)
