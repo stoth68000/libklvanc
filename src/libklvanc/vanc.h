@@ -179,6 +179,9 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	uint16_t **dst, uint16_t *dstWordCount,
 	uint32_t bitDepth);
 
+const char *vanc_lookupDescriptionByType(enum packet_type_e type);
+const char *vanc_lookupSpecificationByType(enum packet_type_e type);
+
 #ifdef __cplusplus
 };
 #endif

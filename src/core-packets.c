@@ -65,7 +65,7 @@ static enum packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdi
 	return VANC_TYPE_UNDEFINED;
 }
 
-static const char *lookupDescriptionByType(enum packet_type_e type)
+const char *vanc_lookupDescriptionByType(enum packet_type_e type)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if (types[i].type == type)
@@ -75,7 +75,7 @@ static const char *lookupDescriptionByType(enum packet_type_e type)
 	return "UNDEFINED";
 }
 
-static const char *lookupSpecificationByType(enum packet_type_e type)
+const char *vanc_lookupSpecificationByType(enum packet_type_e type)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if (types[i].type == type)
