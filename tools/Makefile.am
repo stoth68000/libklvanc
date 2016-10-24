@@ -8,7 +8,7 @@ CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_B
 	-I$(BLACKMAGIC_SDK_PATH) \
 	-I$(top_srcdir)/src \
 	-L$(top_builddir)/src/.libs -lklvanc -lpthread \
-	-DKL_USERSPACE -lz -ldl -lklvanc
+	-DKL_USERSPACE -lz -ldl -lklvanc -lcurses
 
 if DEBUG
 	CFLAGS += -g

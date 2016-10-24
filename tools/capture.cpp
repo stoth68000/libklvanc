@@ -9,7 +9,9 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <zlib.h>
+#include <curses.h>
 #include <libgen.h>
+#include <signal.h>
 #include <libklvanc/vanc.h>
 #include <libklvanc/smpte2038.h>
 
@@ -91,6 +93,9 @@ static const char *g_audioOutputFilename = NULL;
 static const char *g_vancOutputFilename = NULL;
 static const char *g_vancInputFilename = NULL;
 static int g_maxFrames = -1;
+static int g_shutdown = 0;
+static int g_monitor_reset = 0;
+static int g_monitor_mode = 0;
 
 static unsigned long audioFrameCount = 0;
 static struct frameTime_s {
@@ -98,6 +103,195 @@ static struct frameTime_s {
 	unsigned long long frameCount;
 	unsigned long long remoteFrameCount;
 } frameTimes[2];
+
+pthread_t threadId;
+struct vanc_monitor_line_s
+{
+	int      active;
+	uint64_t count;
+};
+
+struct vanc_monitor_s
+{
+	uint32_t activeCount;
+	struct vanc_monitor_line_s lines[2048];
+	uint32_t did, sdid;
+	const char *desc, *spec;
+	struct timeval lastUpdated;
+};
+
+/* A static array of structs, for did/sdid rapid lookups.
+ * Where DD and SD range from 00.FFF.
+ */
+//static struct vanc_monitor_s monitorLines[0x10000];
+static struct vanc_monitor_s *monitorLines;
+#define vanc_monitor_stat_lookup(didnr, sdidnr) &monitorLines[ (((didnr) << 8) | (sdidnr)) ]
+
+static void vanc_monitor_stats_reset()
+{
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			e->activeCount = 0;
+
+			for (int l = 0; l < 2048; l++) {
+				e->lines[l].active = 0;
+				e->lines[l].count = 0;
+			}
+		}
+	}
+
+}
+
+static void vanc_monitor_stats_dump_curses()
+{
+	int line = 1;
+
+	attron(COLOR_PAIR(1));
+	mvprintw(0, 0, " DID / SDID  DESCRIPTION                                                   ");
+        attroff(COLOR_PAIR(1));
+
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (e->activeCount == 0)
+				continue;
+
+			mvprintw(line, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+			mvprintw(line + 1, 0, "line(cnt)");
+
+			char lbl[256] = { 0 };
+			for (int l = 0; l < 2048; l++) {
+				if (e->lines[l].active)
+					sprintf(lbl + strlen(lbl), "%d(%lu) ", l, e->lines[l].count);
+			}
+			mvprintw(line + 1, 13 , "%s", lbl);
+
+			line += 3;
+		}
+	}
+
+	attron(COLOR_PAIR(2));
+        mvprintw(line++, 0, "q)uit r)eset");
+	attroff(COLOR_PAIR(2));
+
+	char tail_c[160];
+	time_t now = time(0);
+	sprintf(tail_c, "%s", ctime(&now));
+
+	char tail_a[160];
+	sprintf(tail_a, "KLVANC_CAPTURE");
+
+	char tail_b[160];
+	int blen = 76 - (strlen(tail_a) + strlen(tail_c));
+	memset(tail_b, 0x20, sizeof(tail_b));
+	tail_b[blen] = 0;
+
+	attron(COLOR_PAIR(1));
+	mvprintw(line++, 0, "%s%s%s", tail_a, tail_b, tail_c);
+        attroff(COLOR_PAIR(1));
+}
+
+static void vanc_monitor_stats_dump()
+{
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (e->activeCount == 0)
+				continue;
+
+			printf("%02x/%02x: %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+			for (int l = 0; l < 2048; l++) {
+				if (e->lines[l].active)
+					printf("%d(%lu) ", l, e->lines[l].count);
+			}
+			printf("\n");
+		}
+	}
+}
+
+static void vanc_monitor_stat_alloc()
+{
+	monitorLines = (struct vanc_monitor_s *)calloc(0x10000, sizeof(struct vanc_monitor_s));
+}
+
+static void vanc_monitor_stat_free()
+{
+	free(monitorLines);
+}
+
+static int vanc_monitor_stat_update(uint32_t didnr, uint32_t sdidnr, uint32_t lineNr, enum packet_type_e type)
+{
+	if (didnr > 0xff)
+		return -1;
+	if (sdidnr > 0xff)
+		return -1;
+	if (lineNr >= 2048)
+		return -1;
+
+	struct vanc_monitor_s *s = vanc_monitor_stat_lookup(didnr, sdidnr);
+	if (s->activeCount == 0) {
+		s->did = didnr;
+		s->sdid = sdidnr;
+		s->desc = vanc_lookupDescriptionByType(type);
+		s->spec = vanc_lookupSpecificationByType(type);
+	}
+	gettimeofday(&s->lastUpdated, NULL);
+
+	if (s->lines[ lineNr ].active == 0) {
+		s->lines[ lineNr ].active = 1;
+		s->activeCount++;
+	}
+	s->lines[ lineNr ].count++;
+
+	return 0;
+}
+
+static void signal_handler(int signum);
+static void *thread_func_input(void *p)
+{
+	while (!g_shutdown) {
+		int ch = getch();
+		if (ch == 'q') {
+			signal_handler(1);
+			break;
+		}
+		if (ch == 'r')
+			g_monitor_reset = 1;
+	}
+	return 0;
+}
+
+static void *thread_func_draw(void *p)
+{
+	noecho();
+	curs_set(0);
+	start_color();
+	init_pair(1, COLOR_WHITE, COLOR_BLUE);
+	init_pair(2, COLOR_CYAN, COLOR_BLACK);
+	init_pair(3, COLOR_RED, COLOR_BLACK);
+
+	while (!g_shutdown) {
+		if (g_monitor_reset) {
+			g_monitor_reset = 0;
+			vanc_monitor_stats_reset();
+		}
+
+		clear();
+		vanc_monitor_stats_dump_curses();
+
+		refresh();
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
+
+static void signal_handler(int signum)
+{
+	pthread_cond_signal(&sleepCond);
+	g_shutdown = 1;
+}
 
 static void showMemory(FILE * fd)
 {
@@ -439,6 +633,13 @@ ULONG DeckLinkCaptureDelegate::Release(void)
 
 HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame *videoFrame, IDeckLinkAudioInputPacket *audioFrame)
 {
+	if (g_shutdown == 1) {
+		g_shutdown = 2;
+		return S_OK;
+	}
+	if (g_shutdown == 2)
+		return S_OK;
+
 	IDeckLinkVideoFrame *rightEyeFrame = NULL;
 	IDeckLinkVideoFrame3DExtensions *threeDExtensions = NULL;
 	void *frameBytes;
@@ -636,47 +837,43 @@ HRESULT DeckLinkCaptureDelegate:: VideoInputFormatChanged(BMDVideoInputFormatCha
 /* CALLBACKS for message notification */
 static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
 {
-	printf("%s:%s()\n", __FILE__, __func__);
-
 	/* Have the library display some debug */
-	dump_PAYLOAD_INFORMATION(ctx, pkt);
+	if (!g_monitor_mode)
+		dump_PAYLOAD_INFORMATION(ctx, pkt);
 
 	return 0;
 }
 
 static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
 {
-	printf("%s:%s()\n", __FILE__, __func__);
-
 	/* Have the library display some debug */
-	dump_EIA_708B(ctx, pkt);
+	if (!g_monitor_mode)
+		dump_EIA_708B(ctx, pkt);
 
 	return 0;
 }
 
 static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
 {
-	printf("%s:%s()\n", __FILE__, __func__);
-
 	/* Have the library display some debug */
-	dump_EIA_608(ctx, pkt);
+	if (!g_monitor_mode)
+		dump_EIA_608(ctx, pkt);
 
 	return 0;
 }
 
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
-	printf("%s:%s()\n", __FILE__, __func__);
-
 	/* Have the library display some debug */
-	dump_SCTE_104(ctx, pkt);
+	if (!g_monitor_mode)
+		dump_SCTE_104(ctx, pkt);
 
 	return 0;
 }
 
 static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
 {
-	printf("%s:%s()\n", __FILE__, __func__);
+	vanc_monitor_stat_update(pkt->did, pkt->dbnsdid, pkt->lineNr, pkt->type);
 
 	if (g_packetizeSMPTE2038) {
 		if (smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {
@@ -750,6 +947,7 @@ static int usage(const char *progname, int status)
 		"    -i <number>     Capture from input port (def: 0)\n"
 		"    -P pid 0xNNNN   Packetsize all detected VANC into SMPTE2038 TS packets using pid.\n"
 		"                    The packets are store in file %s\n"
+		"    -M              During VANC capture, display a Curses onscreen UI.\n"
 		"\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
@@ -786,7 +984,7 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:P")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:PM")) != -1) {
 		switch (ch) {
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
@@ -825,6 +1023,9 @@ static int _main(int argc, char *argv[])
 			break;
 		case 'n':
 			g_maxFrames = atoi(optarg);
+			break;
+		case 'M':
+			g_monitor_mode = 1;
 			break;
 		case 'v':
 			g_verbose++;
@@ -920,9 +1121,9 @@ static int _main(int argc, char *argv[])
                 exit(1);
         }
 
+	vanc_monitor_stat_alloc();
        	vanchdl->verbose = g_verbose;
         vanchdl->callbacks = &callbacks;
-
 
 	if (g_vancInputFilename != NULL) {
 		return AnalyzeVANC(g_vancInputFilename);
@@ -1008,6 +1209,14 @@ static int _main(int argc, char *argv[])
 		goto bail;
 	}
 
+	signal(SIGINT, signal_handler);
+
+	if (g_monitor_mode) {
+		initscr();
+		pthread_create(&threadId, 0, thread_func_draw, NULL);
+		pthread_create(&threadId, 0, thread_func_input, NULL);
+	}
+
 	/* All Okay. */
 	exitStatus = 0;
 
@@ -1015,10 +1224,23 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_lock(&sleepMutex);
 	pthread_cond_wait(&sleepCond, &sleepMutex);
 	pthread_mutex_unlock(&sleepMutex);
-	fprintf(stdout, "Stopping Capture\n");
 
+	while (g_shutdown != 2)
+		usleep(50 * 1000);
+
+	fprintf(stdout, "Stopping Capture\n");
+	result = deckLinkInput->StopStreams();
+	if (result != S_OK) {
+		fprintf(stderr, "Failed to start stream. Is another application using the card?\n");
+	}
+
+	vanc_monitor_stats_dump();
         vanc_context_destroy(vanchdl);
 	smpte2038_packetizer_free(&smpte2038_ctx);
+	vanc_monitor_stat_free();
+
+	if (g_monitor_mode)
+		endwin();
 
 bail:
 
