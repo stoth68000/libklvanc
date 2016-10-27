@@ -911,12 +911,13 @@ static int usage(const char *progname, int status)
 			BMDTimeValue frameRateDuration, frameRateScale;
 			displayMode->GetFrameRate(&frameRateDuration, &frameRateScale);
 
-			fprintf(stderr, "        %2d:  %-20s \t %li x %li \t %g FPS\n",
+			fprintf(stderr, "        %2d:  %-20s \t %li x %li \t %g FPS [0x%08x]\n",
 				displayModeCount, displayModeString,
 				displayMode->GetWidth(),
 				displayMode->GetHeight(),
 				(double)frameRateScale /
-				(double)frameRateDuration);
+				(double)frameRateDuration,
+				displayMode->GetDisplayMode());
 
 			free(displayModeString);
 			displayModeCount++;
