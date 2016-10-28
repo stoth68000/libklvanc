@@ -64,6 +64,7 @@ struct packet_header_s
 	unsigned int		lineNr; 		/**< The vanc in this header came from line.... */
 	unsigned short		raw[16384];
 	unsigned int 		rawLengthWords;
+	unsigned short		horizontalOffset;	/**< Horizontal word where the ADF was detected. */
 };
 
 #ifdef __cplusplus

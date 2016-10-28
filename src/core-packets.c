@@ -176,6 +176,7 @@ void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header
 		klvanc_didLookupSpecification(hdr->did, hdr->dbnsdid),
 		klvanc_didLookupDescription(hdr->did, hdr->dbnsdid),
 		hdr->lineNr);
+	printf(" ->h_offset = %d\n", hdr->horizontalOffset);
 	printf(" ->checksum = 0x%04x (%s)\n", hdr->checksum, hdr->checksumValid ? "VALID" : "INVALID");
 	printf(" ->payloadLengthWords = %d\n", hdr->payloadLengthWords);
 	printf(" ->payload  = ");
@@ -208,6 +209,7 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 			continue;
 		}
 
+		hdr->horizontalOffset = i;
 		hdr->lineNr = lineNr;
 
 		/* Dump the packet header and basic VANC types if required. */

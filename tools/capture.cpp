@@ -295,7 +295,7 @@ static void vanc_monitor_stats_dump_curses()
 
 				if (e->expandUI)
 				{
-					mvprintw(linecount++, 0, " H/offset    ...");
+					mvprintw(linecount++, 0, " H/offset    %d", pkt->horizontalOffset);
 					mvprintw(linecount++, 0, " data len    0x%x", pkt->payloadLengthWords);
 
 					char p[256] = { 0 };
