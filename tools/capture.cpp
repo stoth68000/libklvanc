@@ -181,17 +181,17 @@ static void vanc_monitor_stats_dump_curses()
 			if (e->activeCount == 0)
 				continue;
 
-			mvprintw(line, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
-			mvprintw(line + 1, 0, "line(cnt)");
+			mvprintw(line++, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
 
-			char lbl[256] = { 0 };
 			for (int l = 0; l < 2048; l++) {
-				if (e->lines[l].active)
-					sprintf(lbl + strlen(lbl), "%d(%lu) ", l, e->lines[l].count);
+				if (e->lines[l].active) {
+					mvprintw(line++, 0, "line(cnt)    %d(%lu)", l, e->lines[l].count);
+					mvprintw(line++, 0, " H/offset    ...");
+					mvprintw(line++, 0, "     data    ...");
+				}
 			}
-			mvprintw(line + 1, 13 , "%s", lbl);
 
-			line += 3;
+			line++;
 		}
 	}
 
