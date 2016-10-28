@@ -950,6 +950,8 @@ static int usage(const char *progname, int status)
 		"                    The packets are store in file %s\n"
 		"    -M              During VANC capture, display a Curses onscreen UI.\n"
 		"\n"
+		"Capture and display all VANC messages and show line/msg counts in an interactive UI (1080i 59.94):\n"
+		"    %s -m9 -p1 -M\n\n"
 		"Capture video and/or audio to a file. Raw video and/or audio can be viewed with mplayer eg:\n"
 		"\n"
 		"    %s -m2 -n 50 -f video.raw -a audio.raw\n"
@@ -958,6 +960,7 @@ static int usage(const char *progname, int status)
 		"    %s -m13 -p1 -V vanc.raw\n"
 		"    %s          -I vanc.raw\n\n",
 		TS_OUTPUT_NAME,
+		basename((char *)progname),
 		basename((char *)progname),
 		basename((char *)progname),
 		basename((char *)progname)
