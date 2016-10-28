@@ -158,6 +158,7 @@ static void vanc_monitor_stats_dump_curses()
 	if (g_requested_mode_id == g_detected_mode_id)
 		sprintf(head_c, "SIGNAL LOCKED");
 	else {
+		//sprintf(head_c, "CHECK SIGNAL SETTINGS %x == %x", g_detected_mode_id, g_requested_mode_id);
 		sprintf(head_c, "CHECK SIGNAL SETTINGS");
 		headLineColor = 4;
 	}
@@ -1198,6 +1199,7 @@ static int _main(int argc, char *argv[])
 			const char *displayModeName;
 			displayMode->GetName(&displayModeName);
 			selectedDisplayMode = displayMode->GetDisplayMode();
+			g_detected_mode_id = displayMode->GetDisplayMode();
 			g_requested_mode_id = displayMode->GetDisplayMode();
 
 			BMDDisplayModeSupport result;
