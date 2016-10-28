@@ -96,6 +96,9 @@ static int g_maxFrames = -1;
 static int g_shutdown = 0;
 static int g_monitor_reset = 0;
 static int g_monitor_mode = 0;
+static int g_no_signal = 1;
+static BMDDisplayMode g_detected_mode_id = 0;
+static BMDDisplayMode g_requested_mode_id = 0;
 
 static unsigned long audioFrameCount = 0;
 static struct frameTime_s {
@@ -145,11 +148,31 @@ static void vanc_monitor_stats_reset()
 
 static void vanc_monitor_stats_dump_curses()
 {
-	int line = 1;
+	int line = 0;
+	int headLineColor = 1;
 
-	attron(COLOR_PAIR(1));
-	mvprintw(0, 0, " DID / SDID  DESCRIPTION                                                   ");
-        attroff(COLOR_PAIR(1));
+	char head_c[160];
+	if (g_no_signal)
+		sprintf(head_c, "NO SIGNAL");
+	else
+	if (g_requested_mode_id == g_detected_mode_id)
+		sprintf(head_c, "SIGNAL LOCKED");
+	else {
+		sprintf(head_c, "CHECK SIGNAL SETTINGS");
+		headLineColor = 4;
+	}
+
+	char head_a[160];
+	sprintf(head_a, " DID / SDID  DESCRIPTION");
+
+	char head_b[160];
+	int blen = 75 - (strlen(head_a) + strlen(head_c));
+	memset(head_b, 0x20, sizeof(head_b));
+	head_b[blen] = 0;
+
+	attron(COLOR_PAIR(headLineColor));
+	mvprintw(line++, 0, "%s%s%s", head_a, head_b, head_c);
+        attroff(COLOR_PAIR(headLineColor));
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
@@ -183,7 +206,7 @@ static void vanc_monitor_stats_dump_curses()
 	sprintf(tail_a, "KLVANC_CAPTURE");
 
 	char tail_b[160];
-	int blen = 76 - (strlen(tail_a) + strlen(tail_c));
+	blen = 76 - (strlen(tail_a) + strlen(tail_c));
 	memset(tail_b, 0x20, sizeof(tail_b));
 	tail_b[blen] = 0;
 
@@ -270,6 +293,7 @@ static void *thread_func_draw(void *p)
 	init_pair(1, COLOR_WHITE, COLOR_BLUE);
 	init_pair(2, COLOR_CYAN, COLOR_BLACK);
 	init_pair(3, COLOR_RED, COLOR_BLACK);
+	init_pair(4, COLOR_RED, COLOR_BLUE);
 
 	while (!g_shutdown) {
 		if (g_monitor_reset) {
@@ -678,9 +702,13 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			threeDExtensions->Release();
 
 		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource && !g_monitor_mode) {
-			fprintf(stdout, "Frame received (#%8llu) - No input signal detected (%7.2f ms)\n",
-				frameTime->frameCount, interval);
+			g_no_signal = 1;
+			if (!g_monitor_mode) {
+				fprintf(stdout, "Frame received (#%8llu) - No input signal detected (%7.2f ms)\n",
+					frameTime->frameCount, interval);
+			}
 		} else {
+			g_no_signal = 0;
 			const char *timecodeString = NULL;
 			if (g_timecodeFormat != 0) {
 				IDeckLinkTimecode *timecode;
@@ -829,8 +857,9 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 	return S_OK;
 }
 
-HRESULT DeckLinkCaptureDelegate:: VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode * mode, BMDDetectedVideoInputFormatFlags)
+HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode * mode, BMDDetectedVideoInputFormatFlags)
 {
+	g_detected_mode_id = mode->GetDisplayMode();
 	return S_OK;
 }
 
@@ -974,7 +1003,7 @@ static int _main(int argc, char *argv[])
 	IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 	DeckLinkCaptureDelegate *delegate;
 	IDeckLinkDisplayMode *displayMode;
-	BMDVideoInputFlags inputFlags = 0;
+	BMDVideoInputFlags inputFlags = bmdVideoInputEnableFormatDetection;
 	BMDDisplayMode selectedDisplayMode = bmdModeNTSC;
 	BMDPixelFormat pixelFormat = bmdFormat8BitYUV;
 	int displayModeCount = 0;
@@ -1169,6 +1198,7 @@ static int _main(int argc, char *argv[])
 			const char *displayModeName;
 			displayMode->GetName(&displayModeName);
 			selectedDisplayMode = displayMode->GetDisplayMode();
+			g_requested_mode_id = displayMode->GetDisplayMode();
 
 			BMDDisplayModeSupport result;
 			deckLinkInput->DoesSupportVideoMode(selectedDisplayMode, pixelFormat, bmdVideoInputFlagDefault, &result, NULL);
