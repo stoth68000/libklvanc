@@ -99,7 +99,8 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 			}
 
 			/* Heck, why don't we attempt to parse the vanc?
-			 * Production apps to craete the vanc context once.... obviously.
+			 * Production apps to create the vanc context once.... obviously,
+			 * don't keep intializing and destroying the vanchdl.
 			 */
 			struct vanc_context_s *vanchdl;
 			if (vanc_context_create(&vanchdl) < 0) {
