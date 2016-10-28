@@ -20,6 +20,8 @@
 #include "DeckLinkAPI.h"
 #include "ts_packetizer.h"
 
+#define WIDE 80
+
 class DeckLinkCaptureDelegate : public IDeckLinkInputCallback
 {
 public:
@@ -179,7 +181,7 @@ static void vanc_monitor_stats_dump_curses()
 	sprintf(head_a, " DID / SDID  DESCRIPTION");
 
 	char head_b[160];
-	int blen = 75 - (strlen(head_a) + strlen(head_c));
+	int blen = (WIDE - 5) - (strlen(head_a) + strlen(head_c));
 	memset(head_b, 0x20, sizeof(head_b));
 	head_b[blen] = 0;
 
@@ -201,9 +203,28 @@ static void vanc_monitor_stats_dump_curses()
 					continue;
 
 				pthread_mutex_lock(&line->mutex);
+				struct packet_header_s *pkt = line->pkt;
+
 				mvprintw(linecount++, 0, "line(cnt)    %d(%lu)", l, line->count);
 				mvprintw(linecount++, 0, " H/offset    ...");
-				mvprintw(linecount++, 0, "     data    ...");
+				mvprintw(linecount++, 0, " data len    0x%x", pkt->payloadLengthWords);
+
+				char p[256] = { 0 };
+				int cnt = 0;
+				for (int w = 0; w < pkt->payloadLengthWords; w++) {
+					sprintf(p + strlen(p), "%02x ", (pkt->payload[w]) & 0xff);
+					if (++cnt == 16 || (w + 1) == pkt->payloadLengthWords) {
+						cnt = 0;
+						if (w == 15)
+							mvprintw(linecount++, 0, "     data    %s", p);
+						else
+							mvprintw(linecount++, 0, "             %s", p);
+						p[0] = 0;
+					}
+				}
+				mvprintw(linecount++, 0, " checksum    %03x (%s)",
+					pkt->checksum,
+					pkt->checksumValid ? "VALID" : "INVALID");
 				pthread_mutex_unlock(&line->mutex);
 			}
 
@@ -223,7 +244,7 @@ static void vanc_monitor_stats_dump_curses()
 	sprintf(tail_a, "KLVANC_CAPTURE");
 
 	char tail_b[160];
-	blen = 76 - (strlen(tail_a) + strlen(tail_c));
+	blen = (WIDE - 4) - (strlen(tail_a) + strlen(tail_c));
 	memset(tail_b, 0x20, sizeof(tail_b));
 	tail_b[blen] = 0;
 
@@ -279,18 +300,17 @@ static int vanc_monitor_stat_update(struct packet_header_s *pkt)
 	gettimeofday(&s->lastUpdated, NULL);
 
 	struct vanc_monitor_line_s *line = &s->lines[ pkt->lineNr ];
-	if (line->active == 0) {
-		line->active = 1;
-		s->activeCount++;
+	line->active = 1;
+	s->activeCount++;
 
-		pthread_mutex_lock(&line->mutex);
-		if (line->pkt) {
-			vanc_packet_free(line->pkt);
-			line->pkt = 0;
-		}
-		vanc_packet_copy(&line->pkt, pkt);
-		pthread_mutex_unlock(&line->mutex);
+	pthread_mutex_lock(&line->mutex);
+	if (line->pkt) {
+		vanc_packet_free(line->pkt);
+		line->pkt = 0;
 	}
+	vanc_packet_copy(&line->pkt, pkt);
+	pthread_mutex_unlock(&line->mutex);
+
 	line->count++;
 
 	return 0;
@@ -307,6 +327,26 @@ static void *thread_func_input(void *p)
 		}
 		if (ch == 'r')
 			g_monitor_reset = 1;
+		if (ch == 0x1b) {
+			ch = getch();
+
+			/* Cursor keys */
+			if (ch == 0x5b) {
+				ch = getch();
+				if (ch == 0x41) {
+					/* Up arrow */
+				} else
+				if (ch == 0x42) {
+					/* Down arrow */
+				} else
+				if (ch == 0x43) {
+					/* Right arrow */
+				} else
+				if (ch == 0x44) {
+					/* Left arrow */
+				}
+			}
+		}
 	}
 	return 0;
 }
