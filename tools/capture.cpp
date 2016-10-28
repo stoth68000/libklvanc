@@ -125,7 +125,10 @@ struct vanc_monitor_s
 	uint32_t did, sdid;
 	const char *desc, *spec;
 	struct timeval lastUpdated;
+	int hasCursor;
+	int expandUI;
 };
+static struct vanc_monitor_s *selected = 0;
 
 /* A static array of structs, for did/sdid rapid lookups.
  * Where DD and SD range from 00.FFF.
@@ -133,6 +136,80 @@ struct vanc_monitor_s
 //static struct vanc_monitor_s monitorLines[0x10000];
 static struct vanc_monitor_s *monitorLines;
 #define vanc_monitor_stat_lookup(didnr, sdidnr) &monitorLines[ (((didnr) << 8) | (sdidnr)) ]
+
+static void cursor_expand()
+{
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (!e->activeCount)
+				continue;
+
+			if (e->hasCursor == 1) {
+				if (e->expandUI)
+					e->expandUI = 0;
+				else
+					e->expandUI = 1;
+				return;
+			}
+		}
+	}
+}
+
+static void cursor_down()
+{
+	struct vanc_monitor_s *def = 0;
+	struct vanc_monitor_s *prev = 0;
+
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (!e->activeCount)
+				continue;
+
+			def = e;
+			if (e->hasCursor == 1 && !prev) {
+				prev = e;
+			} else
+			if (!e->hasCursor && prev) {
+				prev->hasCursor = 0;
+				e->hasCursor = 1;
+				return;
+			}
+		}
+	}
+
+	if (def)
+		def->hasCursor = 1;
+}
+
+static void cursor_up()
+{
+	struct vanc_monitor_s *def = 0;
+	struct vanc_monitor_s *prev = 0;
+
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (!e->activeCount)
+				continue;
+
+			def = e;
+			if (e->hasCursor == 0) {
+				prev = e;
+			} else
+			if (e->hasCursor && prev) {
+				prev->hasCursor = 1;
+				e->hasCursor = 0;
+				return;
+			}
+		}
+	}
+
+	if (def)
+		def->hasCursor = 0;
+}
+
 
 static void vanc_monitor_stats_reset()
 {
@@ -164,6 +241,7 @@ static void vanc_monitor_stats_dump_curses()
 {
 	int linecount = 0;
 	int headLineColor = 1;
+	int cursorColor = 5;
 
 	char head_c[160];
 	if (g_no_signal)
@@ -195,7 +273,15 @@ static void vanc_monitor_stats_dump_curses()
 			if (e->activeCount == 0)
 				continue;
 
-			mvprintw(linecount++, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+			{
+				if (e->hasCursor)
+					attron(COLOR_PAIR(cursorColor));
+				char t[80];
+				sprintf(t, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+				mvprintw(linecount++, 0, "%-75s", t);
+				if (e->hasCursor)
+					attroff(COLOR_PAIR(cursorColor));
+			}
 
 			for (int l = 0; l < 2048; l++) {
 				struct vanc_monitor_line_s *line = &e->lines[ l ];
@@ -206,25 +292,29 @@ static void vanc_monitor_stats_dump_curses()
 				struct packet_header_s *pkt = line->pkt;
 
 				mvprintw(linecount++, 0, "line(cnt)    %d(%lu)", l, line->count);
-				mvprintw(linecount++, 0, " H/offset    ...");
-				mvprintw(linecount++, 0, " data len    0x%x", pkt->payloadLengthWords);
 
-				char p[256] = { 0 };
-				int cnt = 0;
-				for (int w = 0; w < pkt->payloadLengthWords; w++) {
-					sprintf(p + strlen(p), "%02x ", (pkt->payload[w]) & 0xff);
-					if (++cnt == 16 || (w + 1) == pkt->payloadLengthWords) {
-						cnt = 0;
-						if (w == 15)
-							mvprintw(linecount++, 0, "     data    %s", p);
-						else
-							mvprintw(linecount++, 0, "             %s", p);
-						p[0] = 0;
+				if (e->expandUI)
+				{
+					mvprintw(linecount++, 0, " H/offset    ...");
+					mvprintw(linecount++, 0, " data len    0x%x", pkt->payloadLengthWords);
+
+					char p[256] = { 0 };
+					int cnt = 0;
+					for (int w = 0; w < pkt->payloadLengthWords; w++) {
+						sprintf(p + strlen(p), "%02x ", (pkt->payload[w]) & 0xff);
+						if (++cnt == 16 || (w + 1) == pkt->payloadLengthWords) {
+							cnt = 0;
+							if (w == 15)
+								mvprintw(linecount++, 0, "     data    %s", p);
+							else
+								mvprintw(linecount++, 0, "             %s", p);
+							p[0] = 0;
+						}
 					}
+					mvprintw(linecount++, 0, " checksum    %03x (%s)",
+						pkt->checksum,
+						pkt->checksumValid ? "VALID" : "INVALID");
 				}
-				mvprintw(linecount++, 0, " checksum    %03x (%s)",
-					pkt->checksum,
-					pkt->checksumValid ? "VALID" : "INVALID");
 				pthread_mutex_unlock(&line->mutex);
 			}
 
@@ -233,7 +323,7 @@ static void vanc_monitor_stats_dump_curses()
 	}
 
 	attron(COLOR_PAIR(2));
-        mvprintw(linecount++, 0, "q)uit r)eset");
+        mvprintw(linecount++, 0, "q)uit r)eset e)xpand");
 	attroff(COLOR_PAIR(2));
 
 	char tail_c[160];
@@ -313,6 +403,11 @@ static int vanc_monitor_stat_update(struct packet_header_s *pkt)
 
 	line->count++;
 
+	if (selected == 0) {
+		selected = s;
+		selected->hasCursor = 1;
+	}
+
 	return 0;
 }
 
@@ -327,6 +422,8 @@ static void *thread_func_input(void *p)
 		}
 		if (ch == 'r')
 			g_monitor_reset = 1;
+		if (ch == 'e')
+			cursor_expand();
 		if (ch == 0x1b) {
 			ch = getch();
 
@@ -335,9 +432,11 @@ static void *thread_func_input(void *p)
 				ch = getch();
 				if (ch == 0x41) {
 					/* Up arrow */
+					cursor_up();
 				} else
 				if (ch == 0x42) {
 					/* Down arrow */
+					cursor_down();
 				} else
 				if (ch == 0x43) {
 					/* Right arrow */
@@ -360,6 +459,7 @@ static void *thread_func_draw(void *p)
 	init_pair(2, COLOR_CYAN, COLOR_BLACK);
 	init_pair(3, COLOR_RED, COLOR_BLACK);
 	init_pair(4, COLOR_RED, COLOR_BLUE);
+	init_pair(5, COLOR_WHITE, COLOR_CYAN);
 
 	while (!g_shutdown) {
 		if (g_monitor_reset) {
