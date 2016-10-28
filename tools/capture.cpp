@@ -137,6 +137,18 @@ static struct vanc_monitor_s *selected = 0;
 static struct vanc_monitor_s *monitorLines;
 #define vanc_monitor_stat_lookup(didnr, sdidnr) &monitorLines[ (((didnr) << 8) | (sdidnr)) ]
 
+static void cursor_expand_all()
+{
+	for (int d = 0; d <= 0xff; d++) {
+		for (int s = 0; s <= 0xff; s++) {
+			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			if (!e->activeCount)
+				continue;
+			e->expandUI = 1;
+		}
+	}
+}
+
 static void cursor_expand()
 {
 	for (int d = 0; d <= 0xff; d++) {
@@ -291,12 +303,14 @@ static void vanc_monitor_stats_dump_curses()
 				pthread_mutex_lock(&line->mutex);
 				struct packet_header_s *pkt = line->pkt;
 
-				mvprintw(linecount++, 0, "line(cnt)    %d(%lu)", l, line->count);
+				mvprintw(linecount++, 13, "line #%d count #%lu horizontal offset word #%d", l, line->count,
+					pkt->horizontalOffset);
 
 				if (e->expandUI)
 				{
-					mvprintw(linecount++, 0, " H/offset    %d", pkt->horizontalOffset);
-					mvprintw(linecount++, 0, " data len    0x%x", pkt->payloadLengthWords);
+					mvprintw(linecount++, 13, "data length: 0x%x (%d)",
+						pkt->payloadLengthWords,
+						pkt->payloadLengthWords);
 
 					char p[256] = { 0 };
 					int cnt = 0;
@@ -304,14 +318,14 @@ static void vanc_monitor_stats_dump_curses()
 						sprintf(p + strlen(p), "%02x ", (pkt->payload[w]) & 0xff);
 						if (++cnt == 16 || (w + 1) == pkt->payloadLengthWords) {
 							cnt = 0;
-							if (w == 15)
-								mvprintw(linecount++, 0, "     data    %s", p);
+							if (w == 15 || (pkt->payloadLengthWords < 15))
+								mvprintw(linecount++, 13, "  -> %s", p);
 							else
-								mvprintw(linecount++, 0, "             %s", p);
+								mvprintw(linecount++, 13, "     %s", p);
 							p[0] = 0;
 						}
 					}
-					mvprintw(linecount++, 0, " checksum    %03x (%s)",
+					mvprintw(linecount++, 13, "checksum %03x (%s)",
 						pkt->checksum,
 						pkt->checksumValid ? "VALID" : "INVALID");
 				}
@@ -323,7 +337,7 @@ static void vanc_monitor_stats_dump_curses()
 	}
 
 	attron(COLOR_PAIR(2));
-        mvprintw(linecount++, 0, "q)uit r)eset e)xpand");
+        mvprintw(linecount++, 0, "q)uit r)eset e)xpand E)xpand all");
 	attroff(COLOR_PAIR(2));
 
 	char tail_c[160];
@@ -424,6 +438,8 @@ static void *thread_func_input(void *p)
 			g_monitor_reset = 1;
 		if (ch == 'e')
 			cursor_expand();
+		if (ch == 'E')
+			cursor_expand_all();
 		if (ch == 0x1b) {
 			ch = getch();
 
@@ -459,7 +475,7 @@ static void *thread_func_draw(void *p)
 	init_pair(2, COLOR_CYAN, COLOR_BLACK);
 	init_pair(3, COLOR_RED, COLOR_BLACK);
 	init_pair(4, COLOR_RED, COLOR_BLUE);
-	init_pair(5, COLOR_WHITE, COLOR_CYAN);
+	init_pair(5, COLOR_BLACK, COLOR_WHITE);
 
 	while (!g_shutdown) {
 		if (g_monitor_reset) {
