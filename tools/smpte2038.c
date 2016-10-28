@@ -80,7 +80,7 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 		smpte2038_anc_data_packet_dump(pkt);
 
 		/* For fun, convert all SMPTE2038 ANC Lines into raw VANC, then parse
-		 * it using the stand VANC library.
+		 * it using the standard VANC library facilities.
 		 */
 		printf("SMPTE2038 message has %d line(s), displaying...\n", pkt->lineCount);
 		for (int i = 0; i < pkt->lineCount; i++) {
