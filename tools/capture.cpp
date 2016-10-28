@@ -677,7 +677,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		if (threeDExtensions)
 			threeDExtensions->Release();
 
-		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource) {
+		if (videoFrame->GetFlags() & bmdFrameHasNoInputSource && !g_monitor_mode) {
 			fprintf(stdout, "Frame received (#%8llu) - No input signal detected (%7.2f ms)\n",
 				frameTime->frameCount, interval);
 		} else {
