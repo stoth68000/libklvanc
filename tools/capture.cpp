@@ -112,6 +112,8 @@ struct vanc_monitor_line_s
 {
 	int      active;
 	uint64_t count;
+	pthread_mutex_t mutex;
+	struct   packet_header_s *pkt;
 };
 
 struct vanc_monitor_s
@@ -138,17 +140,27 @@ static void vanc_monitor_stats_reset()
 			e->activeCount = 0;
 
 			for (int l = 0; l < 2048; l++) {
-				e->lines[l].active = 0;
-				e->lines[l].count = 0;
+				struct vanc_monitor_line_s *line = &e->lines[ l ];
+				if (!line->active)
+					continue;
+
+				line->active = 0;
+				line->count = 0;
+
+				pthread_mutex_lock(&line->mutex);
+				if (line->pkt) {
+					vanc_packet_free(line->pkt);
+					line->pkt = 0;
+				}
+				pthread_mutex_unlock(&line->mutex);
 			}
 		}
 	}
-
 }
 
 static void vanc_monitor_stats_dump_curses()
 {
-	int line = 0;
+	int linecount = 0;
 	int headLineColor = 1;
 
 	char head_c[160];
@@ -172,7 +184,7 @@ static void vanc_monitor_stats_dump_curses()
 	head_b[blen] = 0;
 
 	attron(COLOR_PAIR(headLineColor));
-	mvprintw(line++, 0, "%s%s%s", head_a, head_b, head_c);
+	mvprintw(linecount++, 0, "%s%s%s", head_a, head_b, head_c);
         attroff(COLOR_PAIR(headLineColor));
 
 	for (int d = 0; d <= 0xff; d++) {
@@ -181,22 +193,26 @@ static void vanc_monitor_stats_dump_curses()
 			if (e->activeCount == 0)
 				continue;
 
-			mvprintw(line++, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+			mvprintw(linecount++, 0, "  %02x / %02x    %s [%s] ", e->did, e->sdid, e->desc, e->spec);
 
 			for (int l = 0; l < 2048; l++) {
-				if (e->lines[l].active) {
-					mvprintw(line++, 0, "line(cnt)    %d(%lu)", l, e->lines[l].count);
-					mvprintw(line++, 0, " H/offset    ...");
-					mvprintw(line++, 0, "     data    ...");
-				}
+				struct vanc_monitor_line_s *line = &e->lines[ l ];
+				if (!line->active)
+					continue;
+
+				pthread_mutex_lock(&line->mutex);
+				mvprintw(linecount++, 0, "line(cnt)    %d(%lu)", l, line->count);
+				mvprintw(linecount++, 0, " H/offset    ...");
+				mvprintw(linecount++, 0, "     data    ...");
+				pthread_mutex_unlock(&line->mutex);
 			}
 
-			line++;
+			linecount++;
 		}
 	}
 
 	attron(COLOR_PAIR(2));
-        mvprintw(line++, 0, "q)uit r)eset");
+        mvprintw(linecount++, 0, "q)uit r)eset");
 	attroff(COLOR_PAIR(2));
 
 	char tail_c[160];
@@ -212,7 +228,7 @@ static void vanc_monitor_stats_dump_curses()
 	tail_b[blen] = 0;
 
 	attron(COLOR_PAIR(1));
-	mvprintw(line++, 0, "%s%s%s", tail_a, tail_b, tail_c);
+	mvprintw(linecount++, 0, "%s%s%s", tail_a, tail_b, tail_c);
         attroff(COLOR_PAIR(1));
 }
 
@@ -244,29 +260,38 @@ static void vanc_monitor_stat_free()
 	free(monitorLines);
 }
 
-static int vanc_monitor_stat_update(uint32_t didnr, uint32_t sdidnr, uint32_t lineNr, enum packet_type_e type)
+static int vanc_monitor_stat_update(struct packet_header_s *pkt)
 {
-	if (didnr > 0xff)
+	if (pkt->did > 0xff)
 		return -1;
-	if (sdidnr > 0xff)
+	if (pkt->dbnsdid > 0xff)
 		return -1;
-	if (lineNr >= 2048)
+	if (pkt->lineNr >= 2048)
 		return -1;
 
-	struct vanc_monitor_s *s = vanc_monitor_stat_lookup(didnr, sdidnr);
+	struct vanc_monitor_s *s = vanc_monitor_stat_lookup(pkt->did, pkt->dbnsdid);
 	if (s->activeCount == 0) {
-		s->did = didnr;
-		s->sdid = sdidnr;
-		s->desc = vanc_lookupDescriptionByType(type);
-		s->spec = vanc_lookupSpecificationByType(type);
+		s->did = pkt->did;
+		s->sdid = pkt->dbnsdid;
+		s->desc = vanc_lookupDescriptionByType(pkt->type);
+		s->spec = vanc_lookupSpecificationByType(pkt->type);
 	}
 	gettimeofday(&s->lastUpdated, NULL);
 
-	if (s->lines[ lineNr ].active == 0) {
-		s->lines[ lineNr ].active = 1;
+	struct vanc_monitor_line_s *line = &s->lines[ pkt->lineNr ];
+	if (line->active == 0) {
+		line->active = 1;
 		s->activeCount++;
+
+		pthread_mutex_lock(&line->mutex);
+		if (line->pkt) {
+			vanc_packet_free(line->pkt);
+			line->pkt = 0;
+		}
+		vanc_packet_copy(&line->pkt, pkt);
+		pthread_mutex_unlock(&line->mutex);
 	}
-	s->lines[ lineNr ].count++;
+	line->count++;
 
 	return 0;
 }
@@ -903,7 +928,7 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 
 static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
 {
-	vanc_monitor_stat_update(pkt->did, pkt->dbnsdid, pkt->lineNr, pkt->type);
+	vanc_monitor_stat_update(pkt);
 
 	if (g_packetizeSMPTE2038) {
 		if (smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {

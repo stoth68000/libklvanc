@@ -182,6 +182,9 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 const char *vanc_lookupDescriptionByType(enum packet_type_e type);
 const char *vanc_lookupSpecificationByType(enum packet_type_e type);
 
+int vanc_packet_copy(struct packet_header_s **dst, struct packet_header_s *src);
+void vanc_packet_free(struct packet_header_s *src);
+
 #ifdef __cplusplus
 };
 #endif

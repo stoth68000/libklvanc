@@ -307,3 +307,16 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 
 	return 0;
 }
+
+int vanc_packet_copy(struct packet_header_s **dst, struct packet_header_s *src)
+{
+	*dst = malloc(sizeof(*src));
+	memcpy(*dst, src, sizeof(*src));
+	return 0;
+}
+
+void vanc_packet_free(struct packet_header_s *src)
+{
+	free(src);
+}
+
