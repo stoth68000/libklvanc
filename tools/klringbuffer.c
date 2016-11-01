@@ -75,7 +75,7 @@ size_t rb_write(KLRingBuffer *buf, const char *from, size_t bytes)
 	assert(from);
 
 	if (bytes > rb_remain(buf)) {
-		if (rb_grow(buf, bytes - rb_remain(buf)) < 0)
+		if (rb_grow(buf, bytes * 128) < 0)
 			return 0;
 	}
 
