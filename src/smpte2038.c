@@ -356,9 +356,9 @@ int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx)
 	uint64_t pts = 0; /* TODO */
 	klbs_write_bits(ctx->bs, (pts >> 30), 3);			/* PTS[32:30] */
 	klbs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
-	klbs_write_bits(ctx->bs, (pts >> 15) & 0xefff, 15);	/* PTS[29:15] */
+	klbs_write_bits(ctx->bs, (pts >> 15) & 0x7fff, 15);	/* PTS[29:15] */
 	klbs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
-	klbs_write_bits(ctx->bs, (pts & 0xefff), 15);		/* PTS[14:0] */
+	klbs_write_bits(ctx->bs, (pts & 0x7fff), 15);		/* PTS[14:0] */
 	klbs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
 
 	/* Close (actually its 'align') the bitstream buffer */
