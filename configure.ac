@@ -18,6 +18,17 @@ LDFLAGS+="-L/usr/local/lib "
 fi
 CFLAGS+=" -DKL_USERSPACE "
 
+# We always build with -fPIC in case our static libraries end up
+# being linked into a consumer's shared library
+AC_MSG_CHECKING(whether fPIC compiler option is accepted)
+SAVED_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -fPIC -Werror"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [return 0;])],
+    [AC_MSG_RESULT(yes)
+     CFLAGS="$SAVED_CFLAGS -fPIC"],
+    [AC_MSG_RESULT(no)
+     CFLAGS="$SAVED_CFLAGS"])
+
 AC_PROG_RANLIB
 AC_PROG_LIBTOOL
 
