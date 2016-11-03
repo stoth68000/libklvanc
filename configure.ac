@@ -37,10 +37,13 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdint.h stdlib.h string.h sy
 AC_CHECK_HEADERS([zlib.h],
                  [break],
                  [AC_MSG_ERROR([zlib-dev headers not found or not usable])])
-AC_CHECK_HEADERS([curses.h],
-                 [break],
-                 [AC_MSG_ERROR([curses headers not found or not usable])])
 
+# Check for curses (optional)
+AC_CHECK_HEADERS([curses.h], HEADER_LIBCURSES="yes")
+if test "x$HEADER_LIBCURSES" == "xyes" ; then
+    LDFLAGS+="-lcurses "
+fi
+AM_CONDITIONAL(LIBCURSES, test x"$HEADER_LIBCURSES" == x"yes")
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_UINT16_T

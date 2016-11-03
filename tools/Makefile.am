@@ -3,12 +3,12 @@ AUTOMAKE_OPTIONS = foreign
 
 BLACKMAGIC_SDK_PATH = $(top_srcdir)/include/decklink-sdk
 
-CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 -O3 \
+CFLAGS += -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 -O3 \
 	-D_BSD_SOURCE \
 	-I$(BLACKMAGIC_SDK_PATH) \
 	-I$(top_srcdir)/src \
 	-L$(top_builddir)/src/.libs -lklvanc -lpthread \
-	-DKL_USERSPACE -lz -ldl -lklvanc -lcurses
+	-DKL_USERSPACE -lz -ldl -lklvanc
 
 if DEBUG
 	CFLAGS += -g

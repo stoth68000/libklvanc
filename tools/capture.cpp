@@ -9,7 +9,9 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <zlib.h>
+#if HAVE_CURSES_H
 #include <curses.h>
+#endif
 #include <libgen.h>
 #include <signal.h>
 #include <libklvanc/vanc.h>
@@ -109,6 +111,7 @@ static struct frameTime_s {
 	unsigned long long remoteFrameCount;
 } frameTimes[2];
 
+#if HAVE_CURSES_H
 pthread_t threadId;
 struct vanc_monitor_line_s
 {
@@ -492,6 +495,7 @@ static void *thread_func_draw(void *p)
 
 	return 0;
 }
+#endif /* HAVE_CURSES_H */
 
 static void signal_handler(int signum)
 {
@@ -1084,7 +1088,9 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 
 static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
 {
+#if HAVE_CURSES_H
 	vanc_monitor_stat_update(pkt);
+#endif
 
 	if (g_packetizeSMPTE2038) {
 		if (smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {
@@ -1336,7 +1342,9 @@ static int _main(int argc, char *argv[])
                 exit(1);
         }
 
+#if HAVE_CURSES_H
 	vanc_monitor_stat_alloc();
+#endif
        	vanchdl->verbose = g_verbose;
         vanchdl->callbacks = &callbacks;
 
@@ -1428,11 +1436,13 @@ static int _main(int argc, char *argv[])
 
 	signal(SIGINT, signal_handler);
 
+#if HAVE_CURSES_H
 	if (g_monitor_mode) {
 		initscr();
 		pthread_create(&threadId, 0, thread_func_draw, NULL);
 		pthread_create(&threadId, 0, thread_func_input, NULL);
 	}
+#endif
 
 	/* All Okay. */
 	exitStatus = 0;
@@ -1451,13 +1461,17 @@ static int _main(int argc, char *argv[])
 		fprintf(stderr, "Failed to start stream. Is another application using the card?\n");
 	}
 
+#if HAVE_CURSES_H
 	vanc_monitor_stats_dump();
+#endif
         vanc_context_destroy(vanchdl);
 	smpte2038_packetizer_free(&smpte2038_ctx);
-	vanc_monitor_stat_free();
 
+#if HAVE_CURSES_H
+	vanc_monitor_stat_free();
 	if (g_monitor_mode)
 		endwin();
+#endif
 
 bail:
 
