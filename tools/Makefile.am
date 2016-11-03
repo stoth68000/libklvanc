@@ -36,10 +36,11 @@ klvanc_capture_SOURCES = $(SRC)
 klvanc_smpte2038_SOURCES = $(SRC)
 
 libklvanc_noinst_includedir = $(includedir)
-libklvanc_noinst_include_HEADERS  = hexdump.h
-libklvanc_noinst_include_HEADERS += klringbuffer.h
-libklvanc_noinst_include_HEADERS += pes_extractor.h
-libklvanc_noinst_include_HEADERS += ts_packetizer.h
-libklvanc_noinst_include_HEADERS += udp.h
-libklvanc_noinst_include_HEADERS += url.h
-libklvanc_noinst_include_HEADERS += version.h
+
+noinst_HEADERS  = hexdump.h
+noinst_HEADERS += klringbuffer.h
+noinst_HEADERS += pes_extractor.h
+noinst_HEADERS += ts_packetizer.h
+noinst_HEADERS += udp.h
+noinst_HEADERS += url.h
+noinst_HEADERS += version.h
