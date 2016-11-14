@@ -113,6 +113,9 @@ void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h);
  */
 void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt);
 
+/**
+ * @brief	TODO - Brief description goes here.
+ */
 struct smpte2038_packetizer_s
 {
 	uint8_t *buf;
@@ -145,6 +148,12 @@ void smpte2038_packetizer_free(struct smpte2038_packetizer_s **ctx);
  */
 int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx);
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct smpte2038_packetizer_s *ctx
+ * @param[in]	struct packet_header_s *pkt
+ * @return	TODO.
+ */
 int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packet_header_s *pkt);
 
 /**
