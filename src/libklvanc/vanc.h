@@ -179,10 +179,32 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	uint16_t **dst, uint16_t *dstWordCount,
 	uint32_t bitDepth);
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	enum packet_type_e type
+ * @return	TODO.
+ */
 const char *vanc_lookupDescriptionByType(enum packet_type_e type);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	enum packet_type_e type
+ * @return	TODO.
+ */
 const char *vanc_lookupSpecificationByType(enum packet_type_e type);
 
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct packet_header_s **dst
+ * @param[in]	struct packet_header_s *src
+ * @return	TODO.
+ */
 int vanc_packet_copy(struct packet_header_s **dst, struct packet_header_s *src);
+
+/**
+ * @brief	TODO - Brief description goes here.
+ * @param[in]	struct packet_header_s *src
+ */
 void vanc_packet_free(struct packet_header_s *src);
 
 #ifdef __cplusplus
