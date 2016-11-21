@@ -41,7 +41,7 @@ AC_CHECK_HEADERS([zlib.h],
 # Check for curses (optional)
 AC_CHECK_HEADERS([curses.h], HEADER_LIBCURSES="yes")
 if test "x$HEADER_LIBCURSES" == "xyes" ; then
-    LDFLAGS+="-lcurses "
+    LDFLAGS+=" -lcurses "
 fi
 AM_CONDITIONAL(LIBCURSES, test x"$HEADER_LIBCURSES" == x"yes")
 
