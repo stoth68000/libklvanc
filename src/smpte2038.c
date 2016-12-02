@@ -390,9 +390,28 @@ int smpte2038_convert_line_to_words(struct smpte2038_anc_data_line_s *l, uint16_
 	arr[i++] = 0;
 	arr[i++] = 0x3ff;
 	arr[i++] = 0x3ff;
-	arr[i++] = l->DID;
-	arr[i++] = l->SDID;
-	arr[i++] = l->data_count;
+
+	/* If parity bits are already present, pass them through rather than recomputing them
+	   This avoids running the parity function against a value which already contains a
+	   parity bit (the parity bit present in the input could change the outcome of the
+	   parity computation).  It also avoids cases where we might turn a bad parity into
+	   a good parity value (e.g. the input is malformed and recomputing the parity would
+	   result in bad data having a good parity). */
+	if (l->DID & 0x300)
+		arr[i++] = l->DID;
+	else
+		arr[i++] = l->DID | (__builtin_parity(l->DID) ? 0x100 : 0x200);
+
+	if (l->SDID & 0x300)
+		arr[i++] = l->SDID;
+	else
+		arr[i++] = l->SDID | (__builtin_parity(l->SDID) ? 0x100 : 0x200);
+
+	if (l->data_count & 0x300)
+		arr[i++] = l->data_count;
+	else
+		arr[i++] = l->data_count | (__builtin_parity(l->data_count) ? 0x100 : 0x200);
+
 	for (int j = 0; j < VANC8(l->data_count); j++)
 		arr[i++] = l->user_data_words[j];
 	arr[i++] = l->checksum_word;
