@@ -60,7 +60,7 @@ int klvanc_v210_line_to_nv20_c(const uint32_t * src, uint16_t * dst, int dstSize
 	if (!src || !dst || !width)
 		return -1;
 
-	if (dstSizeBytes < (width * 2))
+	if (dstSizeBytes < (width * 6))
 		return -1;
 
 	int w;
