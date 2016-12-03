@@ -165,7 +165,7 @@ int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packe
  * @return      0 - Success
  * @return    < 0 - Error
  */
-int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx);
+int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx, uint64_t pts);
 
 /**
  * @brief	Convert type struct smpte2038_anc_data_line_s into a more traditional line of\n
