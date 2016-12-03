@@ -623,7 +623,7 @@ static int AnalyzeVANC(const char *fn)
 			hexdump(buf, uiStride, 64);
 
 		if (uiLine == 1 && g_packetizeSMPTE2038) {
-			if (smpte2038_packetizer_end(smpte2038_ctx) == 0) {
+			if (smpte2038_packetizer_end(smpte2038_ctx, 0) == 0) {
 				printf("%s() PES buffer is complete\n", __func__);
 
 				uint8_t *pkts = 0;
@@ -774,7 +774,10 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 	}
 
 	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_end(smpte2038_ctx) == 0) {
+		BMDTimeValue stream_time;
+		BMDTimeValue frame_duration;
+		frame->GetStreamTime(&stream_time, &frame_duration, 90000);
+		if (smpte2038_packetizer_end(smpte2038_ctx, stream_time) == 0) {
 			printf("%s() PES buffer is complete\n", __func__);
 		}
 	}
