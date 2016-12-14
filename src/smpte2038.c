@@ -318,7 +318,7 @@ int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packe
 }
 
 /* return the size in bytes of the newly created buffer */
-int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx)
+int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx, uint64_t pts)
 {
 	if (ctx->bufused == SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET)
 		return -1;
@@ -353,7 +353,6 @@ int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx)
 	klbs_write_bits(ctx->bs, 5, 8);		/* PES_HEADER_DATA_length */
 	klbs_write_bits(ctx->bs, 2, 4);		/* '0010' fixed value */
 
-	uint64_t pts = 0; /* TODO */
 	klbs_write_bits(ctx->bs, (pts >> 30), 3);			/* PTS[32:30] */
 	klbs_write_bits(ctx->bs, 1, 1);				/* marker_bit */
 	klbs_write_bits(ctx->bs, (pts >> 15) & 0x7fff, 15);	/* PTS[29:15] */
