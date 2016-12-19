@@ -47,15 +47,15 @@ void vanc_line_free(struct vanc_line_s *line)
 	free(line);
 }
 
-void vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
-		      int pixel_width, int line_number, int horizontal_offset)
+int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
+		     int pixel_width, int line_number, int horizontal_offset)
 {
 	int i;
 	struct vanc_line_s *line = vanc_lines->lines[0];
 	struct vanc_entry_s *new_entry =
 	    (struct vanc_entry_s *)malloc(sizeof(struct vanc_entry_s));
 	if (new_entry == NULL)
-		return;
+		return -ENOMEM;
 
 	new_entry->payload =
 	    (uint16_t *) malloc(pixel_width * sizeof(uint16_t));
@@ -81,7 +81,7 @@ void vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 		/* Array is full */
 		fprintf(stderr, "array of lines is full!\n");
 		free(new_entry);
-		return;
+		return -ENOMEM;
 	}
 
 	/* Now insert the VANC entry into the line */
@@ -89,10 +89,11 @@ void vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 		/* Array is full */
 		fprintf(stderr, "line is full!\n");
 		free(new_entry);
-		return;
+		return -ENOMEM;
 	}
 
 	line->p_entries[line->num_entries++] = new_entry;
+	return 0;
 }
 
 static int vanc_ent_comp(const void *a, const void *b)
@@ -108,8 +109,8 @@ static int vanc_ent_comp(const void *a, const void *b)
 	return 1;
 }
 
-void generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
-			int *out_len, int line_pixel_width)
+int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
+		       int *out_len, int line_pixel_width)
 {
 	int pixels_used = 0;
 	int i;
@@ -166,7 +167,7 @@ void generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 
 	*outbuf = (uint16_t *) malloc(pixels_used * sizeof(uint16_t));
 	if (*outbuf == NULL) {
-		return;
+		return -ENOMEM;
 	}
 	*out_len = pixels_used;
 
@@ -177,4 +178,5 @@ void generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 		memcpy((*outbuf) + entry->h_offset, entry->payload,
 		       entry->pixel_width * (sizeof(uint16_t)));
 	}
+	return 0;
 }
