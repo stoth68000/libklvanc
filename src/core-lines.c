@@ -59,6 +59,10 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 
 	new_entry->payload =
 	    (uint16_t *) malloc(pixel_width * sizeof(uint16_t));
+	if (new_entry->payload == NULL) {
+		free(new_entry);
+		return -ENOMEM;
+	}
 	memcpy(new_entry->payload, pixels, pixel_width * sizeof(uint16_t));
 	new_entry->h_offset = horizontal_offset;
 	new_entry->pixel_width = pixel_width;
@@ -80,6 +84,7 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 	if (i == MAX_VANC_LINES) {
 		/* Array is full */
 		fprintf(stderr, "array of lines is full!\n");
+		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
 	}
@@ -88,6 +93,7 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 	if (line->num_entries == MAX_VANC_ENTRIES) {
 		/* Array is full */
 		fprintf(stderr, "line is full!\n");
+		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
 	}
