@@ -39,7 +39,7 @@ static struct did_s {
 	{ 0x41, 0x01,   "S352", "Payload Identification, VANC space"},
 	{ 0x41, 0x05,   "S352 / S2016-3", "AFD and Bar Data / Payload Identification, VANC space (Misconfigured upstream?)"},
 	{ 0x41, 0x06,"S2016-4", "Pan-Scan Data"},
-	{ 0x41, 0x07,  "S2010", "ANSI/SCTE 104"},
+	{ 0x41, 0x07,  "S2010", "ANSI/SCTE 104 - Packet Type 2"},
 	{ 0x41, 0x08,  "S2031", "DVB/SCTE VBI data"},
 	{ 0x60, 0x60, "S12M-2", "Ancillary Time Code"},
 	{ 0x61, 0x01,   "S334", "EIA 708B Data mapping into HDTV VBI, VANC space"},
@@ -49,6 +49,7 @@ static struct did_s {
 	{ 0x61, 0x05,   "S334", "ARIB Captioning - HD"},
 	{ 0x61, 0x06,   "S334", "ARIB Captioning - SD"},
 	{ 0x61, 0x07,   "S334", "ARIB Captioning - Analog"},
+	{ 0x80, 0x07,  "S2010", "ANSI/SCTE 104 - Packet Type 1 (deprecated)"},
 };
 
 const char *klvanc_didLookupDescription(uint16_t did, uint16_t sdid)
