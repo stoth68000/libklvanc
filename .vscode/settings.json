@@ -1,0 +1,36 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+
+    // Configure glob patterns for excluding files and folders.
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/.lo": true,
+        "**/*.lo": true,
+        "**/*.Po": true,
+        "**/*.la": true,
+        "**/*.o": true,
+        "**/Makefile": true,
+        "**/Makefile.in": true,
+        "**/.libs": true,
+        "**/.deps": true,
+        "**/m4": true,
+        "**/autom4te.cache": true,
+        "config.*": true,
+        "configure": true,
+        "install-sh": true,
+        "aclocal.m4": true,
+        "compile": true,
+        "libtool": true,
+        "ltmain.sh": true,
+        "missing": true,
+        "depcomp": true,
+        // Binaries that we generate
+        "tools/klvanc_util": true,
+        "tools/klvanc_capture": true,
+        "tools/klvanc_smpte2038": true,
+    }
+
+}

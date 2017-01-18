@@ -1,0 +1,55 @@
+{
+    "version": "0.1.0",
+    "command": "bash",
+    "isShellCommand": true,
+    "args": ["-c"],
+    "showOutput": "always",
+    "echoCommand": true,
+    "suppressTaskName": true,
+    "tasks": [
+        { 
+            "isBuildCommand": true,
+            "isShellCommand": true,
+            "taskName": "make",
+            "args": ["make"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "make clean (tools)",
+            "args": ["make", "-C", "tools", "clean"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "make clean (src)",
+            "args": ["make", "-C", "src", "clean"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "run util usage",
+            "args": ["tools/iso13818_util", "-h"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "configure",
+            "args": ["./configure --enable-shared=no"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "autogen.sh --build",
+            "args": ["./autogen.sh --build"],
+            "showOutput": "always",
+        },
+        { 
+            "isBuildCommand": true,
+            "taskName": "Doxygen - Create Docs",
+            "args": ["make docs"],
+            "showOutput": "always",
+        }
+    ]
+}
+
