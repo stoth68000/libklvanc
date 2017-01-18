@@ -159,6 +159,7 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
 #include <libklvanc/pixels.h>
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
+#include <libklvanc/klrestricted_code_path.h>
 
 /**
  * @brief	Take an array of payload, create a fully formed VANC message.
