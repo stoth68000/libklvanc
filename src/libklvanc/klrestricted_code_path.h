@@ -44,6 +44,7 @@
 #define _KLRESTRICTED_CODE_PATH_H
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/time.h>
 
 #ifdef __cplusplus

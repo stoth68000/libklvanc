@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -371,7 +372,7 @@ static void vanc_monitor_stats_dump()
 			printf("%02x/%02x: %s [%s] ", e->did, e->sdid, e->desc, e->spec);
 			for (int l = 0; l < 2048; l++) {
 				if (e->lines[l].active)
-					printf("%d(%lu) ", l, e->lines[l].count);
+					printf("%d(%" PRIu64 ") ", l, e->lines[l].count);
 			}
 			printf("\n");
 		}

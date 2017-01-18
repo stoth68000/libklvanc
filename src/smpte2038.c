@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include <libklvanc/smpte2038.h>
 
 #define VANC8(n) ((n) & 0xff)
@@ -53,7 +54,7 @@ void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt)
 }
 
 #define SHOW_LINE_U32(indent, fn) printf("%s%s = %d (0x%x)\n", indent, #fn, fn, fn);
-#define SHOW_LINE_U64(indent, fn) printf("%s%s = %ld (0x%lx)\n", indent, #fn, fn, fn);
+#define SHOW_LINE_U64(indent, fn) printf("%s%s = %" PRIu64 " (0x%" PRIx64 ")\n", indent, #fn, fn, fn);
 
 void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h)
 {

@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <sys/errno.h>
 #include <sys/errno.h>
+#include <libklvanc/klrestricted_code_path.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,6 +102,7 @@ struct vanc_context_s
 
 	/* Internal use by the library */
 	void *priv;
+	struct klrestricted_code_path_block_s rcp_failedToDecode;
 };
 
 /**
@@ -159,7 +161,6 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
 #include <libklvanc/pixels.h>
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
-#include <libklvanc/klrestricted_code_path.h>
 
 /**
  * @brief	Take an array of payload, create a fully formed VANC message.

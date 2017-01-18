@@ -54,6 +54,9 @@ int vanc_context_create(struct vanc_context_s **ctx)
 		return -ENOMEM;
 	}
 
+	/* If we fail to parse a vanc message, don't report more than one of those per second. */
+	klrestricted_code_path_block_initialize(&p->rcp_failedToDecode, 1, 1, 1000);
+
 	struct vanc_context_private_s *prv = getPrivate(p);
 	pthread_mutex_init(&prv->listlock, NULL);
 
@@ -61,6 +64,8 @@ int vanc_context_create(struct vanc_context_s **ctx)
 	pthread_mutex_lock(&prv->listlock);
 	xorg_list_init(&prv->listOfItems);
 
+	/* TODO: ST: DId I add these from a template? Do we even use these buffers? */
+	
 	/* Create some buffers, put them on a list */
 	for (unsigned int i = 0; i < 4; i++) {
 		struct buffer_s *buf;

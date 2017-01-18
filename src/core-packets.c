@@ -231,8 +231,10 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 				ret = dumpByType(ctx, decodedPacket);
 			}
 		} else {
-			fprintf(stderr, "Failed parsing by type\n");
-			klvanc_dump_packet_console(ctx, hdr);
+ 			if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
+				fprintf(stderr, "Failed parsing by type\n");
+				klvanc_dump_packet_console(ctx, hdr);
+			 }
 		}
 
 		if (decodedPacket)
