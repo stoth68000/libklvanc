@@ -116,14 +116,18 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	d->avails_expected     = *(p++);
 	d->auto_return_flag    = *(p++);
 
-	/* We only support spliceStart_immediate and spliceEnd_immediate */
+	/* TODO: We don't support splice cancel, but we'll pass it through with a warning. */
 	switch (d->splice_insert_type) {
 	case SPLICESTART_IMMEDIATE:
 	case SPLICEEND_IMMEDIATE:
+	case SPLICESTART_NORMAL:
+	case SPLICEEND_NORMAL:
 		break;
 	default:
 		/* We don't support this splice command */
-		fprintf(stderr, "%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
+		fprintf(stderr, "%s() splice_insert_type 0x%x [%s], error.\n", __func__,
+			d->splice_insert_type,
+		spliceInsertTypeName(d->splice_insert_type));
 	}
 
 	return p;
