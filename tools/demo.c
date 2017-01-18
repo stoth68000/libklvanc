@@ -190,7 +190,7 @@ int demo_main(int argc, char *argv[])
 	if (ret < 0)
 		fprintf(stderr, "EIA_708B failed to parse\n");
 
-	ret = test_checksum(ctx);
+	ret = test_checksum();
 	if (ret < 0)
 		fprintf(stderr, "Checksum calculation failed\n");
 
