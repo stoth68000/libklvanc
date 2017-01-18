@@ -88,6 +88,11 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
+#define SCTE104_SR_DATA_FIELD__DURATION(pkt) ((pkt)->sr_data.brk_duration)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct single_operation_message
 {
 	/* single_operation_message */
