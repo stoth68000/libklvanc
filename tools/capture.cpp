@@ -1115,13 +1115,8 @@ static struct vanc_callbacks_s callbacks =
 
 /* END - CALLBACKS for message notification */
 
-static int usage(const char *progname, int status)
+static void listDisplayModes()
 {
-	fprintf(stderr, COPYRIGHT "\n");
-	fprintf(stderr, "Capture decklink SDI payload, capture vanc, analyze vanc.\n");
-	fprintf(stderr, "Usage: %s -m <mode id> [OPTIONS]\n"
-		"\n" "    -m <mode id>:\n", basename((char *)progname));
-
 	int displayModeCount = 0;
 	IDeckLinkDisplayMode *displayMode;
 	while (displayModeIterator->Next(&displayMode) == S_OK) {
@@ -1146,6 +1141,14 @@ static int usage(const char *progname, int status)
 
 		displayMode->Release();
 	}
+}
+
+static int usage(const char *progname, int status)
+{
+	fprintf(stderr, COPYRIGHT "\n");
+	fprintf(stderr, "Capture decklink SDI payload, capture vanc, analyze vanc.\n");
+	fprintf(stderr, "Usage: %s -m <mode id> [OPTIONS]\n"
+		"\n" "    -m <mode id>:\n", basename((char *)progname));
 
 	fprintf(stderr,
 		"    -p <pixelformat>\n"
@@ -1161,6 +1164,7 @@ static int usage(const char *progname, int status)
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
+		"    -L              List availalble display modes\n"
 		"    -c <channels>   Audio Channels (2, 8 or 16 - def: 2)\n"
 		"    -s <depth>      Audio Sample Depth (16 or 32 - def: 16)\n"
 		"    -n <frames>     Number of frames to capture (def: unlimited)\n"
@@ -1204,12 +1208,13 @@ static int _main(int argc, char *argv[])
 	int portnr = 0;
 	bool foundDisplayMode = false;
 	bool wantHelp = false;
+	bool wantDisplayModes = false;
 	HRESULT result;
 
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:PM")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:LP:M")) != -1) {
 		switch (ch) {
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
@@ -1242,6 +1247,9 @@ static int _main(int argc, char *argv[])
 			break;
 		case 'l':
 			g_linenr = atoi(optarg);
+			break;
+		case 'L':
+			wantDisplayModes = true;
 			break;
 		case 'V':
 			g_vancOutputFilename = optarg;
@@ -1300,6 +1308,11 @@ static int _main(int argc, char *argv[])
 		}
 	}
 
+	if (wantHelp) {
+		usage(argv[0], 0);
+		goto bail;
+	}
+
  	if (g_packetizeSMPTE2038) {
 		unlink(TS_OUTPUT_NAME);
 		if (smpte2038_packetizer_alloc(&smpte2038_ctx) < 0) {
@@ -1307,6 +1320,23 @@ static int _main(int argc, char *argv[])
 			goto bail;
 		}
 	}
+
+        if (vanc_context_create(&vanchdl) < 0) {
+                fprintf(stderr, "Error initializing library context\n");
+                exit(1);
+        }
+
+#if HAVE_CURSES_H
+	vanc_monitor_stat_alloc();
+#endif
+
+	vanchdl->verbose = g_verbose;
+	vanchdl->callbacks = &callbacks;
+
+	if (g_vancInputFilename != NULL) {
+		return AnalyzeVANC(g_vancInputFilename);
+	}
+
 
 	if (!deckLinkIterator) {
 		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
@@ -1337,23 +1367,9 @@ static int _main(int argc, char *argv[])
 		goto bail;
 	}
 
-	if (wantHelp) {
-		usage(argv[0], 0);
-	}
-
-        if (vanc_context_create(&vanchdl) < 0) {
-                fprintf(stderr, "Error initializing library context\n");
-                exit(1);
-        }
-
-#if HAVE_CURSES_H
-	vanc_monitor_stat_alloc();
-#endif
-       	vanchdl->verbose = g_verbose;
-        vanchdl->callbacks = &callbacks;
-
-	if (g_vancInputFilename != NULL) {
-		return AnalyzeVANC(g_vancInputFilename);
+	if (wantDisplayModes) {
+		listDisplayModes();
+		goto bail;
 	}
 
 	if (g_videoModeIndex < 0) {
