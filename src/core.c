@@ -91,6 +91,8 @@ int vanc_context_destroy(struct vanc_context_s *ctx)
 	struct vanc_context_private_s *prv = getPrivate(ctx);
 	struct buffer_s *buf;
 
+	vanc_cache_free(ctx);
+
 	/* Free any allocated buffers */
 	pthread_mutex_lock(&prv->listlock);
 	while (xorg_list_is_empty(&prv->listOfItems) == 0) {
@@ -108,3 +110,14 @@ int vanc_context_destroy(struct vanc_context_s *ctx)
 
 	return KLAPI_OK;
 }
+
+int vanc_context_enable_cache(struct vanc_context_s *ctx)
+{
+	if (vanc_cache_alloc(ctx) < 0) {
+		fprintf(stderr, "Unable to allocate vanc cache, enough free ram? Will continue.\n");
+		return -1;
+	}
+
+	return 0;
+}
+

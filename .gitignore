@@ -31,4 +31,5 @@ src/libklvanc_la-core.lo
 src/libklvanc_la-core-checksum.lo
 src/libklvanc_la-smpte2038.lo
 src/libklvanc_la-core-lines.lo
+src/libklvanc_la-core-cache.lo
 doxygen/html

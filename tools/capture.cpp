@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016 Kernel Labs Inc. */
+/* Copyright (c) 2014-2017 Kernel Labs Inc. All Rights Reserved. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -114,38 +114,13 @@ static struct frameTime_s {
 
 #if HAVE_CURSES_H
 pthread_t threadId;
-struct vanc_monitor_line_s
-{
-	int      active;
-	uint64_t count;
-	pthread_mutex_t mutex;
-	struct   packet_header_s *pkt;
-};
-
-struct vanc_monitor_s
-{
-	uint32_t activeCount;
-	struct vanc_monitor_line_s lines[2048];
-	uint32_t did, sdid;
-	const char *desc, *spec;
-	struct timeval lastUpdated;
-	int hasCursor;
-	int expandUI;
-};
-static struct vanc_monitor_s *selected = 0;
-
-/* A static array of structs, for did/sdid rapid lookups.
- * Where DD and SD range from 00.FFF.
- */
-//static struct vanc_monitor_s monitorLines[0x10000];
-static struct vanc_monitor_s *monitorLines;
-#define vanc_monitor_stat_lookup(didnr, sdidnr) &monitorLines[ (((didnr) << 8) | (sdidnr)) ]
+//static struct vanc_cache_s *selected = 0;
 
 static void cursor_expand_all()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 			e->expandUI = 1;
@@ -157,7 +132,7 @@ static void cursor_expand()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -174,12 +149,12 @@ static void cursor_expand()
 
 static void cursor_down()
 {
-	struct vanc_monitor_s *def = 0;
-	struct vanc_monitor_s *prev = 0;
+	struct vanc_cache_s *def = 0;
+	struct vanc_cache_s *prev = 0;
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -201,12 +176,12 @@ static void cursor_down()
 
 static void cursor_up()
 {
-	struct vanc_monitor_s *def = 0;
-	struct vanc_monitor_s *prev = 0;
+	struct vanc_cache_s *def = 0;
+	struct vanc_cache_s *prev = 0;
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -224,33 +199,6 @@ static void cursor_up()
 
 	if (def)
 		def->hasCursor = 0;
-}
-
-
-static void vanc_monitor_stats_reset()
-{
-	for (int d = 0; d <= 0xff; d++) {
-		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
-			e->activeCount = 0;
-
-			for (int l = 0; l < 2048; l++) {
-				struct vanc_monitor_line_s *line = &e->lines[ l ];
-				if (!line->active)
-					continue;
-
-				line->active = 0;
-				line->count = 0;
-
-				pthread_mutex_lock(&line->mutex);
-				if (line->pkt) {
-					vanc_packet_free(line->pkt);
-					line->pkt = 0;
-				}
-				pthread_mutex_unlock(&line->mutex);
-			}
-		}
-	}
 }
 
 static void vanc_monitor_stats_dump_curses()
@@ -285,7 +233,10 @@ static void vanc_monitor_stats_dump_curses()
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			if (!e)
+				continue;
+
 			if (e->activeCount == 0)
 				continue;
 
@@ -300,7 +251,7 @@ static void vanc_monitor_stats_dump_curses()
 			}
 
 			for (int l = 0; l < 2048; l++) {
-				struct vanc_monitor_line_s *line = &e->lines[ l ];
+				struct vanc_cache_line_s *line = &e->lines[ l ];
 				if (!line->active)
 					continue;
 
@@ -365,68 +316,21 @@ static void vanc_monitor_stats_dump()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_monitor_s *e = vanc_monitor_stat_lookup(d, s);
+			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			if (!e)
+				continue;
+
 			if (e->activeCount == 0)
 				continue;
 
-			printf("%02x/%02x: %s [%s] ", e->did, e->sdid, e->desc, e->spec);
+			printf("->did/sdid = %02x / %02x: %s [%s] ", e->did, e->sdid, e->desc, e->spec);
 			for (int l = 0; l < 2048; l++) {
 				if (e->lines[l].active)
-					printf("%d(%" PRIu64 ") ", l, e->lines[l].count);
+					printf("via SDI line %d (%" PRIu64 " packets) ", l, e->lines[l].count);
 			}
 			printf("\n");
 		}
 	}
-}
-
-static void vanc_monitor_stat_alloc()
-{
-	monitorLines = (struct vanc_monitor_s *)calloc(0x10000, sizeof(struct vanc_monitor_s));
-}
-
-static void vanc_monitor_stat_free()
-{
-	free(monitorLines);
-}
-
-static int vanc_monitor_stat_update(struct packet_header_s *pkt)
-{
-	if (pkt->did > 0xff)
-		return -1;
-	if (pkt->dbnsdid > 0xff)
-		return -1;
-	if (pkt->lineNr >= 2048)
-		return -1;
-
-	struct vanc_monitor_s *s = vanc_monitor_stat_lookup(pkt->did, pkt->dbnsdid);
-	if (s->activeCount == 0) {
-		s->did = pkt->did;
-		s->sdid = pkt->dbnsdid;
-		s->desc = vanc_lookupDescriptionByType(pkt->type);
-		s->spec = vanc_lookupSpecificationByType(pkt->type);
-	}
-	gettimeofday(&s->lastUpdated, NULL);
-
-	struct vanc_monitor_line_s *line = &s->lines[ pkt->lineNr ];
-	line->active = 1;
-	s->activeCount++;
-
-	pthread_mutex_lock(&line->mutex);
-	if (line->pkt) {
-		vanc_packet_free(line->pkt);
-		line->pkt = 0;
-	}
-	vanc_packet_copy(&line->pkt, pkt);
-	pthread_mutex_unlock(&line->mutex);
-
-	line->count++;
-
-	if (selected == 0) {
-		selected = s;
-		selected->hasCursor = 1;
-	}
-
-	return 0;
 }
 
 static void signal_handler(int signum);
@@ -484,7 +388,7 @@ static void *thread_func_draw(void *p)
 	while (!g_shutdown) {
 		if (g_monitor_reset) {
 			g_monitor_reset = 0;
-			vanc_monitor_stats_reset();
+			vanc_cache_reset(vanchdl);
 		}
 
 		clear();
@@ -1093,7 +997,9 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
 {
 #if HAVE_CURSES_H
-	vanc_monitor_stat_update(pkt);
+#if 0
+	vanc_monitor_update(ctx, pkt, &selected);
+#endif
 #endif
 
 	if (g_packetizeSMPTE2038) {
@@ -1326,9 +1232,7 @@ static int _main(int argc, char *argv[])
                 exit(1);
         }
 
-#if HAVE_CURSES_H
-	vanc_monitor_stat_alloc();
-#endif
+	vanc_context_enable_cache(vanchdl);
 
 	vanchdl->verbose = g_verbose;
 	vanchdl->callbacks = &callbacks;
@@ -1488,7 +1392,6 @@ static int _main(int argc, char *argv[])
 	smpte2038_packetizer_free(&smpte2038_ctx);
 
 #if HAVE_CURSES_H
-	vanc_monitor_stat_free();
 	if (g_monitor_mode)
 		endwin();
 #endif

@@ -77,4 +77,12 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
 
 void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header_s *hdr);
+
+/* We don't expect anything outside of the VANC framework to need toascii
+ * call these, so we'll keep them private / internal calls.
+ */
+extern int  vanc_cache_alloc(struct vanc_context_s *ctx);
+extern void vanc_cache_free(struct vanc_context_s *ctx);
+extern int  vanc_cache_update(struct vanc_context_s *ctx, struct packet_header_s *pkt);
+
 #endif

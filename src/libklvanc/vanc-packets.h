@@ -22,7 +22,7 @@
 /**
  * @file	vanc-packets.h
  * @author	Steven Toth <stoth@kernellabs.com>
- * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
+ * @copyright	Copyright (c) 2016-2017 Kernel Labs Inc. All Rights Reserved.
  * @brief	TODO - Brief description goes here.
  */
 

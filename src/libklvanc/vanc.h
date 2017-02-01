@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved
+ * Copyright (c) 2016-2017 Kernel Labs Inc. All Rights Reserved
  *
  * Address: Kernel Labs Inc., PO Box 745, St James, NY. 11780
  * Contact: sales@kernellabs.com
@@ -90,9 +90,11 @@ struct vanc_callbacks_s
 	int (*all)(void *user_context, struct vanc_context_s *, struct packet_header_s *);
 };
 
+struct vanc_cache_s;
+
 /**
  * @brief       Application specific context, the library allocates and stores user specific instance
- *		information.
+ *		        information.
  */
 struct vanc_context_s
 {
@@ -103,6 +105,19 @@ struct vanc_context_s
 	/* Internal use by the library */
 	void *priv;
 	struct klrestricted_code_path_block_s rcp_failedToDecode;
+
+	/* Optional: A cache of VANC lines we've detected in the stream.
+	 * see vanc_context_enable_monitor().
+	 * A static array of structs, for did/sdid rapid lookups.
+	 * Where DD and SD range from 00..FF.
+	 * This contains an array of structs, each containing a set of lines,
+	 * optimized for update/query. The structures are typically used by
+	 * applications that want to keep tabs on what messages have been
+	 * seen in the stream, per line. Its important to understand that
+	 * for every message, we cache it, and the same message (same line)
+	 * overwrites our previous cached message.
+	 */
+	struct vanc_cache_s *cacheLines;
 };
 
 /**
@@ -161,6 +176,7 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
 #include <libklvanc/pixels.h>
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
+#include <libklvanc/cache.h>
 
 /**
  * @brief	Take an array of payload, create a fully formed VANC message.

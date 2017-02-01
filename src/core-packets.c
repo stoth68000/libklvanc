@@ -220,6 +220,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 		/* The number of frames we attempted to parse */
 		attempts++;
 
+		/* Update the internal VANC cache */
+		vanc_cache_update(ctx, hdr);
+
 		if (ctx->callbacks && ctx->callbacks->all)
 			ctx->callbacks->all(ctx->callback_context, ctx, hdr);
 
