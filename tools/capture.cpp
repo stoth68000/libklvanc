@@ -1321,6 +1321,23 @@ static int _main(int argc, char *argv[])
 		}
 	}
 
+        if (vanc_context_create(&vanchdl) < 0) {
+                fprintf(stderr, "Error initializing library context\n");
+                exit(1);
+        }
+
+#if HAVE_CURSES_H
+	vanc_monitor_stat_alloc();
+#endif
+
+	vanchdl->verbose = g_verbose;
+	vanchdl->callbacks = &callbacks;
+
+	if (g_vancInputFilename != NULL) {
+		return AnalyzeVANC(g_vancInputFilename);
+	}
+
+
 	if (!deckLinkIterator) {
 		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
 		goto bail;
@@ -1353,21 +1370,6 @@ static int _main(int argc, char *argv[])
 	if (wantDisplayModes) {
 		listDisplayModes();
 		goto bail;
-	}
-
-        if (vanc_context_create(&vanchdl) < 0) {
-                fprintf(stderr, "Error initializing library context\n");
-                exit(1);
-        }
-
-#if HAVE_CURSES_H
-	vanc_monitor_stat_alloc();
-#endif
-       	vanchdl->verbose = g_verbose;
-        vanchdl->callbacks = &callbacks;
-
-	if (g_vancInputFilename != NULL) {
-		return AnalyzeVANC(g_vancInputFilename);
 	}
 
 	if (g_videoModeIndex < 0) {
