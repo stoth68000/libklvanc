@@ -15,7 +15,7 @@ AC_PROG_CXX
 if test `uname -s` = "Darwin"
 then
 CFLAGS+=" -I/usr/local/include "
-LDFLAGS+="-L/usr/local/lib "
+LDFLAGS+=" -L/usr/local/lib "
 fi
 CFLAGS+=" -DKL_USERSPACE "
 
