@@ -11,7 +11,8 @@
     make
 
 ## Dependencies
-* none
+* ncurses (optional)
+* zlib-dev
 
 ## Making Documentation:
 To make doxygen documentation in the doxygen folder, run the following command:
