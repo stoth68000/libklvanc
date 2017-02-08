@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved
+ * Copyright (c) 2016-2017 Kernel Labs Inc. All Rights Reserved
  *
  * Address: Kernel Labs Inc., PO Box 745, St James, NY. 11780
  * Contact: sales@kernellabs.com
@@ -303,6 +303,10 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	m->opID = pkt->payload[0] << 8 | pkt->payload[1];
 
 	if (m->opID == SO_INIT_REQUEST_DATA) {
+
+		/* TODO: Will we ever see a trigger in a SOM. Interal discussion says
+		 *       no. We'll leave this active for the time being, pending removal.
+		 */
 		m->messageSize      = pkt->payload[2] << 8 | pkt->payload[3];
 		m->result           = pkt->payload[4] << 8 | pkt->payload[5];
 		m->result_extension = pkt->payload[6] << 8 | pkt->payload[7];
@@ -323,7 +327,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		d->avails_expected     = pkt->payload[25];
 		d->auto_return_flag    = pkt->payload[26];
 
-		/* We only support spliceStart_immediate and spliceEnd_immediate */
+		/* TODO: We only support spliceStart_immediate and spliceEnd_immediate */
 		switch (d->splice_insert_type) {
 		case SPLICESTART_IMMEDIATE:
 		case SPLICEEND_IMMEDIATE:
