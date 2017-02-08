@@ -67,6 +67,16 @@ struct packet_header_s
 	unsigned short		horizontalOffset;	/**< Horizontal word where the ADF was detected. */
 };
 
+/**
+ * @brief SMPTE 291-1-2011 Section 6.3
+ * "An ancillary data packet with a DID word value equal to 80h may be deleted by any equipment
+ * during a subsequent processing cycle (see Annex C). The occupied ancillary data space, however,
+ * shall remain contiguous as defined in Section 7.3.
+ * Note: Designers of equipment are advised that, in 8-bit systems, ancillary data packets with
+ * DID words in the range of 80h – 83h all are considered to be marked for deletion."
+ */
+#define vanc_packetType1(pkt) (((pkt)->did >= 0x80) && ((pkt)->did <= 0x83))
+
 #ifdef __cplusplus
 };
 #endif  
