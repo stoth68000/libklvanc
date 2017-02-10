@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libklvanc.la
 
-libklvanc_la_SOURCES  = core-buffer.c
+libklvanc_la_SOURCES  = core.c
 libklvanc_la_SOURCES += core-module1.c
 libklvanc_la_SOURCES += core-packet-eia_708b.c
 libklvanc_la_SOURCES += core-packet-eia_608.c
@@ -14,7 +14,6 @@ libklvanc_la_SOURCES += core-lines.c
 libklvanc_la_SOURCES += core-did.c
 libklvanc_la_SOURCES += core-pixels.c
 libklvanc_la_SOURCES += core-checksum.c
-libklvanc_la_SOURCES += core.c
 libklvanc_la_SOURCES += smpte2038.c
 libklvanc_la_SOURCES += core-cache.c
 libklvanc_la_SOURCES += core-private.h xorg-list.h

@@ -39,27 +39,6 @@
 #define VALIDATE(ctx) \
  if (!ctx) return -EINVAL;
 
-struct buffer_s
-{
-	struct vanc_context_s *ctx;
-	struct xorg_list list;
-	unsigned int nr;
-};
-
-/* Application specific context the library allocates */
-struct vanc_context_private_s
-{
-	/* Private internal vars here */
-	pthread_mutex_t listlock;
-	struct xorg_list listOfItems;
-};
-
-int vanc_buffer_alloc(struct vanc_context_s *ctx, struct buffer_s **buf, unsigned int nr);
-int vanc_buffer_free(struct buffer_s *buf);
-int vanc_buffer_reset(struct buffer_s *buf);
-int vanc_buffer_dump(struct buffer_s *buf);
-int vanc_buffer_dump_list(struct xorg_list *head);
-
 /* core-packet-payload_information.c */
 int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p);
 int parse_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
