@@ -77,7 +77,7 @@ static const char *mom_operationName(unsigned short opID)
 
 	switch (opID) {
 	case 0x0100: return "inject_section_data_request";
-	case 0x0101: return "splice_data_request";
+	case 0x0101: return "splice_request_data";
 	case 0x0102: return "splice_null_request_data";
 	case 0x0103: return "start_schedule_download_request_data";
 	case 0x0104: return "time_signal_request_data";
