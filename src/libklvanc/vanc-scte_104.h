@@ -43,7 +43,7 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
-#define MO_INIT_REQUEST_DATA     0x101
+#define MO_SPLICE_REQUEST_DATA     0x101
 
 /**
  * @brief       TODO - Brief description goes here.
