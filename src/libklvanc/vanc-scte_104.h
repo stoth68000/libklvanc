@@ -93,6 +93,16 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
+#define SCTE104_SR_DATA_FIELD__AVAIL_NUM(pkt) ((pkt)->sr_data.avail_num)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define SCTE104_SR_DATA_FIELD__AVAILS_EXPECTED(pkt) ((pkt)->sr_data.avails_expected)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct single_operation_message
 {
 	/* single_operation_message */
