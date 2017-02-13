@@ -20,8 +20,10 @@
 static struct vanc_context_s *vanchdl;
 FILE *vancOutputFile = NULL;
 static int g_verbose = 0;
+static int g_saveVanc = 0;
 static unsigned int g_frameCount = 0;
 static unsigned int g_lastLine = 0;
+static unsigned int g_vancEntryCount = 0;
 
 /* Filtering */
 static int g_filterMatch = 0;
@@ -246,6 +248,22 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 {
 	if (pkt_filtered(pkt)) {
 		g_filterMatch = 1;
+
+		if (g_saveVanc > 0) {
+			char tmpfname[256];
+			snprintf(tmpfname, sizeof(tmpfname), "%d.vancentry", g_vancEntryCount);
+			FILE *fd = fopen(tmpfname, "w");
+			if (fd) {
+				for (int i = 0; i < pkt->payloadLengthWords + 7; i++) {
+					unsigned char out[2];
+					out[0] = pkt->raw[i] >> 8;
+					out[1] = pkt->raw[i] & 0xff;
+					fwrite(out, 2, 1, fd);
+				}
+				fclose(fd);
+			}
+		}
+		g_vancEntryCount++;
 	}
 	return 0;
 }
@@ -290,7 +308,7 @@ static int _main(int argc, char *argv[])
 	int ch;
 	bool wantHelp = false;
 
-	while ((ch = getopt(argc, argv, "?hf:o:p:vI:d:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "?hf:o:p:vxI:d:s:")) != -1) {
 		switch (ch) {
 		case 'o':
 			g_vancOutputFilename = optarg;
@@ -306,6 +324,9 @@ static int _main(int argc, char *argv[])
 			break;
 		case 'v':
 			g_verbose++;
+			break;
+		case 'x':
+			g_saveVanc++;
 			break;
 		case '?':
 		case 'h':
