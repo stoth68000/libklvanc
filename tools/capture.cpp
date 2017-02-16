@@ -814,10 +814,14 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			}
 
 			unsigned int currRFC = 0;
+			int isBad = 0;
 #if 0
+			isBad = 1;
 			/* KL: Look for the framecount metadata, created by the KL signal generator. */
+			unsigned int stride = videoFrame->GetRowBytes();
 			unsigned char *pixelData;
 			videoFrame->GetBytes((void **)&pixelData);
+			pixelData += (10 * stride);
 			if ((*(pixelData + 0) == 0xde) &&
 			    (*(pixelData + 1) == 0xad) &&
 			    (*(pixelData + 2) == 0xbe) &&
@@ -851,8 +855,6 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 				//fprintf(stdout, "\n");
 			}
 #endif
-
-			int isBad = 0;
 			if (frameTime->remoteFrameCount + 1 == currRFC)
 				isBad = 0;
 
@@ -867,13 +869,12 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 					"Valid Frame",
 					videoFrame->GetRowBytes() *
 					videoFrame->GetHeight(), interval, currRFC);
+			}
 			
 
-				if (isBad) {
-					fprintf(stdout, " %lld frames lost", currRFC - frameTime->remoteFrameCount);
-					fprintf(stdout, "\n");
-				} else
-					fprintf(stdout, "\n");
+			if (isBad) {
+				fprintf(stdout, " %lld frames lost %lld->%d\n", currRFC - frameTime->remoteFrameCount,
+					frameTime->remoteFrameCount, currRFC);
 			}
 
 			frameTime->remoteFrameCount = currRFC;

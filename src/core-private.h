@@ -55,6 +55,10 @@ int parse_EIA_608(struct vanc_context_s *ctx, struct packet_header_s *hdr, void 
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
 
+/* core-packet-kl_u64le_counter.c */
+int dump_KL_U64LE_COUNTER(struct vanc_context_s *ctx, void *p);
+int parse_KL_U64LE_COUNTER(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+
 void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header_s *hdr);
 
 /* We don't expect anything outside of the VANC framework to need toascii
