@@ -77,6 +77,7 @@ static int vancOutputFile = -1;
 static int g_showStartupMemory = 0;
 static int g_verbose = 0;
 static unsigned int g_linenr = 0;
+static uint64_t lastGoodKLFrameCounter = 0;
 
 /* SMPTE 2038 */
 static int g_packetizeSMPTE2038 = 0;
@@ -1011,6 +1012,27 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 	return 0;
 }
 
+static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_context_s *ctx, struct packet_kl_u64le_counter_s *pkt)
+{
+	/* Have the library display some debug */
+	if (!g_monitor_mode && g_verbose)
+		dump_KL_U64LE_COUNTER(ctx, pkt);
+
+	if (lastGoodKLFrameCounter && lastGoodKLFrameCounter + 1 != pkt->counter) {
+		char t[160];
+		time_t now = time(0);
+		sprintf(t, "%s", ctime(&now));
+		t[strlen(t) - 1] = 0;
+
+		fprintf(stderr, "%s: KL VANC frame counter discontinuity was %" PRIu64 " now %" PRIu64 "\n",
+			t,
+			lastGoodKLFrameCounter, pkt->counter);
+	}
+	lastGoodKLFrameCounter = pkt->counter;
+
+	return 0;
+}
+
 static struct vanc_callbacks_s callbacks =
 {
 	.payload_information    = cb_PAYLOAD_INFORMATION,
@@ -1018,6 +1040,7 @@ static struct vanc_callbacks_s callbacks =
 	.eia_608                = cb_EIA_608,
 	.scte_104               = cb_SCTE_104,
 	.all                    = cb_all,
+	.kl_i64le_counter       = cb_VANC_TYPE_KL_UINT64_COUNTER,
 };
 
 /* END - CALLBACKS for message notification */
