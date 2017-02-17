@@ -44,5 +44,5 @@ libklvanc_include_HEADERS += libklvanc/vanc-checksum.h
 libklvanc_include_HEADERS += libklvanc/klbitstream_readwriter.h
 libklvanc_include_HEADERS += libklvanc/klrestricted_code_path.h
 libklvanc_include_HEADERS += libklvanc/cache.h
-libklvanc_include_HEADERS += libklvanc/vanc-kl_u64le_counter.h
+#libklvanc_include_HEADERS += libklvanc/vanc-kl_u64le_counter.h
 
