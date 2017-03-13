@@ -55,6 +55,7 @@ extern "C" {
  */
 #define MO_TIME_SIGNAL_REQUEST_DATA  0x104
 #define MO_INSERT_DTMF_REQUEST_DATA  0x109
+#define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -180,6 +181,29 @@ struct dtmf_descriptor_request_data
 	char dtmf_char[7];
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct segmentation_descriptor_request_data
+{
+	/* SCTE 104 Table 8-29 */
+	unsigned int event_id;
+	unsigned int event_cancel_indicator;
+	unsigned int duration; /* In seconds */
+	unsigned int upid_type;
+	unsigned int upid_length;
+	unsigned char upid[255];
+	unsigned int type_id;
+	unsigned int segment_num;
+	unsigned int segments_expected;
+	unsigned int duration_extension_frames;
+	unsigned int delivery_not_restricted_flag;
+	unsigned int web_delivery_allowed_flag;
+	unsigned int no_regional_blackout_flag;
+	unsigned int archive_allowed_flag;
+	unsigned int device_restrictions;
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
@@ -187,6 +211,7 @@ struct multiple_operation_message_operation {
 	union {
 		struct splice_request_data sr_data;
 		struct dtmf_descriptor_request_data dtmf_data;
+		struct segmentation_descriptor_request_data segmentation_data;
 	};
 };
 

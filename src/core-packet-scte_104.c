@@ -146,6 +146,34 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_desc
 	return p;
 }
 
+static unsigned char *parse_segmentation_request_data(unsigned char *p,
+						      struct segmentation_descriptor_request_data *d)
+{
+
+	d->event_id  = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+	p += 4;
+	d->event_cancel_indicator = *(p++);
+	d->duration = p[0] | (p[1] << 8);
+	p += 2;
+	d->upid_type = *(p++);
+	d->upid_length = *(p++);
+
+	memset(d->upid, 0, sizeof(d->upid));
+	memcpy(d->upid, p, d->upid_length);
+	p += d->upid_length;
+	d->type_id = *(p++);
+	d->segment_num = *(p++);
+	d->segments_expected = *(p++);
+	d->duration_extension_frames = *(p++);
+	d->delivery_not_restricted_flag = *(p++);
+	d->web_delivery_allowed_flag = *(p++);
+	d->no_regional_blackout_flag = *(p++);
+	d->archive_allowed_flag = *(p++);
+	d->device_restrictions = *(p++);
+
+	return p;
+}
+
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
@@ -220,7 +248,28 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			for (int j = 0; j < d->dtmf_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->dtmf_char[j]);
 			}
+		} else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA) {
+			struct segmentation_descriptor_request_data *d = &o->segmentation_data;
+			PRINT_DEBUG_MEMBER_INT(d->event_id);
+			PRINT_DEBUG_MEMBER_INT(d->event_cancel_indicator);
+			PRINT_DEBUG_MEMBER_INT(d->duration);
+			printf("    duration = %d (seconds)\n", d->duration);
+			PRINT_DEBUG_MEMBER_INT(d->upid_type);
+			PRINT_DEBUG_MEMBER_INT(d->upid_length);
+			for (int j = 0; j < d->upid_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->upid[j]);
+			}
+			PRINT_DEBUG_MEMBER_INT(d->type_id);
+			PRINT_DEBUG_MEMBER_INT(d->segment_num);
+			PRINT_DEBUG_MEMBER_INT(d->segments_expected);
+			PRINT_DEBUG_MEMBER_INT(d->duration_extension_frames);
+			PRINT_DEBUG_MEMBER_INT(d->delivery_not_restricted_flag);
+			PRINT_DEBUG_MEMBER_INT(d->web_delivery_allowed_flag);
+			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
+			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
+			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
 		}
+
 	}
 
 	return KLAPI_OK;
@@ -401,6 +450,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 				parse_splice_request_data(o->data, &o->sr_data);
 			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
 				parse_dtmf_request_data(o->data, &o->dtmf_data);
+			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
+				parse_segmentation_request_data(o->data, &o->segmentation_data);
 
 #if 1
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
