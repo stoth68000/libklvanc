@@ -133,6 +133,19 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	return p;
 }
 
+static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_descriptor_request_data *d)
+{
+	d->pre_roll_time  = *(p++);
+	d->dtmf_length = *(p++);
+	memset(d->dtmf_char, 0, sizeof(d->dtmf_char));
+	if (d->dtmf_length < sizeof(d->dtmf_char)) {
+		memcpy(d->dtmf_char, p, d->dtmf_length);
+	}
+	p += d->dtmf_length;
+
+	return p;
+}
+
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
@@ -200,6 +213,13 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
 			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+		} else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA) {
+			struct dtmf_descriptor_request_data *d = &o->dtmf_data;
+			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			PRINT_DEBUG_MEMBER_INT(d->dtmf_length);
+			for (int j = 0; j < d->dtmf_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->dtmf_char[j]);
+			}
 		}
 	}
 
@@ -379,6 +399,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
 				parse_splice_request_data(o->data, &o->sr_data);
+			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
+				parse_dtmf_request_data(o->data, &o->dtmf_data);
 
 #if 1
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);

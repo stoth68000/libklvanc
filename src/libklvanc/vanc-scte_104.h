@@ -54,6 +54,7 @@ extern "C" {
  * @brief       TODO - Brief description goes here.
  */
 #define MO_TIME_SIGNAL_REQUEST_DATA  0x104
+#define MO_INSERT_DTMF_REQUEST_DATA  0x109
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -168,11 +169,25 @@ struct splice_request_data
 	unsigned char auto_return_flag;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct dtmf_descriptor_request_data
+{
+	/* SCTE 104 Table 8-28 */
+	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned int dtmf_length;
+	char dtmf_char[7];
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
 	unsigned char *data;
-	struct splice_request_data sr_data;
+	union {
+		struct splice_request_data sr_data;
+		struct dtmf_descriptor_request_data dtmf_data;
+	};
 };
 
 /**
