@@ -77,7 +77,7 @@ static const char *mom_operationName(unsigned short opID)
 
 	switch (opID) {
 	case 0x0100: return "inject_section_data_request";
-	case 0x0101: return "splice_data_request";
+	case 0x0101: return "splice_request_data";
 	case 0x0102: return "splice_null_request_data";
 	case 0x0103: return "start_schedule_download_request_data";
 	case 0x0104: return "time_signal_request_data";
@@ -188,7 +188,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		PRINT_DEBUG_MEMBER_INT(o->data_length);
 		if (o->data_length)
 			hexdump(o->data, o->data_length, 32, "    ");
-		if (o->opID == MO_INIT_REQUEST_DATA) {
+		if (o->opID == MO_SPLICE_REQUEST_DATA) {
 			struct splice_request_data *d = &pkt->sr_data;
 			PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
 			printf("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
@@ -371,7 +371,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			}
 			p += (4 + o->data_length);
 
-			if (o->opID == MO_INIT_REQUEST_DATA)
+			if (o->opID == MO_SPLICE_REQUEST_DATA)
 				parse_splice_request_data(o->data, &pkt->sr_data);
 
 #if 1

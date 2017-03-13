@@ -43,7 +43,7 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
-#define MO_INIT_REQUEST_DATA     0x101
+#define MO_SPLICE_REQUEST_DATA     0x101
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -89,6 +89,16 @@ extern "C" {
  * @brief       TODO - Brief description goes here.
  */
 #define SCTE104_SR_DATA_FIELD__DURATION(pkt) ((pkt)->sr_data.brk_duration)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define SCTE104_SR_DATA_FIELD__AVAIL_NUM(pkt) ((pkt)->sr_data.avail_num)
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define SCTE104_SR_DATA_FIELD__AVAILS_EXPECTED(pkt) ((pkt)->sr_data.avails_expected)
 
 /**
  * @brief       TODO - Brief description goes here.
