@@ -133,6 +133,20 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	return p;
 }
 
+static unsigned char *parse_descriptor_request_data(unsigned char *p, struct insert_descriptor_request_data *d, unsigned int descriptor_size)
+{
+	d->descriptor_count = *(p++);
+	d->total_length = descriptor_size;
+
+	memset(d->descriptor_bytes, 0, sizeof(d->descriptor_bytes));
+	if (d->total_length < sizeof(d->descriptor_bytes)) {
+		memcpy(d->descriptor_bytes, p, d->total_length);
+	}
+	p += d->total_length;
+
+	return p;
+}
+
 static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_descriptor_request_data *d)
 {
 	d->pre_roll_time  = *(p++);
@@ -241,6 +255,13 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
 			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+		} else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA) {
+			struct insert_descriptor_request_data *d = &o->descriptor_data;
+			PRINT_DEBUG_MEMBER_INT(d->descriptor_count);
+			PRINT_DEBUG_MEMBER_INT(d->total_length);
+			for (int j = 0; j < d->total_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->descriptor_bytes[j]);
+			}
 		} else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA) {
 			struct dtmf_descriptor_request_data *d = &o->dtmf_data;
 			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
@@ -448,6 +469,9 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
 				parse_splice_request_data(o->data, &o->sr_data);
+			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
+				parse_descriptor_request_data(o->data, &o->descriptor_data,
+					o->data_length - 1);
 			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
 				parse_dtmf_request_data(o->data, &o->dtmf_data);
 			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)

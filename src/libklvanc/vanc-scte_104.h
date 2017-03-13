@@ -54,6 +54,7 @@ extern "C" {
  * @brief       TODO - Brief description goes here.
  */
 #define MO_TIME_SIGNAL_REQUEST_DATA  0x104
+#define MO_INSERT_DESCRIPTOR_REQUEST_DATA    0x108
 #define MO_INSERT_DTMF_REQUEST_DATA  0x109
 #define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
 
@@ -173,6 +174,17 @@ struct splice_request_data
 /**
  * @brief       TODO - Brief description goes here.
  */
+struct insert_descriptor_request_data
+{
+	/* SCTE 104 Table 8-27 */
+	unsigned int descriptor_count;
+	unsigned int total_length;
+	unsigned char descriptor_bytes[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct dtmf_descriptor_request_data
 {
 	/* SCTE 104 Table 8-28 */
@@ -212,6 +224,7 @@ struct multiple_operation_message_operation {
 		struct splice_request_data sr_data;
 		struct dtmf_descriptor_request_data dtmf_data;
 		struct segmentation_descriptor_request_data segmentation_data;
+		struct insert_descriptor_request_data descriptor_data;
 	};
 };
 
