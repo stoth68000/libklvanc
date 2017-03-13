@@ -189,7 +189,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		if (o->data_length)
 			hexdump(o->data, o->data_length, 32, "    ");
 		if (o->opID == MO_SPLICE_REQUEST_DATA) {
-			struct splice_request_data *d = &pkt->sr_data;
+			struct splice_request_data *d = &o->sr_data;
 			PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
 			printf("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
 			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
@@ -208,7 +208,9 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 
 static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
+#ifdef SPLICE_REQUEST_SINGLE
         struct splice_request_data *d = &pkt->sr_data;
+#endif
 	struct single_operation_message *m = &pkt->so_msg;
 
 	printf("SCTE104 single_operation_message struct\n");
@@ -225,6 +227,7 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 	PRINT_DEBUG_MEMBER_INT(m->message_number);
 	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
 
+#ifdef SPLICE_REQUEST_SINGLE
 	if (m->opID == SO_INIT_REQUEST_DATA) {
 		PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
 		printf("   splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
@@ -237,6 +240,7 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 		PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
 	} else
+#endif
 		printf("   unsupported m->opID = 0x%x\n", m->opID);
 
 	for (int i = 0; i < pkt->payloadLengthBytes; i++)
@@ -302,6 +306,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	 */
 	m->opID = pkt->payload[0] << 8 | pkt->payload[1];
 
+#ifdef SPLICE_REQUEST_SINGLE
 	if (m->opID == SO_INIT_REQUEST_DATA) {
 
 		/* TODO: Will we ever see a trigger in a SOM. Interal discussion says
@@ -339,6 +344,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			return -1;
 		}
 	} else
+#endif
 	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
 		mom->rsvd                    = pkt->payload[0] << 8 | pkt->payload[1];
 		mom->messageSize             = pkt->payload[2] << 8 | pkt->payload[3];
@@ -372,7 +378,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			p += (4 + o->data_length);
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
-				parse_splice_request_data(o->data, &pkt->sr_data);
+				parse_splice_request_data(o->data, &o->sr_data);
 
 #if 1
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);

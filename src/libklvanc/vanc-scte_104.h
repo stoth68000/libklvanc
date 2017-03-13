@@ -152,10 +152,27 @@ struct multiple_operation_message_timestamp
 	};
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct splice_request_data
+{
+	/* SCTE 104 Table 8-5 */
+	unsigned int splice_insert_type;
+	unsigned int splice_event_id;
+	unsigned short unique_program_id;
+	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned short brk_duration;	/* In 1/10's of a second */
+	unsigned char avail_num;
+	unsigned char avails_expected;
+	unsigned char auto_return_flag;
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
 	unsigned char *data;
+	struct splice_request_data sr_data;
 };
 
 /**
@@ -180,22 +197,6 @@ struct multiple_operation_message
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct splice_request_data
-{
-	/* SCTE 104 Table 8-5 */
-	unsigned int splice_insert_type;
-	unsigned int splice_event_id;
-	unsigned short unique_program_id;
-	unsigned short pre_roll_time;	/* In 1/10's of a second */
-	unsigned short brk_duration;	/* In 1/10's of a second */
-	unsigned char avail_num;
-	unsigned char avails_expected;
-	unsigned char auto_return_flag;
-};
-
-/**
- * @brief       TODO - Brief description goes here.
- */
 struct packet_scte_104_s
 {
 	struct packet_header_s hdr;
@@ -211,7 +212,6 @@ struct packet_scte_104_s
 	unsigned int payloadLengthBytes;
 
 	struct single_operation_message so_msg;
-	struct splice_request_data sr_data;
 	struct multiple_operation_message mo_msg;
 };
 
