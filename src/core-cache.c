@@ -40,6 +40,9 @@ int vanc_cache_alloc(struct vanc_context_s *ctx)
 
 void vanc_cache_free(struct vanc_context_s *ctx)
 {
+    /* Free any cached lines otherwise we'll memory leak. */
+    vanc_cache_reset(ctx);
+
     if (ctx->cacheLines) {
 	    free(ctx->cacheLines);
         ctx->cacheLines = 0;

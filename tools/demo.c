@@ -74,6 +74,12 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 	return 0;
 }
 
+static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_context_s *ctx, struct packet_kl_u64le_counter_s *pkt)
+{
+	printf("%s:%s()\n", __FILE__, __func__);
+	return 0;
+}
+
 static struct vanc_callbacks_s callbacks = 
 {
 	.payload_information	= cb_PAYLOAD_INFORMATION,
@@ -81,6 +87,7 @@ static struct vanc_callbacks_s callbacks =
 	.eia_608		= cb_EIA_608,
 	.scte_104		= cb_SCTE_104,
 	.all			= cb_all,
+	.kl_i64le_counter	= cb_VANC_TYPE_KL_UINT64_COUNTER,
 };
 /* END - CALLBACKS for message notification */
 
