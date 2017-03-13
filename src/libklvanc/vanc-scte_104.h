@@ -48,6 +48,16 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
+#define MO_SPLICE_NULL_REQUEST_DATA  0x102
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define MO_TIME_SIGNAL_REQUEST_DATA  0x104
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICESTART_NORMAL    0x01
 
 /**
