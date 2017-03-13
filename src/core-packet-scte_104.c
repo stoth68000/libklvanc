@@ -133,6 +133,61 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	return p;
 }
 
+static unsigned char *parse_descriptor_request_data(unsigned char *p, struct insert_descriptor_request_data *d, unsigned int descriptor_size)
+{
+	d->descriptor_count = *(p++);
+	d->total_length = descriptor_size;
+
+	memset(d->descriptor_bytes, 0, sizeof(d->descriptor_bytes));
+	if (d->total_length < sizeof(d->descriptor_bytes)) {
+		memcpy(d->descriptor_bytes, p, d->total_length);
+	}
+	p += d->total_length;
+
+	return p;
+}
+
+static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_descriptor_request_data *d)
+{
+	d->pre_roll_time  = *(p++);
+	d->dtmf_length = *(p++);
+	memset(d->dtmf_char, 0, sizeof(d->dtmf_char));
+	if (d->dtmf_length < sizeof(d->dtmf_char)) {
+		memcpy(d->dtmf_char, p, d->dtmf_length);
+	}
+	p += d->dtmf_length;
+
+	return p;
+}
+
+static unsigned char *parse_segmentation_request_data(unsigned char *p,
+						      struct segmentation_descriptor_request_data *d)
+{
+
+	d->event_id  = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+	p += 4;
+	d->event_cancel_indicator = *(p++);
+	d->duration = p[0] | (p[1] << 8);
+	p += 2;
+	d->upid_type = *(p++);
+	d->upid_length = *(p++);
+
+	memset(d->upid, 0, sizeof(d->upid));
+	memcpy(d->upid, p, d->upid_length);
+	p += d->upid_length;
+	d->type_id = *(p++);
+	d->segment_num = *(p++);
+	d->segments_expected = *(p++);
+	d->duration_extension_frames = *(p++);
+	d->delivery_not_restricted_flag = *(p++);
+	d->web_delivery_allowed_flag = *(p++);
+	d->no_regional_blackout_flag = *(p++);
+	d->archive_allowed_flag = *(p++);
+	d->device_restrictions = *(p++);
+
+	return p;
+}
+
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
@@ -189,7 +244,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		if (o->data_length)
 			hexdump(o->data, o->data_length, 32, "    ");
 		if (o->opID == MO_SPLICE_REQUEST_DATA) {
-			struct splice_request_data *d = &pkt->sr_data;
+			struct splice_request_data *d = &o->sr_data;
 			PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
 			printf("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
 			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
@@ -200,7 +255,42 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
 			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+		} else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA) {
+			struct insert_descriptor_request_data *d = &o->descriptor_data;
+			PRINT_DEBUG_MEMBER_INT(d->descriptor_count);
+			PRINT_DEBUG_MEMBER_INT(d->total_length);
+			for (int j = 0; j < d->total_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->descriptor_bytes[j]);
+			}
+		} else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA) {
+			struct dtmf_descriptor_request_data *d = &o->dtmf_data;
+			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			PRINT_DEBUG_MEMBER_INT(d->dtmf_length);
+			for (int j = 0; j < d->dtmf_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->dtmf_char[j]);
+			}
+		} else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA) {
+			struct segmentation_descriptor_request_data *d = &o->segmentation_data;
+			PRINT_DEBUG_MEMBER_INT(d->event_id);
+			PRINT_DEBUG_MEMBER_INT(d->event_cancel_indicator);
+			PRINT_DEBUG_MEMBER_INT(d->duration);
+			printf("    duration = %d (seconds)\n", d->duration);
+			PRINT_DEBUG_MEMBER_INT(d->upid_type);
+			PRINT_DEBUG_MEMBER_INT(d->upid_length);
+			for (int j = 0; j < d->upid_length; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->upid[j]);
+			}
+			PRINT_DEBUG_MEMBER_INT(d->type_id);
+			PRINT_DEBUG_MEMBER_INT(d->segment_num);
+			PRINT_DEBUG_MEMBER_INT(d->segments_expected);
+			PRINT_DEBUG_MEMBER_INT(d->duration_extension_frames);
+			PRINT_DEBUG_MEMBER_INT(d->delivery_not_restricted_flag);
+			PRINT_DEBUG_MEMBER_INT(d->web_delivery_allowed_flag);
+			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
+			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
+			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
 		}
+
 	}
 
 	return KLAPI_OK;
@@ -208,7 +298,9 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 
 static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
+#ifdef SPLICE_REQUEST_SINGLE
         struct splice_request_data *d = &pkt->sr_data;
+#endif
 	struct single_operation_message *m = &pkt->so_msg;
 
 	printf("SCTE104 single_operation_message struct\n");
@@ -225,6 +317,7 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 	PRINT_DEBUG_MEMBER_INT(m->message_number);
 	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
 
+#ifdef SPLICE_REQUEST_SINGLE
 	if (m->opID == SO_INIT_REQUEST_DATA) {
 		PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
 		printf("   splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
@@ -237,6 +330,7 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 		PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
 	} else
+#endif
 		printf("   unsupported m->opID = 0x%x\n", m->opID);
 
 	for (int i = 0; i < pkt->payloadLengthBytes; i++)
@@ -302,6 +396,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	 */
 	m->opID = pkt->payload[0] << 8 | pkt->payload[1];
 
+#ifdef SPLICE_REQUEST_SINGLE
 	if (m->opID == SO_INIT_REQUEST_DATA) {
 
 		/* TODO: Will we ever see a trigger in a SOM. Interal discussion says
@@ -339,6 +434,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			return -1;
 		}
 	} else
+#endif
 	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
 		mom->rsvd                    = pkt->payload[0] << 8 | pkt->payload[1];
 		mom->messageSize             = pkt->payload[2] << 8 | pkt->payload[3];
@@ -372,7 +468,14 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			p += (4 + o->data_length);
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
-				parse_splice_request_data(o->data, &pkt->sr_data);
+				parse_splice_request_data(o->data, &o->sr_data);
+			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
+				parse_descriptor_request_data(o->data, &o->descriptor_data,
+					o->data_length - 1);
+			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
+				parse_dtmf_request_data(o->data, &o->dtmf_data);
+			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
+				parse_segmentation_request_data(o->data, &o->segmentation_data);
 
 #if 1
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);

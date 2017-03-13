@@ -48,6 +48,19 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
+#define MO_SPLICE_NULL_REQUEST_DATA  0x102
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define MO_TIME_SIGNAL_REQUEST_DATA  0x104
+#define MO_INSERT_DESCRIPTOR_REQUEST_DATA    0x108
+#define MO_INSERT_DTMF_REQUEST_DATA  0x109
+#define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICESTART_NORMAL    0x01
 
 /**
@@ -142,10 +155,77 @@ struct multiple_operation_message_timestamp
 	};
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct splice_request_data
+{
+	/* SCTE 104 Table 8-5 */
+	unsigned int splice_insert_type;
+	unsigned int splice_event_id;
+	unsigned short unique_program_id;
+	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned short brk_duration;	/* In 1/10's of a second */
+	unsigned char avail_num;
+	unsigned char avails_expected;
+	unsigned char auto_return_flag;
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct insert_descriptor_request_data
+{
+	/* SCTE 104 Table 8-27 */
+	unsigned int descriptor_count;
+	unsigned int total_length;
+	unsigned char descriptor_bytes[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct dtmf_descriptor_request_data
+{
+	/* SCTE 104 Table 8-28 */
+	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned int dtmf_length;
+	char dtmf_char[7];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct segmentation_descriptor_request_data
+{
+	/* SCTE 104 Table 8-29 */
+	unsigned int event_id;
+	unsigned int event_cancel_indicator;
+	unsigned int duration; /* In seconds */
+	unsigned int upid_type;
+	unsigned int upid_length;
+	unsigned char upid[255];
+	unsigned int type_id;
+	unsigned int segment_num;
+	unsigned int segments_expected;
+	unsigned int duration_extension_frames;
+	unsigned int delivery_not_restricted_flag;
+	unsigned int web_delivery_allowed_flag;
+	unsigned int no_regional_blackout_flag;
+	unsigned int archive_allowed_flag;
+	unsigned int device_restrictions;
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
 	unsigned char *data;
+	union {
+		struct splice_request_data sr_data;
+		struct dtmf_descriptor_request_data dtmf_data;
+		struct segmentation_descriptor_request_data segmentation_data;
+		struct insert_descriptor_request_data descriptor_data;
+	};
 };
 
 /**
@@ -170,22 +250,6 @@ struct multiple_operation_message
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct splice_request_data
-{
-	/* SCTE 104 Table 8-5 */
-	unsigned int splice_insert_type;
-	unsigned int splice_event_id;
-	unsigned short unique_program_id;
-	unsigned short pre_roll_time;	/* In 1/10's of a second */
-	unsigned short brk_duration;	/* In 1/10's of a second */
-	unsigned char avail_num;
-	unsigned char avails_expected;
-	unsigned char auto_return_flag;
-};
-
-/**
- * @brief       TODO - Brief description goes here.
- */
 struct packet_scte_104_s
 {
 	struct packet_header_s hdr;
@@ -201,7 +265,6 @@ struct packet_scte_104_s
 	unsigned int payloadLengthBytes;
 
 	struct single_operation_message so_msg;
-	struct splice_request_data sr_data;
 	struct multiple_operation_message mo_msg;
 };
 
