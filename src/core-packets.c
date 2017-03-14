@@ -264,10 +264,8 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 		return -1;
 
 	int header_length = 6 + 1; /* Header 6 and checksum footer 1 */
-	uint16_t *arr = calloc(2,
-		srcByteCount
-		+ header_length
-		+ 6 /* Enough room for padding */);
+	uint16_t *arr = calloc(2, srcByteCount + header_length);
+
 	uint16_t *v = arr;
 
 	*(v++) = 0x000;
@@ -299,19 +297,7 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	}
 	*(v++) = sum | ((~sum & 0x100) << 1);
 
-	/* Padding - We need to align for correct conversion to V210, IE,
-	 * we need the output length to be a multiple of 6 words.
-	 * I know, the decklink module should really do this....
-	 * Its here for now.
-	 */
-	uint16_t x = ((header_length + srcByteCount + 5) / 6) * 6;
-	for (int j = 0; j < (x - i); j++)
-		*(v++) = 0x040;
- 
-	/* Colorspace convert to V210 */
-	/* Let's handle this in the decklink output module */
-
-	*dstWordCount = v - arr - 1;
+	*dstWordCount = v - arr;
 	*dst = arr;
 
 	return 0;
