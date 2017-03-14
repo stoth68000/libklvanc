@@ -276,6 +276,19 @@ struct packet_scte_104_s
  */
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
 
+/**
+ * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
+ * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount);
+
 #ifdef __cplusplus
 };
 #endif  

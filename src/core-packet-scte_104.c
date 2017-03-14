@@ -501,3 +501,92 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	return KLAPI_OK;
 }
 
+int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount)
+{
+	struct multiple_operation_message *m;
+	uint8_t buf[255];
+
+	if (!pkt || !words || !wordCount)
+		return -1;
+
+	if (pkt->so_msg.opID != 0xffff) {
+		/* We don't currently support anything but Multiple Operation
+		   Messages */
+		return -1;
+	}
+
+	m = &pkt->mo_msg;
+
+	/* Serialize the SCTE 104 into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, sizeof(buf));
+
+	klbs_write_bits(bs, 0x08, 8); /* SMPTE 2010 Payload Descriptor */
+
+	klbs_write_bits(bs, 0xffff, 16); /* reserved */
+
+	klbs_write_bits(bs, m->messageSize, 16);
+	klbs_write_bits(bs, m->protocol_version, 8);
+	klbs_write_bits(bs, m->AS_index, 8);
+	klbs_write_bits(bs, m->message_number, 8);
+	klbs_write_bits(bs, m->DPI_PID_index, 16);
+	klbs_write_bits(bs, m->SCTE35_protocol_version, 8);
+	klbs_write_bits(bs, m->timestamp.time_type, 8);
+
+	struct multiple_operation_message_timestamp *ts = &m->timestamp;
+	switch(ts->time_type) {
+	case 1:
+		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 24, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 16, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 8, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_microseconds >> 8, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_microseconds, 8);
+		break;
+	case 2:
+		klbs_write_bits(bs, ts->time_type_2.hours, 8);
+		klbs_write_bits(bs, ts->time_type_2.minutes, 8);
+		klbs_write_bits(bs, ts->time_type_2.seconds, 8);
+		klbs_write_bits(bs, ts->time_type_2.frames, 8);
+		break;
+	case 3:
+		klbs_write_bits(bs, ts->time_type_3.GPI_number, 8);
+		klbs_write_bits(bs, ts->time_type_3.GPI_edge, 8);
+		break;
+	case 0:
+		/* No time standard defined */
+		break;
+	default:
+		fprintf(stderr, "%s() unsupported time_type 0x%x, assuming no time.\n",
+			__func__, ts->time_type);
+		break;
+	}
+
+	klbs_write_bits(bs, m->num_ops, 8);
+	for (int i = 0; i < m->num_ops; i++) {
+		struct multiple_operation_message_operation *o = &m->ops[i];
+		klbs_write_bits(bs, o->opID, 16);
+		klbs_write_bits(bs, o->data_length, 16);
+		for (int j = 0; j < o->data_length; j++) {
+			klbs_write_bits(bs, o->data[j], 8);
+		}
+	}
+	klbs_write_buffer_complete(bs);
+
+#if 0
+	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
+	printf(" ->payload  = ");
+	for (int i = 0; i < klbs_get_byte_count(bs); i++) {
+		printf("%02x ", buf[i]);
+	}
+	printf("\n");
+#endif
+
+	/* Create the final array of VANC bytes (with correct DID/SDID,
+	   checksum, etc) */
+	vanc_sdi_create_payload(0x07, 0x41, buf, klbs_get_byte_count(bs),
+				words, wordCount, 10);
+
+	klbs_free(bs);
+	return 0;
+}
