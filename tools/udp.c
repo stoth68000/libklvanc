@@ -133,7 +133,7 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	ctx->skt = socket(AF_INET, SOCK_DGRAM, 0);
 	if (ctx->skt < 0) {
 		free(ctx);
-		return ctx->skt;
+		return -1;
 	}
 
 	int n = socket_buffer_size;
