@@ -171,6 +171,10 @@ int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 		pixels_used += entry->pixel_width;
 	}
 
+	/* Caller probably provided no line entries, return success as this isn't a failure of sorts. */
+	if (pixels_used == 0)
+		return 0;
+
 	*outbuf = (uint16_t *) malloc(pixels_used * sizeof(uint16_t));
 	if (*outbuf == NULL) {
 		return -ENOMEM;

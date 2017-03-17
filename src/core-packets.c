@@ -233,6 +233,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 		if (ret == KLAPI_OK) {
 			if (ctx->verbose == 2) {
 				ret = dumpByType(ctx, decodedPacket);
+				if (ret < 0) {
+					fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+				}
 			}
 		} else {
  			if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {

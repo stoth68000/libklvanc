@@ -201,6 +201,8 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 	*result = h;
 	ret = 0;
 err:
+	if (h)
+		free(h);
 	if (bs)
 		klbs_free(bs);
 	return ret;
