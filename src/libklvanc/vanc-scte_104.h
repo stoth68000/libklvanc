@@ -174,6 +174,15 @@ struct splice_request_data
 /**
  * @brief       TODO - Brief description goes here.
  */
+struct time_signal_request_data
+{
+	/* SCTE 104 Table 8-23 */
+	unsigned short pre_roll_time;	/* In milliseconds */
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct insert_descriptor_request_data
 {
 	/* SCTE 104 Table 8-27 */
@@ -222,6 +231,7 @@ struct multiple_operation_message_operation {
 	unsigned char *data;
 	union {
 		struct splice_request_data sr_data;
+		struct time_signal_request_data timesignal_data;
 		struct dtmf_descriptor_request_data dtmf_data;
 		struct segmentation_descriptor_request_data segmentation_data;
 		struct insert_descriptor_request_data descriptor_data;
@@ -268,6 +278,16 @@ struct packet_scte_104_s
 	struct multiple_operation_message mo_msg;
 };
 
+
+
+/**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @return	0 - Success
+ * @return	< 0 - Error
+ */
+int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **pkt);
+
 /**
  * @brief       TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
@@ -288,6 +308,22 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
  * @return      -ENOMEM - Not enough memory to satisfy request
  */
 int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount);
+
+/**
+ * @brief	Convert type struct packet_scte_104_s into a block of bytes which can be\n
+ *              embedded into a VANC line
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
+ * @param[out]	uint8_t **bytes - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *byteCount - Number of byes in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **bytes, uint16_t *byteCount);
+
+int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
+			       struct multiple_operation_message_operation **op);
 
 #ifdef __cplusplus
 };

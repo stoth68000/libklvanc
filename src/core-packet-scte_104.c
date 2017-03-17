@@ -133,6 +133,43 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	return p;
 }
 
+#define MAX_DESC_SIZE 255
+static int gen_splice_request_data(struct splice_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->splice_insert_type, 8);
+	klbs_write_bits(bs, d->splice_event_id >> 24, 8);
+	klbs_write_bits(bs, d->splice_event_id >> 16, 8);
+	klbs_write_bits(bs, d->splice_event_id >> 8, 8);
+	klbs_write_bits(bs, d->splice_event_id, 8);
+	klbs_write_bits(bs, d->unique_program_id << 8, 8);
+	klbs_write_bits(bs, d->unique_program_id, 8);
+	klbs_write_bits(bs, d->pre_roll_time << 8, 8);
+	klbs_write_bits(bs, d->pre_roll_time, 8);
+	klbs_write_bits(bs, d->brk_duration << 8, 8);
+	klbs_write_bits(bs, d->brk_duration, 8);
+	klbs_write_bits(bs, d->avail_num, 8);
+	klbs_write_bits(bs, d->avails_expected, 8);
+	klbs_write_bits(bs, d->auto_return_flag, 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 static unsigned char *parse_descriptor_request_data(unsigned char *p, struct insert_descriptor_request_data *d, unsigned int descriptor_size)
 {
 	d->descriptor_count = *(p++);
@@ -147,6 +184,32 @@ static unsigned char *parse_descriptor_request_data(unsigned char *p, struct ins
 	return p;
 }
 
+static int gen_descriptor_request_data(struct insert_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->descriptor_count, 8);
+	for (int i = 0; i < d->total_length; i++)
+		klbs_write_bits(bs, d->descriptor_bytes[i], 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
+
 static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_descriptor_request_data *d)
 {
 	d->pre_roll_time  = *(p++);
@@ -158,6 +221,32 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_desc
 	p += d->dtmf_length;
 
 	return p;
+}
+
+static int gen_dtmf_request_data(struct dtmf_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->pre_roll_time, 8);
+	klbs_write_bits(bs, d->dtmf_length, 8);
+	for (int i = 0; i < d->dtmf_length; i++)
+		klbs_write_bits(bs, d->dtmf_char[i], 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
 }
 
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
@@ -187,6 +276,51 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 
 	return p;
 }
+
+static int gen_segmentation_request_data(struct segmentation_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->event_id >> 24, 8);
+	klbs_write_bits(bs, d->event_id >> 16, 8);
+	klbs_write_bits(bs, d->event_id >> 8, 8);
+	klbs_write_bits(bs, d->event_id, 8);
+	klbs_write_bits(bs, d->event_cancel_indicator, 8);
+	klbs_write_bits(bs, d->duration >> 8, 8);
+	klbs_write_bits(bs, d->duration, 8);
+	klbs_write_bits(bs, d->upid_type, 8);
+	klbs_write_bits(bs, d->upid_length, 8);
+
+	for (int i = 0; i < d->upid_length; i++)
+		klbs_write_bits(bs, d->upid[i], 8);
+
+	klbs_write_bits(bs, d->type_id, 8);
+	klbs_write_bits(bs, d->segment_num, 8);
+	klbs_write_bits(bs, d->segments_expected, 8);
+	klbs_write_bits(bs, d->duration_extension_frames, 8);
+	klbs_write_bits(bs, d->delivery_not_restricted_flag, 8);
+	klbs_write_bits(bs, d->web_delivery_allowed_flag, 8);
+	klbs_write_bits(bs, d->no_regional_blackout_flag, 8);
+	klbs_write_bits(bs, d->archive_allowed_flag, 8);
+	klbs_write_bits(bs, d->device_restrictions, 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
@@ -338,6 +472,26 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 	printf("\n");
 
 	return KLAPI_OK;
+}
+
+int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **outPkt)
+{
+	struct packet_scte_104_s *pkt = (struct packet_scte_104_s *) calloc(1, sizeof(struct packet_scte_104_s));
+	if (pkt == NULL)
+		return -1;
+
+	pkt->payloadDescriptorByte = 0x08;
+	pkt->version = 0x08;
+	pkt->continued_pkt = 0;
+	pkt->following_pkt = 0;
+	pkt->duplicate_msg = 0;
+
+	/* Note, we take advantage of the SOM OpID field even with
+	   Multiple Operation Messages */
+	pkt->so_msg.opID = opId;
+
+	*outPkt = pkt;
+	return 0;
 }
 
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
@@ -501,25 +655,30 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	return KLAPI_OK;
 }
 
-int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount)
+int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **bytes, uint16_t *byteCount)
 {
 	struct multiple_operation_message *m;
-	uint8_t buf[255];
 
-	if (!pkt || !words || !wordCount)
+	if (!pkt || !bytes) {
 		return -1;
+	}
 
 	if (pkt->so_msg.opID != 0xffff) {
 		/* We don't currently support anything but Multiple Operation
 		   Messages */
+		fprintf(stderr, "msg opid not 0xffff.  Provided=0x%x\n", pkt->so_msg.opID);
 		return -1;
 	}
+
+	*bytes = malloc(255);
+	if (*bytes == NULL)
+		return -1;
 
 	m = &pkt->mo_msg;
 
 	/* Serialize the SCTE 104 into a binary blob */
 	struct klbs_context_s *bs = klbs_alloc();
-	klbs_write_set_buffer(bs, buf, sizeof(buf));
+	klbs_write_set_buffer(bs, *bytes, 255);
 
 	klbs_write_bits(bs, 0x08, 8); /* SMPTE 2010 Payload Descriptor */
 
@@ -565,6 +724,25 @@ int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, u
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
 		struct multiple_operation_message_operation *o = &m->ops[i];
+		switch (o->opID) {
+		case MO_SPLICE_REQUEST_DATA:
+			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_DESCRIPTOR_REQUEST_DATA:
+			gen_descriptor_request_data(&o->descriptor_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_DTMF_REQUEST_DATA:
+			gen_dtmf_request_data(&o->dtmf_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
+			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);
+			break;
+
+		default:
+			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);
+		}
+		/* FIXME */
+
 		klbs_write_bits(bs, o->opID, 16);
 		klbs_write_bits(bs, o->data_length, 16);
 		for (int j = 0; j < o->data_length; j++) {
@@ -573,20 +751,49 @@ int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, u
 	}
 	klbs_write_buffer_complete(bs);
 
-#if 0
+#if 1
 	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
 	printf(" ->payload  = ");
 	for (int i = 0; i < klbs_get_byte_count(bs); i++) {
-		printf("%02x ", buf[i]);
+		printf("%02x ", (*bytes)[i]);
 	}
 	printf("\n");
 #endif
 
+	*byteCount = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
+int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount)
+{
+	uint8_t *buf;
+	uint16_t byteCount;
+	int ret;
+
+	ret = convert_SCTE_104_to_packetBytes(pkt, &buf, &byteCount);
+	if (ret != 0)
+		return -1;
+
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
-	vanc_sdi_create_payload(0x07, 0x41, buf, klbs_get_byte_count(bs),
-				words, wordCount, 10);
+	vanc_sdi_create_payload(0x07, 0x41, buf, byteCount, words, wordCount, 10);
 
-	klbs_free(bs);
+	free(buf);
+
+	return 0;
+}
+
+int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
+			       struct multiple_operation_message_operation **op)
+{
+	struct multiple_operation_message *mom = &pkt->mo_msg;
+	mom->num_ops++;
+	mom->ops = realloc(mom->ops,
+			   mom->num_ops * sizeof(struct multiple_operation_message_operation));
+	*op = &mom->ops[mom->num_ops - 1];
+	(*op)->opID = opId;
+
 	return 0;
 }
