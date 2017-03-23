@@ -147,16 +147,10 @@ static int gen_splice_request_data(struct splice_request_data *d, unsigned char 
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->splice_insert_type, 8);
-	klbs_write_bits(bs, d->splice_event_id >> 24, 8);
-	klbs_write_bits(bs, d->splice_event_id >> 16, 8);
-	klbs_write_bits(bs, d->splice_event_id >> 8, 8);
-	klbs_write_bits(bs, d->splice_event_id, 8);
-	klbs_write_bits(bs, d->unique_program_id >> 8, 8);
-	klbs_write_bits(bs, d->unique_program_id, 8);
-	klbs_write_bits(bs, d->pre_roll_time >> 8, 8);
-	klbs_write_bits(bs, d->pre_roll_time, 8);
-	klbs_write_bits(bs, d->brk_duration >> 8, 8);
-	klbs_write_bits(bs, d->brk_duration, 8);
+	klbs_write_bits(bs, d->splice_event_id, 32);
+	klbs_write_bits(bs, d->unique_program_id, 16);
+	klbs_write_bits(bs, d->pre_roll_time, 16);
+	klbs_write_bits(bs, d->brk_duration, 16);
 	klbs_write_bits(bs, d->avail_num, 8);
 	klbs_write_bits(bs, d->avails_expected, 8);
 	klbs_write_bits(bs, d->auto_return_flag, 8);
