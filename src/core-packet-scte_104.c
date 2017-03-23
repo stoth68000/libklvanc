@@ -170,6 +170,23 @@ static int gen_splice_request_data(struct splice_request_data *d, unsigned char 
 	return 0;
 }
 
+static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* splice_null_request has no actual body, so nothing to do but return an
+	   empty buffer */
+
+	*outBuf = buf;
+	*outSize = 0;
+
+	return 0;
+}
+
 static int gen_time_signal_request_data(struct time_signal_request_data *d, unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -750,6 +767,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
 			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
+			break;
+		case MO_SPLICE_NULL_REQUEST_DATA:
+			gen_splice_null_request_data(&o->data, &o->data_length);
 			break;
 		case MO_TIME_SIGNAL_REQUEST_DATA:
 			gen_time_signal_request_data(&o->timesignal_data, &o->data, &o->data_length);
