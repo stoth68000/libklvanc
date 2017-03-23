@@ -737,9 +737,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
 			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);
 			break;
-
 		default:
 			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);
+			continue;
 		}
 		/* FIXME */
 
