@@ -151,11 +151,11 @@ static int gen_splice_request_data(struct splice_request_data *d, unsigned char 
 	klbs_write_bits(bs, d->splice_event_id >> 16, 8);
 	klbs_write_bits(bs, d->splice_event_id >> 8, 8);
 	klbs_write_bits(bs, d->splice_event_id, 8);
-	klbs_write_bits(bs, d->unique_program_id << 8, 8);
+	klbs_write_bits(bs, d->unique_program_id >> 8, 8);
 	klbs_write_bits(bs, d->unique_program_id, 8);
-	klbs_write_bits(bs, d->pre_roll_time << 8, 8);
+	klbs_write_bits(bs, d->pre_roll_time >> 8, 8);
 	klbs_write_bits(bs, d->pre_roll_time, 8);
-	klbs_write_bits(bs, d->brk_duration << 8, 8);
+	klbs_write_bits(bs, d->brk_duration >> 8, 8);
 	klbs_write_bits(bs, d->brk_duration, 8);
 	klbs_write_bits(bs, d->avail_num, 8);
 	klbs_write_bits(bs, d->avails_expected, 8);
