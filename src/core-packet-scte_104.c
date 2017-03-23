@@ -323,13 +323,9 @@ static int gen_segmentation_request_data(struct segmentation_descriptor_request_
 	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
-	klbs_write_bits(bs, d->event_id >> 24, 8);
-	klbs_write_bits(bs, d->event_id >> 16, 8);
-	klbs_write_bits(bs, d->event_id >> 8, 8);
-	klbs_write_bits(bs, d->event_id, 8);
+	klbs_write_bits(bs, d->event_id, 32);
 	klbs_write_bits(bs, d->event_cancel_indicator, 8);
-	klbs_write_bits(bs, d->duration >> 8, 8);
-	klbs_write_bits(bs, d->duration, 8);
+	klbs_write_bits(bs, d->duration, 16);
 	klbs_write_bits(bs, d->upid_type, 8);
 	klbs_write_bits(bs, d->upid_length, 8);
 
@@ -729,12 +725,8 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	struct multiple_operation_message_timestamp *ts = &m->timestamp;
 	switch(ts->time_type) {
 	case 1:
-		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 24, 8);
-		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 16, 8);
-		klbs_write_bits(bs, ts->time_type_1.UTC_seconds >> 8, 8);
-		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 8);
-		klbs_write_bits(bs, ts->time_type_1.UTC_microseconds >> 8, 8);
-		klbs_write_bits(bs, ts->time_type_1.UTC_microseconds, 8);
+		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 32);
+		klbs_write_bits(bs, ts->time_type_1.UTC_microseconds, 16);
 		break;
 	case 2:
 		klbs_write_bits(bs, ts->time_type_2.hours, 8);
