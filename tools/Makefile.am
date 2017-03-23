@@ -24,6 +24,7 @@ SRC += $(BLACKMAGIC_SDK_PATH)//DeckLinkAPIDispatch.cpp
 SRC += demo.c
 SRC += capture.cpp
 SRC += smpte2038.c
+SRC += scte104.c
 SRC += udp.c
 SRC += url.c
 SRC += ts_packetizer.c
@@ -33,10 +34,12 @@ SRC += pes_extractor.c
 bin_PROGRAMS  = klvanc_util
 bin_PROGRAMS += klvanc_capture
 bin_PROGRAMS += klvanc_smpte2038
+bin_PROGRAMS += klvanc_scte104
 
 klvanc_util_SOURCES = $(SRC)
 klvanc_capture_SOURCES = $(SRC)
 klvanc_smpte2038_SOURCES = $(SRC)
+klvanc_scte104_SOURCES = $(SRC)
 
 libklvanc_noinst_includedir = $(includedir)
 
