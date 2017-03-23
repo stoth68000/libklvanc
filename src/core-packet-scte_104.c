@@ -170,6 +170,29 @@ static int gen_splice_request_data(struct splice_request_data *d, unsigned char 
 	return 0;
 }
 
+static int gen_time_signal_request_data(struct time_signal_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->pre_roll_time, 16);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 static unsigned char *parse_descriptor_request_data(unsigned char *p, struct insert_descriptor_request_data *d, unsigned int descriptor_size)
 {
 	d->descriptor_count = *(p++);
@@ -727,6 +750,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
 			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
+			break;
+		case MO_TIME_SIGNAL_REQUEST_DATA:
+			gen_time_signal_request_data(&o->timesignal_data, &o->data, &o->data_length);
 			break;
 		case MO_INSERT_DESCRIPTOR_REQUEST_DATA:
 			gen_descriptor_request_data(&o->descriptor_data, &o->data, &o->data_length);
