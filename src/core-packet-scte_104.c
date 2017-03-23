@@ -661,7 +661,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
 				parse_segmentation_request_data(o->data, &o->segmentation_data);
 
-#if 1
+#if 0
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
 			hexdump(o->data, o->data_length, 32, "");
 #endif
