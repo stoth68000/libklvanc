@@ -791,7 +791,7 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	}
 	klbs_write_buffer_complete(bs);
 
-#if 1
+#if 0
 	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
 	printf(" ->payload  = ");
 	for (int i = 0; i < klbs_get_byte_count(bs); i++) {
