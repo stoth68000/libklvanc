@@ -283,6 +283,45 @@ static int gen_dtmf_request_data(struct dtmf_descriptor_request_data *d, unsigne
 	return 0;
 }
 
+static unsigned char *parse_avail_request_data(unsigned char *p,
+					       struct avail_descriptor_request_data *d)
+{
+	d->num_provider_avails = *(p++);
+	memset(d->provider_avail_id, 0, sizeof(d->provider_avail_id));
+
+	for (int i = 0; i < d->num_provider_avails; i++) {
+		d->provider_avail_id[i] = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
+	}
+
+	return p;
+}
+
+static int gen_avail_request_data(struct avail_descriptor_request_data *d,
+				  unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->num_provider_avails, 8);
+	for (int i = 0; i < d->num_provider_avails; i++)
+		klbs_write_bits(bs, d->provider_avail_id[i], 32);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
 						      struct segmentation_descriptor_request_data *d)
 {
@@ -425,6 +464,12 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->total_length);
 			for (int j = 0; j < d->total_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->descriptor_bytes[j]);
+			}
+		} else if (o->opID == MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA) {
+			struct avail_descriptor_request_data *d = &o->avail_descriptor_data;
+			PRINT_DEBUG_MEMBER_INT(d->num_provider_avails);
+			for (int j = 0; j < d->num_provider_avails; j++) {
+				PRINT_DEBUG_MEMBER_INT(d->provider_avail_id[j]);
 			}
 		} else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA) {
 			struct dtmf_descriptor_request_data *d = &o->dtmf_data;
@@ -656,6 +701,9 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
 				parse_descriptor_request_data(o->data, &o->descriptor_data,
 					o->data_length - 1);
+			else if (o->opID == MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA)
+				parse_avail_request_data(o->data,
+							 &o->avail_descriptor_data);
 			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
 				parse_dtmf_request_data(o->data, &o->dtmf_data);
 			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
@@ -765,6 +813,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 			break;
 		case MO_INSERT_DTMF_REQUEST_DATA:
 			gen_dtmf_request_data(&o->dtmf_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA:
+			gen_avail_request_data(&o->avail_descriptor_data, &o->data, &o->data_length);
 			break;
 		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
 			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);

@@ -56,6 +56,7 @@ extern "C" {
 #define MO_TIME_SIGNAL_REQUEST_DATA  0x104
 #define MO_INSERT_DESCRIPTOR_REQUEST_DATA    0x108
 #define MO_INSERT_DTMF_REQUEST_DATA  0x109
+#define MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA  0x10a
 #define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
 
 /**
@@ -183,6 +184,16 @@ struct time_signal_request_data
 /**
  * @brief       TODO - Brief description goes here.
  */
+struct avail_descriptor_request_data
+{
+	/* SCTE 104 Table 8-26 */
+	unsigned int num_provider_avails;
+	uint32_t provider_avail_id[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct insert_descriptor_request_data
 {
 	/* SCTE 104 Table 8-27 */
@@ -234,6 +245,7 @@ struct multiple_operation_message_operation {
 		struct time_signal_request_data timesignal_data;
 		struct dtmf_descriptor_request_data dtmf_data;
 		struct segmentation_descriptor_request_data segmentation_data;
+		struct avail_descriptor_request_data avail_descriptor_data;
 		struct insert_descriptor_request_data descriptor_data;
 	};
 };
