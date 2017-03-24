@@ -58,6 +58,7 @@ extern "C" {
 #define MO_INSERT_DTMF_REQUEST_DATA  0x109
 #define MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA  0x10a
 #define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
+#define MO_PROPRIETARY_COMMAND_REQUEST_DATA  0x10c
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -236,6 +237,18 @@ struct segmentation_descriptor_request_data
 	unsigned int device_restrictions;
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct proprietary_command_request_data
+{
+	/* SCTE 104 Table 9-30 */
+	unsigned int proprietary_id;
+	unsigned int proprietary_command;
+	unsigned int data_length;
+	unsigned char proprietary_data[255];
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
@@ -247,6 +260,7 @@ struct multiple_operation_message_operation {
 		struct segmentation_descriptor_request_data segmentation_data;
 		struct avail_descriptor_request_data avail_descriptor_data;
 		struct insert_descriptor_request_data descriptor_data;
+		struct proprietary_command_request_data proprietary_data;
 	};
 };
 

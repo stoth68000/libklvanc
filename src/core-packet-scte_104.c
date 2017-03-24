@@ -390,6 +390,49 @@ static int gen_segmentation_request_data(struct segmentation_descriptor_request_
 	return 0;
 }
 
+static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
+							     struct proprietary_command_request_data *d,
+							     unsigned int descriptor_size)
+{
+	memset(d->proprietary_data, 0, sizeof(d->proprietary_data));
+
+	d->proprietary_id = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
+	d->proprietary_command = *(p++);
+	d->data_length = descriptor_size - 5;
+
+	memcpy(d->proprietary_data, p, d->data_length);
+	p+= d->data_length;
+
+	return p;
+}
+
+static int gen_proprietary_command_request_data(struct proprietary_command_request_data *d,
+						unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->proprietary_id, 32);
+	klbs_write_bits(bs, d->proprietary_command, 8);
+
+	for (int i = 0; i < d->data_length; i++)
+		klbs_write_bits(bs, d->proprietary_data[i], 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
 
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
@@ -708,6 +751,9 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 				parse_dtmf_request_data(o->data, &o->dtmf_data);
 			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
 				parse_segmentation_request_data(o->data, &o->segmentation_data);
+			else if (o->opID == MO_PROPRIETARY_COMMAND_REQUEST_DATA)
+				parse_proprietary_command_request_data(o->data, &o->proprietary_data,
+								       o->data_length - 1);
 
 #if 0
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
@@ -819,6 +865,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 			break;
 		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
 			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);
+			break;
+		case MO_PROPRIETARY_COMMAND_REQUEST_DATA:
+			gen_proprietary_command_request_data(&o->proprietary_data, &o->data, &o->data_length);
 			break;
 		default:
 			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);
