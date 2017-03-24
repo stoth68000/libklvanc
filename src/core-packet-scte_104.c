@@ -434,6 +434,36 @@ static int gen_proprietary_command_request_data(struct proprietary_command_reque
 	return 0;
 }
 
+static unsigned char *parse_tier_data(unsigned char *p, struct tier_data *d)
+{
+	d->tier_data = *(p + 0) << 8 | *(p + 1); p += 2;
+
+	return p;
+}
+
+static int gen_tier_data(struct tier_data *d,  unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->tier_data, 16);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
@@ -754,6 +784,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			else if (o->opID == MO_PROPRIETARY_COMMAND_REQUEST_DATA)
 				parse_proprietary_command_request_data(o->data, &o->proprietary_data,
 								       o->data_length - 1);
+			else if (o->opID == MO_INSERT_TIER_DATA)
+				parse_tier_data(o->data, &o->tier_data);
 
 #if 0
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
@@ -868,6 +900,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 			break;
 		case MO_PROPRIETARY_COMMAND_REQUEST_DATA:
 			gen_proprietary_command_request_data(&o->proprietary_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_TIER_DATA:
+			gen_tier_data(&o->tier_data, &o->data, &o->data_length);
 			break;
 		default:
 			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);
