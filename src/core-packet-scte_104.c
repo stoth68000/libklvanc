@@ -91,6 +91,8 @@ static const char *mom_operationName(unsigned short opID)
 	case 0x010c: return "proprietary_command_request_data";
 	case 0x010d: return "schedule_component_mode_request_data";
 	case 0x010e: return "schedule_definition_data_request";
+	case 0x010f: return "insert_tier_data";
+	case 0x0110: return "insert_time_descriptor";
 	case 0x0300: return "delete_controlword_data_request";
 	case 0x0301: return "update_controlword_data_request";
 	default:     return "Reserved";
