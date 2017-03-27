@@ -594,6 +594,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
 			PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
 			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			printf("    pre_roll_time = %d (milliseconds)\n", d->pre_roll_time);
 			PRINT_DEBUG_MEMBER_INT(d->brk_duration);
 			printf("    break_duration = %d (1/10th seconds)\n", d->brk_duration);
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
