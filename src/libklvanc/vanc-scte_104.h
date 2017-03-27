@@ -90,36 +90,6 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
-#define SCTE104_SR_DATA_FIELD__UNIQUE_PROGRAM_ID(pkt) ((pkt)->sr_data.unique_program_id)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__SPLICE_EVENT_ID(pkt) ((pkt)->sr_data.splice_event_id)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AUTO_RETURN_FLAGS(pkt) ((pkt)->sr_data.auto_return_flag)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__DURATION(pkt) ((pkt)->sr_data.brk_duration)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AVAIL_NUM(pkt) ((pkt)->sr_data.avail_num)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AVAILS_EXPECTED(pkt) ((pkt)->sr_data.avails_expected)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
 struct single_operation_message
 {
 	/* single_operation_message */
