@@ -59,6 +59,7 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
+	int ret = -1;
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
@@ -67,7 +68,11 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 
 	uint16_t *words;
 	uint16_t wordCount;
-	convert_SCTE_104_to_words(pkt, &words, &wordCount);
+	ret = convert_SCTE_104_to_words(pkt, &words, &wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
 
 	printf("Final Output\n");
 	for (int i = 0; i < wordCount; i++) {
@@ -187,7 +192,7 @@ static int test_checksum()
 	return 0;
 }
 
-unsigned char __0_vancentry[] = {
+static unsigned char __0_vancentry[] = {
 	0x00, 0x00, 0x03, 0xff, 0x03, 0xff, 0x02, 0x41, 0x01, 0x07, 0x01, 0x52,
 	0x01, 0x08, 0x02, 0xff, 0x02, 0xff, 0x02, 0x00, 0x01, 0x51, 0x02, 0x00,
 	0x02, 0x00, 0x01, 0x52, 0x02, 0x00, 0x02, 0x05, 0x02, 0x00, 0x02, 0x00,
