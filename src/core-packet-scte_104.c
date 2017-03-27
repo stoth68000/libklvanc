@@ -466,6 +466,45 @@ static int gen_tier_data(struct tier_data *d,  unsigned char **outBuf, uint16_t 
 	return 0;
 }
 
+static unsigned char *parse_time_descriptor(unsigned char *p, struct time_descriptor_data *d)
+{
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_read_set_buffer(bs, p, 12);
+
+	d->TAI_seconds = klbs_read_bits(bs, 48);
+	d->TAI_ns = klbs_read_bits(bs, 32);
+	d->UTC_offset = klbs_read_bits(bs, 16);
+
+	klbs_free(bs);
+
+	return p;
+}
+
+static int gen_time_descriptor(struct time_descriptor_data *d,  unsigned char **outBuf, uint16_t *outSize)
+{
+	unsigned char *buf;
+
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL)
+		return -1;
+
+	/* Serialize the SCTE 104 request into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+
+	klbs_write_bits(bs, d->TAI_seconds, 48);
+	klbs_write_bits(bs, d->TAI_ns, 32);
+	klbs_write_bits(bs, d->UTC_offset, 16);
+
+	klbs_write_buffer_complete(bs);
+
+	*outBuf = buf;
+	*outSize = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
 static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
@@ -788,6 +827,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 								       o->data_length - 1);
 			else if (o->opID == MO_INSERT_TIER_DATA)
 				parse_tier_data(o->data, &o->tier_data);
+			else if (o->opID == MO_INSERT_TIME_DESCRIPTOR)
+				parse_time_descriptor(o->data, &o->time_data);
 
 #if 0
 			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
@@ -905,6 +946,9 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 			break;
 		case MO_INSERT_TIER_DATA:
 			gen_tier_data(&o->tier_data, &o->data, &o->data_length);
+			break;
+		case MO_INSERT_TIME_DESCRIPTOR:
+			gen_time_descriptor(&o->time_data, &o->data, &o->data_length);
 			break;
 		default:
 			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);

@@ -60,6 +60,7 @@ extern "C" {
 #define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
 #define MO_PROPRIETARY_COMMAND_REQUEST_DATA  0x10c
 #define MO_INSERT_TIER_DATA  0x10f
+#define MO_INSERT_TIME_DESCRIPTOR  0x110
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -241,6 +242,17 @@ struct segmentation_descriptor_request_data
 /**
  * @brief       TODO - Brief description goes here.
  */
+struct time_descriptor_data
+{
+	/* SCTE 104 2015 Table 9-32 */
+	uint64_t TAI_seconds;
+	unsigned int TAI_ns;
+	unsigned int UTC_offset;
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct proprietary_command_request_data
 {
 	/* SCTE 104 Table 9-30 */
@@ -272,6 +284,7 @@ struct multiple_operation_message_operation {
 		struct insert_descriptor_request_data descriptor_data;
 		struct proprietary_command_request_data proprietary_data;
 		struct tier_data tier_data;
+		struct time_descriptor_data time_data;
 	};
 };
 
