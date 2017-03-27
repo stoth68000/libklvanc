@@ -29,6 +29,32 @@
 
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
 
+static void print_debug_member_timestamp(struct multiple_operation_message_timestamp *ts)
+{
+	printf( " m->timestamp type = 0x%02x ", ts->time_type);
+	switch (ts->time_type) {
+	case 1:
+		printf("(UTC Time)\n");
+		printf(" m->timestamp value = %d.%06d (UTC seconds)\n", ts->time_type_1.UTC_seconds, ts->time_type_1.UTC_microseconds);
+                break;
+        case 2:
+		printf("(SMPTE VITC timecode)\n");
+		printf(" m->timestamp value = %02d:%02d:%02d:%02d (hh:mm:ss:ff)\n", ts->time_type_2.hours, ts->time_type_2.minutes,
+		       ts->time_type_2.seconds, ts->time_type_2.frames);
+                break;
+        case 3:
+		printf("(GPI input)\n");
+		printf(" m->timestamp value = %d:%d (GPI number, edge)\n", ts->time_type_3.GPI_number, ts->time_type_3.GPI_edge);
+                break;
+        case 0:
+                /* The spec says no time is defined, this is a legitimate state. */
+		printf("(none)\n");
+		break;
+        default:
+		printf("(unknown/unsupported)\n");
+        }
+}
+
 static const char *spliceInsertTypeName(unsigned char type)
 {
 	switch (type) {
@@ -551,6 +577,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 	PRINT_DEBUG_MEMBER_INT(m->message_number);
 	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
 	PRINT_DEBUG_MEMBER_INT(m->SCTE35_protocol_version);
+	print_debug_member_timestamp(&m->timestamp);
 	PRINT_DEBUG_MEMBER_INT(m->num_ops);
 
 	for (int i = 0; i < m->num_ops; i++) {
