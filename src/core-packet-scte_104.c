@@ -28,6 +28,7 @@
 #include <string.h>
 
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
+#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
 
 static void print_debug_member_timestamp(struct multiple_operation_message_timestamp *ts)
 {
@@ -642,6 +643,11 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 		} else if (o->opID == MO_INSERT_TIER_DATA) {
 			struct tier_data *d = &o->tier_data;
 			PRINT_DEBUG_MEMBER_INT(d->tier_data);
+		} else if (o->opID == MO_INSERT_TIME_DESCRIPTOR) {
+			struct time_descriptor_data *d = &o->time_data;
+			PRINT_DEBUG_MEMBER_INT64(d->TAI_seconds);
+			PRINT_DEBUG_MEMBER_INT(d->TAI_ns);
+			PRINT_DEBUG_MEMBER_INT(d->UTC_offset);
 		}
 
 	}
