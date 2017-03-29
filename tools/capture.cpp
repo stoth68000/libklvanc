@@ -921,6 +921,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 	// Handle Audio Frame
 	if (audioFrame) {
+		audioFrameCount++;
 		frameTime = &frameTimes[1];
 
 		uint32_t sampleSize =
