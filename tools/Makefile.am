@@ -26,6 +26,7 @@ SRC += capture.cpp
 SRC += parse.cpp
 SRC += smpte2038.c
 SRC += scte104.c
+SRC += genscte104.c
 SRC += udp.c
 SRC += url.c
 SRC += ts_packetizer.c
@@ -37,12 +38,14 @@ bin_PROGRAMS += klvanc_capture
 bin_PROGRAMS += klvanc_parse
 bin_PROGRAMS += klvanc_smpte2038
 bin_PROGRAMS += klvanc_scte104
+bin_PROGRAMS += klvanc_genscte104
 
 klvanc_util_SOURCES = $(SRC)
 klvanc_capture_SOURCES = $(SRC)
 klvanc_parse_SOURCES = $(SRC)
 klvanc_smpte2038_SOURCES = $(SRC)
 klvanc_scte104_SOURCES = $(SRC)
+klvanc_genscte104_SOURCES = $(SRC)
 
 libklvanc_noinst_includedir = $(includedir)
 
