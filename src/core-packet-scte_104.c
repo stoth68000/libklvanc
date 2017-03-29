@@ -708,6 +708,10 @@ int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **outPkt)
 	/* Note, we take advantage of the SOM OpID field even with
 	   Multiple Operation Messages */
 	pkt->so_msg.opID = opId;
+	if (opId == 0xffff) {
+		/* Set some reasonable defaults for the MOM properties */
+		pkt->mo_msg.rsvd = 0xffff;
+	}
 
 	*outPkt = pkt;
 	return 0;
