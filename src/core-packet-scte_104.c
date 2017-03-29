@@ -639,6 +639,9 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
 			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
 			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
+		} else if (o->opID == MO_INSERT_TIER_DATA) {
+			struct tier_data *d = &o->tier_data;
+			PRINT_DEBUG_MEMBER_INT(d->tier_data);
 		}
 
 	}
