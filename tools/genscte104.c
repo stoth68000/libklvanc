@@ -261,6 +261,42 @@ static int testcase_5(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	return 0;
 }
 
+static int testcase_6(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIME_DESCRIPTOR, &op);
+	if (ret != 0)
+		return -1;
+
+	op->time_data.TAI_seconds = 1490808516; /* Wed Mar 29 13:28:36 EDT 2017 */
+	op->time_data.TAI_ns = 500000000;
+	op->time_data.UTC_offset = 500; /* Nonsensical value? */
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
 struct testcase {
 	const char *name;
 	int (*test)(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount);
@@ -272,6 +308,7 @@ struct testcase testcases[] = {
 	{ "Splice immediate + Insert Avail", testcase_3 },
 	{ "Splice immediate + Insert Segmentation", testcase_4 },
 	{ "Splice Immediate + Insert Time Descriptor", testcase_5 },
+	{ "Splice Null + Insert Time Descriptor", testcase_6 },
 };
 #define NUM_TESTCASES sizeof(testcases) / sizeof(struct testcase)
 
