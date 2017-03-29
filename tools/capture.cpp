@@ -976,6 +976,24 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		frameTime->lastTime = t;
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
+		/* This is crying out for some refactoring and being pushed directly
+		 * into libklmonitoring, but in the meantime, here's what its supposed to
+		 * accomplish.
+		 * a) An upstream SDI device puts PRBS15 15bit values into all of its PCM
+		 *    channels. IN the buffer if uint16_t words, the buffer is prepared
+		 *    as follows
+		 *     for word in buffer[0 ... size]
+		 *       word = next prbs15_value;
+		 * b) So the entire PRBS set is stripped across all PCM channels.
+		 * c) ON the receive side, we "unstripe" accross all channels, and validate
+		 *    our syncronized value matches the predicted upstream value.
+		 *
+		 * In order for the downstream device to syncronize with upstream, it samples the
+		 * last word in an initial buffer, then prepares to predict the next words for each and
+		 * every subsequent buffer. If the prediction value doesn't match the actual value obtained
+		 * from upstream, declare a data integrity error and re-syncronize / repeat the syncronization
+		 * process.
+		 */
 		if (g_monitor_prbs_audio_mode) {
 			audioFrame->GetBytes(&audioFrameBytes);
 			if (g_prbs_initialized == 0) {
