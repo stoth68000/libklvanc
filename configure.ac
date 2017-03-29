@@ -46,6 +46,13 @@ if test "x$HEADER_LIBCURSES" == "xyes" ; then
 fi
 AM_CONDITIONAL(LIBCURSES, test x"$HEADER_LIBCURSES" == x"yes")
 
+AC_CHECK_HEADERS([libklmonitoring/klmonitoring.h], HEADER_LIBKLMONITORING="yes")
+if test "x$HEADER_LIBKLMONITORING" == "xyes" ; then
+    LDFLAGS+=" -lklmonitoring "
+fi
+AM_CONDITIONAL(LIBKLMONITORING, test x"$HEADER_LIBKLMONITORING" == x"yes")
+
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_UINT16_T
 AC_TYPE_UINT8_T
