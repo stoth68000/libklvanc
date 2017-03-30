@@ -31,12 +31,14 @@ static size_t vancResultCount;
 static int passCount = 0;
 static int failCount = 0;
 
+#define SHOW_DETAIL 1
+
 /* CALLBACKS for message notification */
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
 	int ret = -1;
 
-#if 0
+#ifdef SHOW_DETAIL
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
 	dump_SCTE_104(ctx, pkt);
@@ -209,7 +211,9 @@ int scte104_main(int argc, char *argv[])
 		fprintf(stderr, "Error initializing library context\n");
 		exit(1);
 	}
-	ctx->verbose = 0;
+#ifdef SHOW_DETAIL
+	ctx->verbose = 1;
+#endif
 	ctx->callbacks = &callbacks;
 	printf("Library initialized.\n");
 
