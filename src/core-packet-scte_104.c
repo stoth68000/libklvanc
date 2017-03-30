@@ -151,6 +151,7 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	case SPLICEEND_IMMEDIATE:
 	case SPLICESTART_NORMAL:
 	case SPLICEEND_NORMAL:
+	case SPLICE_CANCEL:
 		break;
 	default:
 		/* We don't support this splice command */
