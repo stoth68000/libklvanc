@@ -50,7 +50,7 @@ static int testcase_1(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
 	if (ret != 0)
 		return -1;
-	op->tier_data.tier_data = 0x1234;
+	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
 	if (ret != 0)
@@ -410,7 +410,7 @@ static int testcase_9(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
 	if (ret != 0)
 		return -1;
-	op->tier_data.tier_data = 0x1234;
+	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
 	if (ret != 0)
@@ -452,7 +452,7 @@ static int testcase_10(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
 	if (ret != 0)
 		return -1;
-	op->tier_data.tier_data = 0x1234;
+	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
 	if (ret != 0)
@@ -494,7 +494,7 @@ static int testcase_11(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
 	if (ret != 0)
 		return -1;
-	op->tier_data.tier_data = 0x1234;
+	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
 	if (ret != 0)
@@ -536,7 +536,7 @@ static int testcase_12(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
 	if (ret != 0)
 		return -1;
-	op->tier_data.tier_data = 0x1234;
+	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
 	if (ret != 0)
