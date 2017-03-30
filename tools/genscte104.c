@@ -383,6 +383,174 @@ static int testcase_8(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	return 0;
 }
 
+static int testcase_9(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	op->sr_data.splice_insert_type = SPLICEEND_IMMEDIATE;
+	op->sr_data.splice_event_id = 0x1234;
+	op->sr_data.unique_program_id = 0x4567;
+	op->sr_data.pre_roll_time = 0;
+	op->sr_data.brk_duration = 0;
+	op->sr_data.avail_num = 1;
+	op->sr_data.avails_expected = 2;
+	op->sr_data.auto_return_flag = 0;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
+	if (ret != 0)
+		return -1;
+	op->tier_data.tier_data = 0x1234;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int testcase_10(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	op->sr_data.splice_insert_type = SPLICESTART_NORMAL;
+	op->sr_data.splice_event_id = 0x1234;
+	op->sr_data.unique_program_id = 0x4567;
+	op->sr_data.pre_roll_time = 5000;
+	op->sr_data.brk_duration = 280;
+	op->sr_data.avail_num = 1;
+	op->sr_data.avails_expected = 2;
+	op->sr_data.auto_return_flag = 1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
+	if (ret != 0)
+		return -1;
+	op->tier_data.tier_data = 0x1234;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int testcase_11(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	op->sr_data.splice_insert_type = SPLICEEND_NORMAL;
+	op->sr_data.splice_event_id = 0x1234;
+	op->sr_data.unique_program_id = 0x4567;
+	op->sr_data.pre_roll_time = 5000;
+	op->sr_data.brk_duration = 0;
+	op->sr_data.avail_num = 1;
+	op->sr_data.avails_expected = 2;
+	op->sr_data.auto_return_flag = 0;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
+	if (ret != 0)
+		return -1;
+	op->tier_data.tier_data = 0x1234;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int testcase_12(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	op->sr_data.splice_insert_type = SPLICE_CANCEL;
+	op->sr_data.splice_event_id = 0x1234;
+	op->sr_data.unique_program_id = 0x4567;
+	op->sr_data.pre_roll_time = 0;
+	op->sr_data.brk_duration = 0;
+	op->sr_data.avail_num = 1;
+	op->sr_data.avails_expected = 2;
+	op->sr_data.auto_return_flag = 0;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
+	if (ret != 0)
+		return -1;
+	op->tier_data.tier_data = 0x1234;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
 struct testcase {
 	const char *name;
 	int (*test)(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount);
@@ -397,6 +565,10 @@ struct testcase testcases[] = {
 	{ "Splice Null + Insert Time Descriptor", testcase_6 },
 	{ "Splice Null + Insert Descriptor", testcase_7 },
 	{ "Splice Null + Proprietary command", testcase_8 },
+	{ "SpliceEnd Immediate", testcase_9 },
+	{ "SpliceStart Normal", testcase_10 },
+	{ "SpliceEnd Normal", testcase_11 },
+	{ "Splice Cancel", testcase_12 },
 
 };
 #define NUM_TESTCASES sizeof(testcases) / sizeof(struct testcase)
