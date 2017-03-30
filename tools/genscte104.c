@@ -297,6 +297,92 @@ static int testcase_6(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	return 0;
 }
 
+static int testcase_7(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_DESCRIPTOR_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	op->descriptor_data.descriptor_count = 1;
+	op->descriptor_data.total_length = 7;
+	op->descriptor_data.descriptor_bytes[0] = 0x0b;
+	op->descriptor_data.descriptor_bytes[1] = 0x05;
+	op->descriptor_data.descriptor_bytes[2] = 0x54;
+	op->descriptor_data.descriptor_bytes[3] = 0x56;
+	op->descriptor_data.descriptor_bytes[4] = 0x43;
+	op->descriptor_data.descriptor_bytes[5] = 0x54;
+	op->descriptor_data.descriptor_bytes[6] = 0x11;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int testcase_8(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
+{
+
+	struct packet_scte_104_s *pkt;
+	struct multiple_operation_message_operation *op;
+	int ret;
+
+	ret = alloc_SCTE_104(0xffff, &pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
+	if (ret != 0)
+		return -1;
+
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_PROPRIETARY_COMMAND_REQUEST_DATA,
+					 &op);
+	if (ret != 0)
+		return -1;
+
+	op->proprietary_data.proprietary_id = 0x5522aa11;
+	op->proprietary_data.proprietary_command = 0x22;
+	op->proprietary_data.data_length = 7;
+	op->proprietary_data.proprietary_data[0] = 0x0b;
+	op->proprietary_data.proprietary_data[1] = 0x05;
+	op->proprietary_data.proprietary_data[2] = 0x54;
+	op->proprietary_data.proprietary_data[3] = 0x56;
+	op->proprietary_data.proprietary_data[4] = 0x43;
+	op->proprietary_data.proprietary_data[5] = 0x54;
+	op->proprietary_data.proprietary_data[6] = 0x11;
+
+	ret = dump_SCTE_104(ctx, pkt);
+	if (ret != 0)
+		return -1;
+
+	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
 struct testcase {
 	const char *name;
 	int (*test)(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wordCount);
@@ -309,6 +395,9 @@ struct testcase testcases[] = {
 	{ "Splice immediate + Insert Segmentation", testcase_4 },
 	{ "Splice Immediate + Insert Time Descriptor", testcase_5 },
 	{ "Splice Null + Insert Time Descriptor", testcase_6 },
+	{ "Splice Null + Insert Descriptor", testcase_7 },
+	{ "Splice Null + Proprietary command", testcase_8 },
+
 };
 #define NUM_TESTCASES sizeof(testcases) / sizeof(struct testcase)
 
