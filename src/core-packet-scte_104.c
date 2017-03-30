@@ -28,6 +28,7 @@
 #include <string.h>
 
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
+#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
 
 static void print_debug_member_timestamp(struct multiple_operation_message_timestamp *ts)
 {
@@ -353,11 +354,9 @@ static int gen_avail_request_data(struct avail_descriptor_request_data *d,
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
 						      struct segmentation_descriptor_request_data *d)
 {
-
-	d->event_id  = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
-	p += 4;
+	d->event_id  = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->event_cancel_indicator = *(p++);
-	d->duration = p[0] | (p[1] << 8);
+	d->duration = (p[0] << 8) | p[1];
 	p += 2;
 	d->upid_type = *(p++);
 	d->upid_length = *(p++);
@@ -594,6 +593,7 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
 			PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
 			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			printf("    pre_roll_time = %d (milliseconds)\n", d->pre_roll_time);
 			PRINT_DEBUG_MEMBER_INT(d->brk_duration);
 			printf("    break_duration = %d (1/10th seconds)\n", d->brk_duration);
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
@@ -639,6 +639,14 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
 			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
 			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
+		} else if (o->opID == MO_INSERT_TIER_DATA) {
+			struct tier_data *d = &o->tier_data;
+			PRINT_DEBUG_MEMBER_INT(d->tier_data);
+		} else if (o->opID == MO_INSERT_TIME_DESCRIPTOR) {
+			struct time_descriptor_data *d = &o->time_data;
+			PRINT_DEBUG_MEMBER_INT64(d->TAI_seconds);
+			PRINT_DEBUG_MEMBER_INT(d->TAI_ns);
+			PRINT_DEBUG_MEMBER_INT(d->UTC_offset);
 		}
 
 	}
@@ -705,6 +713,10 @@ int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **outPkt)
 	/* Note, we take advantage of the SOM OpID field even with
 	   Multiple Operation Messages */
 	pkt->so_msg.opID = opId;
+	if (opId == 0xffff) {
+		/* Set some reasonable defaults for the MOM properties */
+		pkt->mo_msg.rsvd = 0xffff;
+	}
 
 	*outPkt = pkt;
 	return 0;
@@ -851,7 +863,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 				parse_segmentation_request_data(o->data, &o->segmentation_data);
 			else if (o->opID == MO_PROPRIETARY_COMMAND_REQUEST_DATA)
 				parse_proprietary_command_request_data(o->data, &o->proprietary_data,
-								       o->data_length - 1);
+								       o->data_length);
 			else if (o->opID == MO_INSERT_TIER_DATA)
 				parse_tier_data(o->data, &o->tier_data);
 			else if (o->opID == MO_INSERT_TIME_DESCRIPTOR)
