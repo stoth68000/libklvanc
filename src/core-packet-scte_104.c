@@ -863,7 +863,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 				parse_segmentation_request_data(o->data, &o->segmentation_data);
 			else if (o->opID == MO_PROPRIETARY_COMMAND_REQUEST_DATA)
 				parse_proprietary_command_request_data(o->data, &o->proprietary_data,
-								       o->data_length - 1);
+								       o->data_length);
 			else if (o->opID == MO_INSERT_TIER_DATA)
 				parse_tier_data(o->data, &o->tier_data);
 			else if (o->opID == MO_INSERT_TIME_DESCRIPTOR)
