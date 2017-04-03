@@ -70,7 +70,7 @@ int vanc_buffer_free(struct buffer_s *buf)
 	VALIDATE(buf);
 
 	/* The caller is responsible for removing the buffer form any list. */
-	memset(buf, 0, sizeof(*buf));
+	free(buf);
 
 	return KLAPI_OK;
 }
@@ -80,6 +80,7 @@ int vanc_buffer_reset(struct buffer_s *buf)
 	VALIDATE(buf);
 
 	/* Perform any buffer wipes, reset any vars as your library needs */
+	memset(buf, 0, sizeof(*buf));
 
 	return KLAPI_OK;
 }

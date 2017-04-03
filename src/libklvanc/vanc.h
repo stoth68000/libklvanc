@@ -81,6 +81,11 @@ struct vanc_context_s;
 /**
  * @brief       TODO - Brief description goes here.
  */
+struct packet_kl_u64le_counter_s;
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 struct vanc_callbacks_s
 {
 	int (*payload_information)(void *user_context, struct vanc_context_s *, struct packet_payload_information_s *);
@@ -88,6 +93,7 @@ struct vanc_callbacks_s
 	int (*eia_608)(void *user_context, struct vanc_context_s *, struct packet_eia_608_s *);
 	int (*scte_104)(void *user_context, struct vanc_context_s *, struct packet_scte_104_s *);
 	int (*all)(void *user_context, struct vanc_context_s *, struct packet_header_s *);
+	int (*kl_i64le_counter)(void *user_context, struct vanc_context_s *, struct packet_kl_u64le_counter_s *);
 };
 
 struct vanc_cache_s;
@@ -177,6 +183,7 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
 #include <libklvanc/vanc-checksum.h>
 #include <libklvanc/smpte2038.h>
 #include <libklvanc/cache.h>
+#include <libklvanc/vanc-kl_u64le_counter.h>
 
 /**
  * @brief	Take an array of payload, create a fully formed VANC message.

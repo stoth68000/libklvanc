@@ -36,6 +36,7 @@ static struct did_s {
 	const char *desc;
 } dids[] = {
 	{ 0x00, 0x00,   "S291", "Undefined Data"},
+	{ 0x40, 0xfe,   "KLABS","UINT64_T little endian frame counter"},
 	{ 0x41, 0x01,   "S352", "Payload Identification, VANC space"},
 	{ 0x41, 0x05,   "S352 / S2016-3", "AFD and Bar Data / Payload Identification, VANC space (Misconfigured upstream?)"},
 	{ 0x41, 0x06,"S2016-4", "Pan-Scan Data"},

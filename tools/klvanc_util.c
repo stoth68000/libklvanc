@@ -26,7 +26,10 @@
 /* External tool hooks */
 extern int demo_main(int argc, char *argv[]);
 extern int capture_main(int argc, char *argv[]);
+extern int parse_main(int argc, char *argv[]);
 extern int smpte2038_main(int argc, char *argv[]);
+extern int scte104_main(int argc, char *argv[]);
+extern int genscte104_main(int argc, char *argv[]);
 
 typedef int (*func_ptr)(int, char *argv[]);
 
@@ -38,7 +41,10 @@ int main(int argc, char *argv[])
 	} apps[] = {
 		{ "klvanc_util",		demo_main, },
 		{ "klvanc_capture",		capture_main, },
+		{ "klvanc_parse",		parse_main, },
 		{ "klvanc_smpte2038",		smpte2038_main, },
+		{ "klvanc_scte104",		scte104_main, },
+		{ "klvanc_genscte104",		genscte104_main, },
 		{ 0, 0 },
 	};
 	char *appname = basename(argv[0]);

@@ -29,6 +29,8 @@
 #ifndef _VANC_CACHE_H
 #define _VANC_CACHE_H
 
+#include <pthread.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif  
