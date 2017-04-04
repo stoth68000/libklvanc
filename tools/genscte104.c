@@ -35,8 +35,10 @@ static int testcase_1(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = 0x02;
 	op->sr_data.splice_event_id = 0x1234;
@@ -48,20 +50,26 @@ static int testcase_1(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -77,8 +85,10 @@ static int testcase_2(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = 0x02;
 	op->sr_data.splice_event_id = 0x1234;
@@ -90,8 +100,10 @@ static int testcase_2(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_DTMF_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->dtmf_data.pre_roll_time = 500;
 	op->dtmf_data.dtmf_length = 3;
@@ -100,15 +112,19 @@ static int testcase_2(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->dtmf_data.dtmf_char[2] = '2';
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -123,9 +139,11 @@ static int testcase_3(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	if (ret != 0)
 		return -1;
 
-	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = 0x02;
 	op->sr_data.splice_event_id = 0x1234;
@@ -137,21 +155,27 @@ static int testcase_3(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->avail_descriptor_data.num_provider_avails = 1;
 	op->avail_descriptor_data.provider_avail_id[0] = 999;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -167,8 +191,10 @@ static int testcase_4(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = 0x02;
 	op->sr_data.splice_event_id = 0x1234;
@@ -180,8 +206,10 @@ static int testcase_4(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_SEGMENTATION_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	struct segmentation_descriptor_request_data *seg = &op->segmentation_data;
 	seg->event_id = 1234;
@@ -204,15 +232,19 @@ static int testcase_4(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	seg->duration_extension_frames = 59;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -228,8 +260,10 @@ static int testcase_5(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = 0x02;
 	op->sr_data.splice_event_id = 0x1234;
@@ -241,23 +275,29 @@ static int testcase_5(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIME_DESCRIPTOR, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->time_data.TAI_seconds = 1490808516; /* Wed Mar 29 13:28:36 EDT 2017 */
 	op->time_data.TAI_ns = 500000000;
 	op->time_data.UTC_offset = 500; /* Nonsensical value? */
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -273,27 +313,35 @@ static int testcase_6(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIME_DESCRIPTOR, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->time_data.TAI_seconds = 1490808516; /* Wed Mar 29 13:28:36 EDT 2017 */
 	op->time_data.TAI_ns = 500000000;
 	op->time_data.UTC_offset = 500; /* Nonsensical value? */
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -309,12 +357,16 @@ static int testcase_7(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_DESCRIPTOR_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->descriptor_data.descriptor_count = 1;
 	op->descriptor_data.total_length = 7;
@@ -327,15 +379,19 @@ static int testcase_7(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->descriptor_data.descriptor_bytes[6] = 0x11;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -351,13 +407,17 @@ static int testcase_8(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_NULL_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_PROPRIETARY_COMMAND_REQUEST_DATA,
 					 &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->proprietary_data.proprietary_id = 0x5522aa11;
 	op->proprietary_data.proprietary_command = 0x22;
@@ -371,15 +431,19 @@ static int testcase_8(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->proprietary_data.proprietary_data[6] = 0x11;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -395,8 +459,10 @@ static int testcase_9(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = SPLICEEND_IMMEDIATE;
 	op->sr_data.splice_event_id = 0x1234;
@@ -408,20 +474,26 @@ static int testcase_9(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 	op->sr_data.auto_return_flag = 0;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -437,8 +509,10 @@ static int testcase_10(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = SPLICESTART_NORMAL;
 	op->sr_data.splice_event_id = 0x1234;
@@ -450,20 +524,26 @@ static int testcase_10(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	op->sr_data.auto_return_flag = 1;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -479,8 +559,10 @@ static int testcase_11(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = SPLICEEND_NORMAL;
 	op->sr_data.splice_event_id = 0x1234;
@@ -492,20 +574,26 @@ static int testcase_11(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	op->sr_data.auto_return_flag = 0;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -521,8 +609,10 @@ static int testcase_12(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 		return -1;
 
 	ret =  klvanc_SCTE_104_Add_MOM_Op(pkt, MO_SPLICE_REQUEST_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	op->sr_data.splice_insert_type = SPLICE_CANCEL;
 	op->sr_data.splice_event_id = 0x1234;
@@ -534,20 +624,26 @@ static int testcase_12(struct vanc_context_s *ctx, uint16_t **words, uint16_t *w
 	op->sr_data.auto_return_flag = 0;
 
 	ret = klvanc_SCTE_104_Add_MOM_Op(pkt, MO_INSERT_TIER_DATA, &op);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 	op->tier_data.tier_data = 0x123;
 
 	ret = dump_SCTE_104(ctx, pkt);
-	if (ret != 0)
+	if (ret != 0) {
+		free_SCTE_104(pkt);
 		return -1;
+	}
 
 	ret = convert_SCTE_104_to_words(pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
+		free_SCTE_104(pkt);
 		return -1;
 	}
 
+	free_SCTE_104(pkt);
 	return 0;
 }
 
@@ -602,5 +698,6 @@ int genscte104_main(int argc, char *argv[])
 		free(words);
 	}
 
+	vanc_context_destroy(ctx);
 	return 0;
 }
