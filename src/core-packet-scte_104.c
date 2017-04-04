@@ -738,6 +738,10 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 
 void free_SCTE_104(struct packet_scte_104_s *pkt)
 {
+	if (pkt == NULL)
+		return;
+
+	free(pkt->mo_msg.ops);
 	free(pkt);
 }
 
