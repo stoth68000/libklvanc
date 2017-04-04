@@ -736,6 +736,11 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 	return dump_mom(ctx, pkt);
 }
 
+void free_SCTE_104(struct packet_scte_104_s *pkt)
+{
+	free(pkt);
+}
+
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
