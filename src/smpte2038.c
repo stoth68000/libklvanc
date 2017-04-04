@@ -103,6 +103,8 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 	int ret = -1;
 
 	struct smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL)
+		return -1;
 
 // MMM
 	struct klbs_context_s *bs = klbs_alloc();
