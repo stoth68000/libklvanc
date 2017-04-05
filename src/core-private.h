@@ -30,6 +30,7 @@
 /* We'll have a mutex and a list of items */
 #include <pthread.h>
 #include "xorg-list.h"
+#include "klbitstream_readwriter.h"
 
 #define getPrivate(ctx) ((struct vanc_context_private_s *)ctx->priv)
 #define sanitizeWord(word) ((word) & 0xff)
