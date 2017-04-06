@@ -42,6 +42,10 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
 	dump_SCTE_104(ctx, pkt);
+	if (ret != 0) {
+		fprintf(stderr, "Error dumping SCTE 104 packet!\n");
+		return -1;
+	}
 #endif
 
 	uint16_t *words;

@@ -129,8 +129,10 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 	p->adf[2] = *(arr + 2);
 	p->did = sanitizeWord(*(arr + 3));
 	p->dbnsdid = sanitizeWord(*(arr + 4));
-	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short)))
+	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short))) {
+		free(p);
 		return -ENOMEM;
+	}
 
 	p->payloadLengthWords = sanitizeWord(*(arr + 5));
 

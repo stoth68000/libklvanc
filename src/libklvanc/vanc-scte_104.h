@@ -317,6 +317,12 @@ int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **pkt);
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
 
 /**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct packet_scte_104_s *pkt
+ */
+void free_SCTE_104(struct packet_scte_104_s *pkt);
+
+/**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
  *              vanc words, so that we may push out as VANC data.
  *              On success, caller MUST free the resulting *words array.

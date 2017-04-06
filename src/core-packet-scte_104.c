@@ -151,6 +151,7 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 	case SPLICEEND_IMMEDIATE:
 	case SPLICESTART_NORMAL:
 	case SPLICEEND_NORMAL:
+	case SPLICE_CANCEL:
 		break;
 	default:
 		/* We don't support this splice command */
@@ -733,6 +734,22 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 		return dump_som(ctx, pkt);
 
 	return dump_mom(ctx, pkt);
+}
+
+void free_SCTE_104(struct packet_scte_104_s *pkt)
+{
+	struct multiple_operation_message *m;
+
+	if (pkt == NULL)
+		return;
+
+	m = &pkt->mo_msg;
+	for (int i = 0; i < m->num_ops; i++) {
+		free(m->ops[i].data);
+	}
+	free(m->ops);
+
+	free(pkt);
 }
 
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
