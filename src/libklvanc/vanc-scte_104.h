@@ -181,7 +181,7 @@ struct insert_descriptor_request_data
 struct dtmf_descriptor_request_data
 {
 	/* SCTE 104 Table 8-28 */
-	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned char pre_roll_time;	/* In 1/10's of a second */
 	unsigned int dtmf_length;
 	char dtmf_char[7];
 };

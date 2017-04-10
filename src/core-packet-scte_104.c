@@ -1020,6 +1020,13 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	}
 	klbs_write_buffer_complete(bs);
 
+	/* Recompute the total message size now that everything has been serialized to
+	   a single buffer.  Note we subtract 1 from the total because this buffer
+	   represents the SMPTE 2010 packet, not the multiple operation message payload */
+	uint16_t buffer_size = klbs_get_byte_count(bs) - 1;
+	(*bytes)[3] = buffer_size >> 8;
+	(*bytes)[4] = buffer_size & 0xff;
+
 #if 0
 	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
 	printf(" ->payload  = ");
