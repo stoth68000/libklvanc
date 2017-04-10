@@ -105,7 +105,7 @@ static int testcase_2(struct vanc_context_s *ctx, uint16_t **words, uint16_t *wo
 		return -1;
 	}
 
-	op->dtmf_data.pre_roll_time = 500;
+	op->dtmf_data.pre_roll_time = 200; /* 20 Seconds */
 	op->dtmf_data.dtmf_length = 3;
 	op->dtmf_data.dtmf_char[0] = '0';
 	op->dtmf_data.dtmf_char[1] = '4';
