@@ -25,6 +25,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <libklvanc/smpte2038.h>
+#include "klbitstream_readwriter.h"
 
 #define VANC8(n) ((n) & 0xff)
 

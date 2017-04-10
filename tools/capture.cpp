@@ -444,7 +444,7 @@ static void showMemory(FILE * fd)
 		return;
 
 	memset(s, 0, sizeof(s));
-	size_t wlen = fread(s, 1, sizeof(s), fh);
+	size_t wlen = fread(s, 1, sizeof(s) - 1, fh);
 	fclose(fh);
 
 	if (wlen > 0) {

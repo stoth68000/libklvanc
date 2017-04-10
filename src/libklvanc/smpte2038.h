@@ -29,7 +29,6 @@
 #ifndef SMPTE2038_H
 #define SMPTE2038_H
 
-#include <libklvanc/klbitstream_readwriter.h>
 #include <libklvanc/vanc-packets.h>
 #include <stdint.h>
 
