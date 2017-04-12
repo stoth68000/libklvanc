@@ -1069,6 +1069,7 @@ int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
 	mom->ops = realloc(mom->ops,
 			   mom->num_ops * sizeof(struct multiple_operation_message_operation));
 	*op = &mom->ops[mom->num_ops - 1];
+	memset(*op, 0, sizeof(struct multiple_operation_message_operation));
 	(*op)->opID = opId;
 
 	return 0;
