@@ -420,7 +420,7 @@ static void showMemory(FILE * fd)
 		return;
 
 	memset(s, 0, sizeof(s));
-	size_t wlen = fread(s, 1, sizeof(s), fh);
+	size_t wlen = fread(s, 1, sizeof(s) - 1, fh);
 	fclose(fh);
 
 	if (wlen > 0) {
@@ -989,9 +989,14 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
+	int ret;
+
 	/* Have the library display some debug */
-	if (!g_monitor_mode)
-		dump_SCTE_104(ctx, pkt);
+	if (!g_monitor_mode) {
+		ret = dump_SCTE_104(ctx, pkt);
+		if (ret != 0)
+			fprintf(stderr, "Error dumping SCTE 104 packet!\n");
+	}
 
 	return 0;
 }

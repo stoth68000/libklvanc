@@ -181,7 +181,7 @@ struct insert_descriptor_request_data
 struct dtmf_descriptor_request_data
 {
 	/* SCTE 104 Table 8-28 */
-	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned char pre_roll_time;	/* In 1/10's of a second */
 	unsigned int dtmf_length;
 	char dtmf_char[7];
 };
@@ -315,6 +315,12 @@ int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **pkt);
  * @return	< 0 - Error
  */
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
+
+/**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct packet_scte_104_s *pkt
+ */
+void free_SCTE_104(struct packet_scte_104_s *pkt);
 
 /**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n

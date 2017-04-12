@@ -86,9 +86,10 @@ void url_print(struct url_opts_s *url)
 		);
 	printf("\thostname = %s\n", url->hostname);
 	printf("\thas_ipaddress = %d\n", url->has_ipaddress);
-	if (url->has_port)
+	if (url->has_port) {
 		printf("\thas_port = %d\n", url->has_port);
 		printf("\t\tport = %d\n", url->port);
+	}
 	if (url->has_ifname) {
 		printf("\thas_ifname = %d\n", url->has_ifname);
 		printf("\t\tifname = %s\n", url->ifname);

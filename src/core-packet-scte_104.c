@@ -736,6 +736,22 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 	return dump_mom(ctx, pkt);
 }
 
+void free_SCTE_104(struct packet_scte_104_s *pkt)
+{
+	struct multiple_operation_message *m;
+
+	if (pkt == NULL)
+		return;
+
+	m = &pkt->mo_msg;
+	for (int i = 0; i < m->num_ops; i++) {
+		free(m->ops[i].data);
+	}
+	free(m->ops);
+
+	free(pkt);
+}
+
 int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
@@ -1004,6 +1020,13 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	}
 	klbs_write_buffer_complete(bs);
 
+	/* Recompute the total message size now that everything has been serialized to
+	   a single buffer.  Note we subtract 1 from the total because this buffer
+	   represents the SMPTE 2010 packet, not the multiple operation message payload */
+	uint16_t buffer_size = klbs_get_byte_count(bs) - 1;
+	(*bytes)[3] = buffer_size >> 8;
+	(*bytes)[4] = buffer_size & 0xff;
+
 #if 0
 	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
 	printf(" ->payload  = ");
@@ -1046,6 +1069,7 @@ int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
 	mom->ops = realloc(mom->ops,
 			   mom->num_ops * sizeof(struct multiple_operation_message_operation));
 	*op = &mom->ops[mom->num_ops - 1];
+	memset(*op, 0, sizeof(struct multiple_operation_message_operation));
 	(*op)->opID = opId;
 
 	return 0;
