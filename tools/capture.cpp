@@ -18,6 +18,10 @@
 #include <libklvanc/vanc.h>
 #include <libklvanc/smpte2038.h>
 
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+#include <libklmonitoring/klmonitoring.h>
+#endif
+
 #include "hexdump.h"
 #include "version.h"
 #include "DeckLinkAPI.h"
@@ -77,6 +81,7 @@ static int vancOutputFile = -1;
 static int g_showStartupMemory = 0;
 static int g_verbose = 0;
 static unsigned int g_linenr = 0;
+static uint64_t lastGoodKLFrameCounter = 0;
 
 /* SMPTE 2038 */
 static int g_packetizeSMPTE2038 = 0;
@@ -105,12 +110,32 @@ static int g_no_signal = 1;
 static BMDDisplayMode g_detected_mode_id = 0;
 static BMDDisplayMode g_requested_mode_id = 0;
 
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+static int g_monitor_prbs_audio_mode = 0;
+static struct prbs_context_s g_prbs;
+static int g_prbs_initialized = 0;
+#endif
+
 static unsigned long audioFrameCount = 0;
 static struct frameTime_s {
 	unsigned long long lastTime;
 	unsigned long long frameCount;
 	unsigned long long remoteFrameCount;
 } frameTimes[2];
+
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+static void dumpAudio(uint16_t *ptr, int fc, int num_channels)
+{
+	fc = 4;
+	uint32_t *p = (uint32_t *)ptr;
+	for (int i = 0; i < fc; i++) {
+		printf("%d.", i);
+		for (int j = 0; j < num_channels; j++)
+			printf("%08x ", *p++);
+		printf("\n");
+	}
+}
+#endif
 
 #if HAVE_CURSES_H
 pthread_t threadId;
@@ -419,7 +444,7 @@ static void showMemory(FILE * fd)
 		return;
 
 	memset(s, 0, sizeof(s));
-	size_t wlen = fread(s, 1, sizeof(s), fh);
+	size_t wlen = fread(s, 1, sizeof(s) - 1, fh);
 	fclose(fh);
 
 	if (wlen > 0) {
@@ -814,10 +839,14 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			}
 
 			unsigned int currRFC = 0;
+			int isBad = 0;
 #if 0
+			isBad = 1;
 			/* KL: Look for the framecount metadata, created by the KL signal generator. */
+			unsigned int stride = videoFrame->GetRowBytes();
 			unsigned char *pixelData;
 			videoFrame->GetBytes((void **)&pixelData);
+			pixelData += (10 * stride);
 			if ((*(pixelData + 0) == 0xde) &&
 			    (*(pixelData + 1) == 0xad) &&
 			    (*(pixelData + 2) == 0xbe) &&
@@ -851,8 +880,6 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 				//fprintf(stdout, "\n");
 			}
 #endif
-
-			int isBad = 0;
 			if (frameTime->remoteFrameCount + 1 == currRFC)
 				isBad = 0;
 
@@ -867,13 +894,12 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 					"Valid Frame",
 					videoFrame->GetRowBytes() *
 					videoFrame->GetHeight(), interval, currRFC);
+			}
 			
 
-				if (isBad) {
-					fprintf(stdout, " %lld frames lost", currRFC - frameTime->remoteFrameCount);
-					fprintf(stdout, "\n");
-				} else
-					fprintf(stdout, "\n");
+			if (isBad) {
+				fprintf(stdout, " %lld frames lost %lld->%d\n", currRFC - frameTime->remoteFrameCount,
+					frameTime->remoteFrameCount, currRFC);
 			}
 
 			frameTime->remoteFrameCount = currRFC;
@@ -919,6 +945,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 	// Handle Audio Frame
 	if (audioFrame) {
+		audioFrameCount++;
 		frameTime = &frameTimes[1];
 
 		uint32_t sampleSize =
@@ -947,6 +974,120 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 		frameTime->frameCount++;
 		frameTime->lastTime = t;
+
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+		/* This is crying out for some refactoring and being pushed directly
+		 * into libklmonitoring, but in the meantime, here's what its supposed to
+		 * accomplish.
+		 * a) An upstream SDI device puts PRBS15 15bit values into all of its PCM
+		 *    channels. IN the buffer if uint16_t words, the buffer is prepared
+		 *    as follows
+		 *     for word in buffer[0 ... size]
+		 *       word = next prbs15_value;
+		 * b) So the entire PRBS set is stripped across all PCM channels.
+		 * c) ON the receive side, we "unstripe" accross all channels, and validate
+		 *    our syncronized value matches the predicted upstream value.
+		 *
+		 * In order for the downstream device to syncronize with upstream, it samples the
+		 * last word in an initial buffer, then prepares to predict the next words for each and
+		 * every subsequent buffer. If the prediction value doesn't match the actual value obtained
+		 * from upstream, declare a data integrity error and re-syncronize / repeat the syncronization
+		 * process.
+		 */
+		if (g_monitor_prbs_audio_mode) {
+			audioFrame->GetBytes(&audioFrameBytes);
+			if (g_prbs_initialized == 0) {
+				if (g_audioSampleDepth == 16) {
+					uint16_t *p = (uint16_t *)audioFrameBytes;
+					for (int i = 0; i < audioFrame->GetSampleFrameCount(); i++) {
+						for (int j = 0; j < g_audioChannels; j++) {
+							if (i == (audioFrame->GetSampleFrameCount() - 1)) {
+								if (j == (g_audioChannels - 1)) {
+									printf("Seeding audio PRBS sequence with upstream value 0x%04x\n", *p);
+									prbs15_init_with_seed(&g_prbs, *p);
+								}
+							}
+							p++;
+						}
+					}
+					g_prbs_initialized = 1;
+				} else
+				if (g_audioSampleDepth == 32) {
+					uint32_t *p = (uint32_t *)audioFrameBytes;
+					for (int i = 0; i < audioFrame->GetSampleFrameCount(); i++) {
+						for (int j = 0; j < g_audioChannels; j++) {
+							if (i == (audioFrame->GetSampleFrameCount() - 1)) {
+								if (j == (g_audioChannels - 1)) {
+									printf("Seeding audio PRBS sequence with upstream value 0x%08x\n", *p >> 16);
+									prbs15_init_with_seed(&g_prbs, *p >> 16);
+								}
+							}
+							p++;
+						}
+					}
+					g_prbs_initialized = 1;
+				} else
+					assert(0);
+			} else {
+				if (g_audioSampleDepth == 16) {
+					uint16_t *p = (uint16_t *)audioFrameBytes;
+					for (int i = 0; i < audioFrame->GetSampleFrameCount(); i++) {
+						for (int j = 0; j < g_audioChannels; j++) {
+							uint16_t a = *p++;
+							uint16_t b = prbs15_generate(&g_prbs);
+							if (a != b) {
+								if (g_verbose) {
+									printf("%04x %04x %04x %04x -- ", *(p + 0), *(p + 1), *(p + 2), *(p + 3));
+									printf("y.is:%04x pred:%04x (pos %d)\n", a, b, i);
+									dumpAudio(p, audioFrame->GetSampleFrameCount(), g_audioChannels);
+								}
+								char t[160];
+								time_t now = time(0);
+								sprintf(t, "%s", ctime(&now));
+								t[strlen(t) - 1] = 0;
+						                fprintf(stderr, "%s: KL PRSB15 Audio frame discontinuity, expected %04" PRIx16
+									" got %04" PRIx16 "\n", t, b, a);
+
+								g_prbs_initialized = 0;
+
+								// Break the sample frame loop i
+								i = audioFrame->GetSampleFrameCount();
+								break;
+							}
+						}
+					}
+				} else
+				if (g_audioSampleDepth == 32) {
+					uint32_t *p = (uint32_t *)audioFrameBytes;
+					for (int i = 0; i < audioFrame->GetSampleFrameCount(); i++) {
+						for (int j = 0; j < g_audioChannels; j++) {
+							uint32_t a = *p++ >> 16;
+							uint32_t b = prbs15_generate(&g_prbs);
+							if (a != b) {
+								if (g_verbose) {
+									printf("%08x %08x %08x %08x -- ", *(p + 0), *(p + 1), *(p + 2), *(p + 3));
+									printf("y.is:%04x pred:%04x (pos %d)\n", a, b, i);
+									dumpAudio((uint16_t *)p, audioFrame->GetSampleFrameCount(), g_audioChannels);
+								}
+								char t[160];
+								time_t now = time(0);
+								sprintf(t, "%s", ctime(&now));
+								t[strlen(t) - 1] = 0;
+						                fprintf(stderr, "%s: KL PRSB15 Audio frame discontinuity, expected %08" PRIx32
+									" got %08" PRIx32 "\n", t, b, a);
+
+								g_prbs_initialized = 0;
+
+								// Break the sample frame loop i
+								i = audioFrame->GetSampleFrameCount();
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+#endif
 	}
 	return S_OK;
 }
@@ -987,9 +1128,14 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
+	int ret;
+
 	/* Have the library display some debug */
-	if (!g_monitor_mode)
-		dump_SCTE_104(ctx, pkt);
+	if (!g_monitor_mode) {
+		ret = dump_SCTE_104(ctx, pkt);
+		if (ret != 0)
+			fprintf(stderr, "Error dumping SCTE 104 packet!\n");
+	}
 
 	return 0;
 }
@@ -1010,6 +1156,27 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 	return 0;
 }
 
+static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_context_s *ctx, struct packet_kl_u64le_counter_s *pkt)
+{
+	/* Have the library display some debug */
+	if (!g_monitor_mode && g_verbose)
+		dump_KL_U64LE_COUNTER(ctx, pkt);
+
+	if (lastGoodKLFrameCounter && lastGoodKLFrameCounter + 1 != pkt->counter) {
+		char t[160];
+		time_t now = time(0);
+		sprintf(t, "%s", ctime(&now));
+		t[strlen(t) - 1] = 0;
+
+		fprintf(stderr, "%s: KL VANC frame counter discontinuity was %" PRIu64 " now %" PRIu64 "\n",
+			t,
+			lastGoodKLFrameCounter, pkt->counter);
+	}
+	lastGoodKLFrameCounter = pkt->counter;
+
+	return 0;
+}
+
 static struct vanc_callbacks_s callbacks =
 {
 	.payload_information    = cb_PAYLOAD_INFORMATION,
@@ -1017,6 +1184,7 @@ static struct vanc_callbacks_s callbacks =
 	.eia_608                = cb_EIA_608,
 	.scte_104               = cb_SCTE_104,
 	.all                    = cb_all,
+	.kl_i64le_counter       = cb_VANC_TYPE_KL_UINT64_COUNTER,
 };
 
 /* END - CALLBACKS for message notification */
@@ -1070,7 +1238,7 @@ static int usage(const char *progname, int status)
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
-		"    -L              List availalble display modes\n"
+		"    -L              List available display modes\n"
 		"    -c <channels>   Audio Channels (2, 8 or 16 - def: 2)\n"
 		"    -s <depth>      Audio Sample Depth (16 or 32 - def: 16)\n"
 		"    -n <frames>     Number of frames to capture (def: unlimited)\n"
@@ -1079,7 +1247,12 @@ static int usage(const char *progname, int status)
 		"    -i <number>     Capture from input port (def: 0)\n"
 		"    -P pid 0xNNNN   Packetsize all detected VANC into SMPTE2038 TS packets using pid.\n"
 		"                    The packets are store in file %s\n"
+#if HAVE_CURSES_H
 		"    -M              During VANC capture, display a Curses onscreen UI.\n"
+#endif
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+		"    -S              Validate PRBS15 sequences are correct on all audio channels (def: disabled).\n"
+#endif
 		"\n"
 		"Capture and display all VANC messages and show line/msg counts in an interactive UI (1080i 59.94):\n"
 		"    %s -m9 -p1 -M\n\n"
@@ -1120,8 +1293,14 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:LP:M")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:LP:MS")) != -1) {
 		switch (ch) {
+#if HAVE_LIBKLMONITORING_KLMONITORING_H
+		case 'S':
+			g_monitor_prbs_audio_mode = 1;
+			g_prbs_initialized = 0;
+			break;
+#endif
 		case 'm':
 			g_videoModeIndex = atoi(optarg);
 			break;
@@ -1163,9 +1342,11 @@ static int _main(int argc, char *argv[])
 		case 'n':
 			g_maxFrames = atoi(optarg);
 			break;
+#if HAVE_CURSES_H
 		case 'M':
 			g_monitor_mode = 1;
 			break;
+#endif
 		case 'v':
 			g_verbose++;
 			break;

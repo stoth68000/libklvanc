@@ -49,9 +49,12 @@ static struct type_s
 	int (*parse)(struct vanc_context_s *, struct packet_header_s *, void **);
 	int (*dump)(struct vanc_context_s *, void *);
 } types[] = {
+	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, dump_KL_U64LE_COUNTER, },
 	{ 0x41, 0x05, VANC_TYPE_PAYLOAD_INFORMATION, "SMPTE 2016-3 AFD", "Payload Information", parse_PAYLOAD_INFORMATION, dump_PAYLOAD_INFORMATION, },
 	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 2", "SCTE 104", parse_SCTE_104, dump_SCTE_104, },
+#ifdef SCTE_104_PACKET_TYPE_1
 	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, dump_SCTE_104, },
+#endif
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, dump_EIA_708B, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, dump_EIA_608, },
 };
@@ -126,8 +129,10 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 	p->adf[2] = *(arr + 2);
 	p->did = sanitizeWord(*(arr + 3));
 	p->dbnsdid = sanitizeWord(*(arr + 4));
-	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short)))
+	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short))) {
+		free(p);
 		return -ENOMEM;
+	}
 
 	p->payloadLengthWords = sanitizeWord(*(arr + 5));
 
@@ -232,6 +237,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 		if (ret == KLAPI_OK) {
 			if (ctx->verbose == 2) {
 				ret = dumpByType(ctx, decodedPacket);
+				if (ret < 0) {
+					fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+				}
 			}
 		} else {
  			if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
@@ -263,10 +271,8 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 		return -1;
 
 	int header_length = 6 + 1; /* Header 6 and checksum footer 1 */
-	uint16_t *arr = calloc(2,
-		srcByteCount
-		+ header_length
-		+ 6 /* Enough room for padding */);
+	uint16_t *arr = calloc(2, srcByteCount + header_length);
+
 	uint16_t *v = arr;
 
 	*(v++) = 0x000;
@@ -298,19 +304,7 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	}
 	*(v++) = sum | ((~sum & 0x100) << 1);
 
-	/* Padding - We need to align for correct conversion to V210, IE,
-	 * we need the output length to be a multiple of 6 words.
-	 * I know, the decklink module should really do this....
-	 * Its here for now.
-	 */
-	uint16_t x = ((header_length + srcByteCount + 5) / 6) * 6;
-	for (int j = 0; j < (x - i); j++)
-		*(v++) = 0x040;
- 
-	/* Colorspace convert to V210 */
-	/* Let's handle this in the decklink output module */
-
-	*dstWordCount = v - arr - 1;
+	*dstWordCount = v - arr;
 	*dst = arr;
 
 	return 0;

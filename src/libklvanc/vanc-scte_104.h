@@ -48,6 +48,23 @@ extern "C" {
 /**
  * @brief       TODO - Brief description goes here.
  */
+#define MO_SPLICE_NULL_REQUEST_DATA  0x102
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+#define MO_TIME_SIGNAL_REQUEST_DATA  0x104
+#define MO_INSERT_DESCRIPTOR_REQUEST_DATA    0x108
+#define MO_INSERT_DTMF_REQUEST_DATA  0x109
+#define MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA  0x10a
+#define MO_INSERT_SEGMENTATION_REQUEST_DATA  0x10b
+#define MO_PROPRIETARY_COMMAND_REQUEST_DATA  0x10c
+#define MO_INSERT_TIER_DATA  0x10f
+#define MO_INSERT_TIME_DESCRIPTOR  0x110
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
 #define SPLICESTART_NORMAL    0x01
 
 /**
@@ -69,36 +86,6 @@ extern "C" {
  * @brief       TODO - Brief description goes here.
  */
 #define SPLICE_CANCEL         0x05
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__UNIQUE_PROGRAM_ID(pkt) ((pkt)->sr_data.unique_program_id)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__SPLICE_EVENT_ID(pkt) ((pkt)->sr_data.splice_event_id)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AUTO_RETURN_FLAGS(pkt) ((pkt)->sr_data.auto_return_flag)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__DURATION(pkt) ((pkt)->sr_data.brk_duration)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AVAIL_NUM(pkt) ((pkt)->sr_data.avail_num)
-
-/**
- * @brief       TODO - Brief description goes here.
- */
-#define SCTE104_SR_DATA_FIELD__AVAILS_EXPECTED(pkt) ((pkt)->sr_data.avails_expected)
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -142,10 +129,133 @@ struct multiple_operation_message_timestamp
 	};
 };
 
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct splice_request_data
+{
+	/* SCTE 104 Table 8-5 */
+	unsigned int splice_insert_type;
+	unsigned int splice_event_id;
+	unsigned short unique_program_id;
+	unsigned short pre_roll_time;	/* In 1/10's of a second */
+	unsigned short brk_duration;	/* In 1/10's of a second */
+	unsigned char avail_num;
+	unsigned char avails_expected;
+	unsigned char auto_return_flag;
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct time_signal_request_data
+{
+	/* SCTE 104 Table 8-23 */
+	unsigned short pre_roll_time;	/* In milliseconds */
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct avail_descriptor_request_data
+{
+	/* SCTE 104 Table 8-26 */
+	unsigned int num_provider_avails;
+	uint32_t provider_avail_id[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct insert_descriptor_request_data
+{
+	/* SCTE 104 Table 8-27 */
+	unsigned int descriptor_count;
+	unsigned int total_length;
+	unsigned char descriptor_bytes[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct dtmf_descriptor_request_data
+{
+	/* SCTE 104 Table 8-28 */
+	unsigned char pre_roll_time;	/* In 1/10's of a second */
+	unsigned int dtmf_length;
+	char dtmf_char[7];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct segmentation_descriptor_request_data
+{
+	/* SCTE 104 Table 8-29 */
+	unsigned int event_id;
+	unsigned int event_cancel_indicator;
+	unsigned int duration; /* In seconds */
+	unsigned int upid_type;
+	unsigned int upid_length;
+	unsigned char upid[255];
+	unsigned int type_id;
+	unsigned int segment_num;
+	unsigned int segments_expected;
+	unsigned int duration_extension_frames;
+	unsigned int delivery_not_restricted_flag;
+	unsigned int web_delivery_allowed_flag;
+	unsigned int no_regional_blackout_flag;
+	unsigned int archive_allowed_flag;
+	unsigned int device_restrictions;
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct time_descriptor_data
+{
+	/* SCTE 104 2015 Table 9-32 */
+	uint64_t TAI_seconds;
+	unsigned int TAI_ns;
+	unsigned int UTC_offset;
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct proprietary_command_request_data
+{
+	/* SCTE 104 Table 9-30 */
+	unsigned int proprietary_id;
+	unsigned int proprietary_command;
+	unsigned int data_length;
+	unsigned char proprietary_data[255];
+};
+
+/**
+ * @brief       TODO - Brief description goes here.
+ */
+struct tier_data
+{
+	/* SCTE 104 Table 9-31 */
+	unsigned short tier_data;
+};
+
 struct multiple_operation_message_operation {
 	unsigned short opID;
 	unsigned short data_length;
 	unsigned char *data;
+	union {
+		struct splice_request_data sr_data;
+		struct time_signal_request_data timesignal_data;
+		struct dtmf_descriptor_request_data dtmf_data;
+		struct segmentation_descriptor_request_data segmentation_data;
+		struct avail_descriptor_request_data avail_descriptor_data;
+		struct insert_descriptor_request_data descriptor_data;
+		struct proprietary_command_request_data proprietary_data;
+		struct tier_data tier_data;
+		struct time_descriptor_data time_data;
+	};
 };
 
 /**
@@ -170,22 +280,6 @@ struct multiple_operation_message
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct splice_request_data
-{
-	/* SCTE 104 Table 8-5 */
-	unsigned int splice_insert_type;
-	unsigned int splice_event_id;
-	unsigned short unique_program_id;
-	unsigned short pre_roll_time;	/* In 1/10's of a second */
-	unsigned short brk_duration;	/* In 1/10's of a second */
-	unsigned char avail_num;
-	unsigned char avails_expected;
-	unsigned char auto_return_flag;
-};
-
-/**
- * @brief       TODO - Brief description goes here.
- */
 struct packet_scte_104_s
 {
 	struct packet_header_s hdr;
@@ -201,9 +295,18 @@ struct packet_scte_104_s
 	unsigned int payloadLengthBytes;
 
 	struct single_operation_message so_msg;
-	struct splice_request_data sr_data;
 	struct multiple_operation_message mo_msg;
 };
+
+
+
+/**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @return	0 - Success
+ * @return	< 0 - Error
+ */
+int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **pkt);
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -212,6 +315,41 @@ struct packet_scte_104_s
  * @return	< 0 - Error
  */
 int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
+
+/**
+ * @brief       TODO - Brief description goes here.
+ * @param[in]	struct packet_scte_104_s *pkt
+ */
+void free_SCTE_104(struct packet_scte_104_s *pkt);
+
+/**
+ * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
+ * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount);
+
+/**
+ * @brief	Convert type struct packet_scte_104_s into a block of bytes which can be\n
+ *              embedded into a VANC line
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
+ * @param[out]	uint8_t **bytes - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *byteCount - Number of byes in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **bytes, uint16_t *byteCount);
+
+int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
+			       struct multiple_operation_message_operation **op);
 
 #ifdef __cplusplus
 };

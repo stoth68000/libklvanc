@@ -25,6 +25,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <libklvanc/smpte2038.h>
+#include "klbitstream_readwriter.h"
 
 #define VANC8(n) ((n) & 0xff)
 
@@ -103,6 +104,8 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 	int ret = -1;
 
 	struct smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL)
+		return -1;
 
 // MMM
 	struct klbs_context_s *bs = klbs_alloc();
@@ -200,7 +203,14 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 
 	*result = h;
 	ret = 0;
+
+	if (bs)
+		klbs_free(bs);
+	return ret;
+
 err:
+	if (h)
+		free(h);
 	if (bs)
 		klbs_free(bs);
 	return ret;

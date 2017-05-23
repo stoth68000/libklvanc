@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libklvanc.la
 
-libklvanc_la_SOURCES  = core-buffer.c
+libklvanc_la_SOURCES  = core.c
 libklvanc_la_SOURCES += core-module1.c
 libklvanc_la_SOURCES += core-packet-eia_708b.c
 libklvanc_la_SOURCES += core-packet-eia_608.c
@@ -14,10 +14,11 @@ libklvanc_la_SOURCES += core-lines.c
 libklvanc_la_SOURCES += core-did.c
 libklvanc_la_SOURCES += core-pixels.c
 libklvanc_la_SOURCES += core-checksum.c
-libklvanc_la_SOURCES += core.c
 libklvanc_la_SOURCES += smpte2038.c
 libklvanc_la_SOURCES += core-cache.c
+libklvanc_la_SOURCES += core-packet-kl_u64le_counter.c
 libklvanc_la_SOURCES += core-private.h xorg-list.h
+libklvanc_la_SOURCES += klbitstream_readwriter.h
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
@@ -41,7 +42,7 @@ libklvanc_include_HEADERS += libklvanc/vanc-packets.h
 libklvanc_include_HEADERS += libklvanc/vanc-lines.h
 libklvanc_include_HEADERS += libklvanc/vanc-payload_information.h
 libklvanc_include_HEADERS += libklvanc/vanc-checksum.h
-libklvanc_include_HEADERS += libklvanc/klbitstream_readwriter.h
 libklvanc_include_HEADERS += libklvanc/klrestricted_code_path.h
 libklvanc_include_HEADERS += libklvanc/cache.h
+libklvanc_include_HEADERS += libklvanc/vanc-kl_u64le_counter.h
 

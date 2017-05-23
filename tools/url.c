@@ -86,9 +86,10 @@ void url_print(struct url_opts_s *url)
 		);
 	printf("\thostname = %s\n", url->hostname);
 	printf("\thas_ipaddress = %d\n", url->has_ipaddress);
-	if (url->has_port)
+	if (url->has_port) {
 		printf("\thas_port = %d\n", url->has_port);
 		printf("\t\tport = %d\n", url->port);
+	}
 	if (url->has_ifname) {
 		printf("\thas_ifname = %d\n", url->has_ifname);
 		printf("\t\tifname = %s\n", url->ifname);
@@ -154,6 +155,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 
 	/* Validate the basic shape of the URL */
 	if (regex_match(url, "://[0-9a-zA-Z].*:[0-9]*") < 0) {
+		free(opts);
 		return -1;
 	}
 
@@ -211,7 +213,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 	char *str2 = &tmp2[0];
 
 	char *q = strsep(&str2, "?&");
-	while (p && has_args) {
+	while (q && has_args) {
 
 		q = strsep(&str2, "?&");
 		if (!q)
@@ -222,23 +224,28 @@ int url_parse(const char *url, struct url_opts_s **result)
 			printf("split error\n");
 		}
                 //printf("tag = [%s] = [%s]\n", tag, value);
-		if (strcasecmp(tag, "ifname") == 0)
-			strcpy(opts->ifname, value);
-		else
+		if (tag) {
+			if (strcasecmp(tag, "ifname") == 0)
+				strcpy(opts->ifname, value);
+			else
 #if 0
-		if (strcasecmp(tag, "buffersize") == 0)
-			opts->buffersize = atoi(value);
-		else
+			if (strcasecmp(tag, "buffersize") == 0)
+				opts->buffersize = atoi(value);
+			else
 #endif
-		if (strcasecmp(tag, "fifosize") == 0)
-			opts->fifosize = atoi(value);
-		else {
-			fprintf(stderr, "Unknown tag [%s], aborting.\n", tag);
-			ret = -1;
-			goto err;
+			if (strcasecmp(tag, "fifosize") == 0)
+				opts->fifosize = atoi(value);
+			else {
+				fprintf(stderr, "Unknown tag [%s], aborting.\n", tag);
+				free(tag);
+				free(value);
+				ret = -1;
+				goto err;
+			}
+			free(tag);
 		}
-		free(tag);
-		free(value);
+		if (value)
+			free(value);
 	}
 
 	/* Success */
