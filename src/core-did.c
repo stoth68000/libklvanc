@@ -50,6 +50,7 @@ static struct did_s {
 	{ 0x61, 0x05,   "S334", "ARIB Captioning - HD"},
 	{ 0x61, 0x06,   "S334", "ARIB Captioning - SD"},
 	{ 0x61, 0x07,   "S334", "ARIB Captioning - Analog"},
+	{ 0x62, 0x01,   "S334", "Program Description (DTV)"},
 	{ 0x80, 0x07,  "S2010", "ANSI/SCTE 104 - Packet Type 1 (deprecated)"},
 };
 
