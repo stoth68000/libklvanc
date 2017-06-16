@@ -236,11 +236,9 @@ static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct
 static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 {
 	/* Have the library display some debug */
-#if 0
 	if (pkt_filtered(&pkt->hdr)) {
 		dump_SCTE_104(ctx, pkt);
 	}
-#endif
 	return 0;
 }
 
