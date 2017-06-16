@@ -45,7 +45,7 @@ int vanc_context_create(struct vanc_context_s **ctx)
 		return -ENOMEM;
 
 	/* If we fail to parse a vanc message, don't report more than one of those per second. */
-	klrestricted_code_path_block_initialize(&p->rcp_failedToDecode, 1, 1, 1000);
+	klrestricted_code_path_block_initialize(&p->rcp_failedToDecode, 1, 1, 60 * 1000);
 
 	if (ret == KLAPI_OK)
 		*ctx = p;

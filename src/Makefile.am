@@ -18,6 +18,7 @@ libklvanc_la_SOURCES += smpte2038.c
 libklvanc_la_SOURCES += core-cache.c
 libklvanc_la_SOURCES += core-packet-kl_u64le_counter.c
 libklvanc_la_SOURCES += core-private.h xorg-list.h
+libklvanc_la_SOURCES += klbitstream_readwriter.h
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
