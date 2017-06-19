@@ -30,22 +30,32 @@
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
 #define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
 
+static const char *gpiEdge(unsigned char edge)
+{
+	switch (edge) {
+	case 0x00: return "Open->Closed";
+	case 0x01: return "Closed->Open";
+	default:   return "Undefined";
+	}
+}
+
 static void print_debug_member_timestamp(struct multiple_operation_message_timestamp *ts)
 {
 	printf( " m->timestamp type = 0x%02x ", ts->time_type);
 	switch (ts->time_type) {
 	case 1:
 		printf("(UTC Time)\n");
-		printf(" m->timestamp value = %d.%06d (UTC seconds)\n", ts->time_type_1.UTC_seconds, ts->time_type_1.UTC_microseconds);
+		printf("   m->timestamp value = %d.%06d (UTC seconds)\n", ts->time_type_1.UTC_seconds, ts->time_type_1.UTC_microseconds);
                 break;
         case 2:
 		printf("(SMPTE VITC timecode)\n");
-		printf(" m->timestamp value = %02d:%02d:%02d:%02d (hh:mm:ss:ff)\n", ts->time_type_2.hours, ts->time_type_2.minutes,
+		printf("   m->timestamp value = %02d:%02d:%02d:%02d (hh:mm:ss:ff)\n", ts->time_type_2.hours, ts->time_type_2.minutes,
 		       ts->time_type_2.seconds, ts->time_type_2.frames);
                 break;
         case 3:
 		printf("(GPI input)\n");
-		printf(" m->timestamp value = %d:%d (GPI number, edge)\n", ts->time_type_3.GPI_number, ts->time_type_3.GPI_edge);
+		printf("   m->timestamp GPI number = %d\n", ts->time_type_3.GPI_number);
+		printf("   m->timestamp GPI edge = 0x%02x (%s)\n", ts->time_type_3.GPI_edge, gpiEdge(ts->time_type_3.GPI_edge));
                 break;
         case 0:
                 /* The spec says no time is defined, this is a legitimate state. */
@@ -123,6 +133,76 @@ static const char *mom_operationName(unsigned short opID)
 	case 0x0300: return "delete_controlword_data_request";
 	case 0x0301: return "update_controlword_data_request";
 	default:     return "Reserved";
+	}
+}
+
+static const char *seg_type_id(unsigned char type_id)
+{
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1 */
+	switch (type_id) {
+	case 0x00: return "Not Indicated";
+	case 0x01: return "Content Identification";
+	case 0x10: return "Program Start";
+	case 0x11: return "Program End";
+	case 0x12: return "Program Early Termination";
+	case 0x13: return "Program Breakaway";
+	case 0x14: return "Program Resumption";
+	case 0x15: return "Program Runover Planned";
+	case 0x16: return "Program Runover Unplanned";
+	case 0x17: return "Program Overlap Start";
+	case 0x18: return "Program Blackout Override";
+	case 0x19: return "Program Start - In Progress";
+	case 0x20: return "Chapter Start";
+	case 0x21: return "Chapter End";
+	case 0x30: return "Provider Advertisement Start";
+	case 0x31: return "Provider Advertisement End";
+	case 0x32: return "Distributor Advertisement Start";
+	case 0x33: return "Distributor Advertisement End";
+	case 0x34: return "Provider Placement Opportunity Start";
+	case 0x35: return "Provider Placement Opportunity End";
+	case 0x36: return "Distributor Placement Opportunity Start";
+	case 0x37: return "Distributor Placement Opportunity End";
+	case 0x40: return "Unscheduled Event Start";
+	case 0x41: return "Unscheduled Event End";
+	case 0x50: return "Network Start";
+	case 0x51: return "Network End";
+	default:   return "Unknown";
+	}
+}
+
+static const char *seg_upid_type(unsigned char upid_type)
+{
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1, Table 21 */
+	switch (upid_type) {
+	case 0x00: return "Not Used";
+	case 0x01: return "User Defined (Deprecated)";
+	case 0x02: return "ISCI (Deprecated)";
+	case 0x03: return "Ad-ID";
+	case 0x04: return "UMID";
+	case 0x05: return "ISAN (Deprecated)";
+	case 0x06: return "ISAN";
+	case 0x07: return "TID";
+	case 0x08: return "TI";
+	case 0x09: return "ADI";
+	case 0x0a: return "EIDR";
+	case 0x0b: return "ATSC Content Identifier";
+	case 0x0c: return "MPU()";
+	case 0x0d: return "MID()";
+	case 0x0e: return "ADS Information";
+	case 0x0f: return "URI";
+	default:   return "Reserved";
+	}
+}
+
+static const char *seg_device_restrictions(unsigned char val)
+{
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1, Table 21 */
+	switch (val) {
+	case 0x00: return "Restrict Group 0";
+	case 0x01: return "Restrict Group 1";
+	case 0x02: return "Restrict Group 2";
+	case 0x03: return "None";
+	default:   return "Unknown";
 	}
 }
 
@@ -627,11 +707,12 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->duration);
 			printf("    duration = %d (seconds)\n", d->duration);
 			PRINT_DEBUG_MEMBER_INT(d->upid_type);
+			printf(" d->upid_type = 0x%02x (%s)\n", d->upid_type, seg_upid_type(d->upid_type));
 			PRINT_DEBUG_MEMBER_INT(d->upid_length);
 			for (int j = 0; j < d->upid_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->upid[j]);
 			}
-			PRINT_DEBUG_MEMBER_INT(d->type_id);
+			printf(" d->type_id = 0x%02x (%s)\n", d->type_id, seg_type_id(d->type_id));
 			PRINT_DEBUG_MEMBER_INT(d->segment_num);
 			PRINT_DEBUG_MEMBER_INT(d->segments_expected);
 			PRINT_DEBUG_MEMBER_INT(d->duration_extension_frames);
@@ -639,7 +720,8 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->web_delivery_allowed_flag);
 			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
 			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
-			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
+			printf(" d->device_restrictions = 0x%02x (%s)\n", d->device_restrictions,
+			       seg_device_restrictions(d->device_restrictions));
 		} else if (o->opID == MO_INSERT_TIER_DATA) {
 			struct tier_data *d = &o->tier_data;
 			PRINT_DEBUG_MEMBER_INT(d->tier_data);
