@@ -935,7 +935,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		}
 
 		if (g_maxFrames > 0 && (int)frameTime->frameCount >= g_maxFrames) {
-			pthread_cond_signal(&sleepCond);
+			kill(getpid(), SIGINT);
 		}
 	}
 
