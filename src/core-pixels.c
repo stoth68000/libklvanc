@@ -121,3 +121,35 @@ void klvanc_v210_line_to_uyvy_c(uint32_t * src, uint16_t * dst, int width)
 		READ_PIXELS(dst, dst, dst);
 	}
 }
+
+static inline void put_le32(uint8_t **p, uint32_t d)
+{
+	uint32_t **x = (uint32_t **) p;
+	**x = av_le2ne32(d);
+	(*p) += 4;
+}
+
+void klvanc_y10_to_v210(uint16_t *src, uint8_t *dst, int width)
+{
+	size_t len = width / 6;
+	size_t w;
+
+	for (w = 0; w < len; w++) {
+		put_le32(&dst, src[w * 6 + 0] << 10);
+		put_le32(&dst, src[w * 6 + 1] | (src[w * 6 + 2] << 20));
+		put_le32(&dst, src[w * 6 + 3] << 10);
+		put_le32(&dst, src[w * 6 + 4] | (src[w * 6 + 5] << 20));
+	}
+
+	/* Handle remaining 0-5 bytes if any */
+	if (width % 6 > 0)
+		put_le32(&dst, src[w * 6 + 0] << 10);
+	if (width % 6 > 2)
+		put_le32(&dst, src[w * 6 + 1] | (src[w * 6 + 2] << 20));
+	else if (width % 6 > 1)
+		put_le32(&dst, src[w * 6 + 1]);
+	if (width % 6 > 3)
+		put_le32(&dst, src[w * 6 + 3] << 10);
+	if (width % 6 > 4)
+		put_le32(&dst, src[w * 6 + 4]);
+}

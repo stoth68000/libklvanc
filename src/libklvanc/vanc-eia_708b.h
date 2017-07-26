@@ -35,13 +35,91 @@
 extern "C" {
 #endif  
 
+
+struct packet_eia_708b_cdp_header
+{
+	uint16_t cdp_identifier;
+	uint8_t cdp_length;
+	uint8_t cdp_frame_rate;
+	uint8_t time_code_present;
+	uint8_t ccdata_present;
+	uint8_t svcinfo_present;
+	uint8_t svc_info_start;
+	uint8_t svc_info_change;
+	uint8_t svc_info_complete;
+	uint8_t caption_service_active;
+	uint16_t cdp_hdr_sequence_cntr;;
+};
+
+struct packet_eia_708b_time_code_section
+{
+	uint8_t time_code_section_id;
+	uint8_t tc_10hrs;
+	uint8_t tc_1hrs;
+	uint8_t tc_10min;
+	uint8_t tc_1min;
+	uint8_t tc_field_flag;
+	uint8_t tc_10sec;
+	uint8_t tc_1sec;
+	uint8_t drop_frame_flag;
+	uint8_t tc_10fr;
+	uint8_t tc_1fr;
+};
+
+struct packet_eia_708b_ccdata_entry
+{
+	uint8_t cc_valid;
+	uint8_t cc_type;
+	uint8_t cc_data[2];
+};
+
+#define MAX_CC_COUNT 30
+struct packet_eia_708b_ccdata_section
+{
+	uint8_t ccdata_id;
+	uint8_t cc_count;
+	struct packet_eia_708b_ccdata_entry cc[MAX_CC_COUNT];
+};
+
+
+struct packet_eia_708b_ccsvcinfo_entry
+{
+	uint8_t caption_service_number;
+	uint8_t svc_data_byte[6];
+};
+
+#define MAX_CCSVC_COUNT 16
+struct packet_eia_708b_ccsvcinfo_section
+{
+	uint8_t ccsvcinfo_id;
+	uint8_t svc_info_start;
+	uint8_t svc_info_change;
+	uint8_t svc_info_complete;
+	uint8_t svc_count;
+	struct packet_eia_708b_ccsvcinfo_entry svc[MAX_CCSVC_COUNT];
+};
+
+struct packet_eia_708b_cdp_footer
+{
+	uint8_t cdp_footer_id;
+	uint16_t cdp_ftr_sequence_cntr;
+	uint8_t packet_checksum;
+};
+
 /**
  * @brief	TODO - Brief description goes here.
  */
 struct packet_eia_708b_s
 {
 	struct packet_header_s hdr;
-	int nr;
+	uint8_t payload[256];
+	unsigned int payloadLengthBytes;
+	int checksum_valid;
+	struct packet_eia_708b_cdp_header header;
+	struct packet_eia_708b_time_code_section tc;
+	struct packet_eia_708b_ccdata_section ccdata;
+	struct packet_eia_708b_ccsvcinfo_section ccsvc;
+	struct packet_eia_708b_cdp_footer footer;
 };
 
 /**
