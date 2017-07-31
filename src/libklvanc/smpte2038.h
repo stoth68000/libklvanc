@@ -101,6 +101,21 @@ struct smpte2038_anc_data_packet_s
 int  smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
 
 /**
+ * @brief	Inspect a section payload.  This function is identical to smpte2038_parse_pes_packet(),\n
+ *              except it takes just the payload section of a section, rather than the full section which\n
+ *              would include the section headers (e.g. start code prefix, stream id, etc).  This routine\n
+ *              is for use in cases where the calling application is responsible for parsing the PES and\n
+ *              only hands off the payload section to decoders (such as the mpegts demux in libavformat).\n\n
+ *              Callers must release the returned struct using smpte2038_anc_data_packet_free().
+ * @param[in]	uint8_t *section - An array of memory that likely contains a valic (or invalid) VANC message.
+ * @param[in]	unsigned int byteCount - Length of section.
+ * @param[out]	struct smpte2038_anc_data_packet_s **result - Packet
+ * @result	0 - Success, **result is valid for future use.
+ * @result	< 0 - Error
+ */
+int  smpte2038_parse_pes_payload(uint8_t *payload, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result);
+
+/**
  * @brief	Inspect structure and output textual information to console.
  * @param[in]	struct smpte2038_anc_data_packet_s *pkt - Packet
  */
