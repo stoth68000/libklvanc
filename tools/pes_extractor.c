@@ -87,7 +87,8 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 
 	/* Regardless, append all packete data from offset to end of packet into the buffer */
 	size_t wlen = pe->packet_size - offset;
-	size_t l = rb_write(pe->rb, (const char *)pkt + offset, wlen);
+	int didOverflow;
+	size_t l = rb_write_with_state(pe->rb, (const char *)pkt + offset, wlen, &didOverflow);
 	if (l != wlen) {
 		printf("Write error, l = %zu, wlen = %zu\n", l, wlen);
 		return;

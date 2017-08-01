@@ -21,6 +21,14 @@
 
 #include <libklvanc/klringbuffer.h>
 
+#define RB_LOCK(rb) \
+	if ((rb)->usingMutex) \
+		pthread_mutex_lock(&(rb)->mutex);
+
+#define RB_UNLOCK(rb) \
+	if ((rb)->usingMutex) \
+		pthread_mutex_unlock(&(rb)->mutex);
+
 KLRingBuffer *rb_new(size_t size, size_t size_max)
 {
 	if ((size == 0) || (size > size_max))
@@ -41,42 +49,141 @@ KLRingBuffer *rb_new(size_t size, size_t size_max)
 	buf->head = buf->fill = 0;
 	buf->size_max = size_max;
 
+	pthread_mutex_init(&buf->mutex, NULL);
+	buf->usingMutex = 0;
+
 	return buf;
 }
 
-static int rb_grow(KLRingBuffer *buf, size_t increment)
+KLRingBuffer *rb_new_threadsafe(size_t size, size_t size_max)
+{
+	KLRingBuffer *rb = rb_new(size, size_max);
+	rb->usingMutex = 1;
+	return rb;
+}
+
+inline bool rb_is_empty(KLRingBuffer *rb)
+{
+	bool result = false;
+
+	RB_LOCK(rb);
+        if (rb->fill == 0)
+		result = true;
+	RB_UNLOCK(rb);
+
+	return result;
+}
+
+bool rb_is_full(KLRingBuffer *rb)
+{
+	bool result = false;
+
+	RB_LOCK(rb);
+	if (rb->fill == rb->size_max)
+		result = true;
+	RB_UNLOCK(rb);
+
+	return result;
+}
+
+size_t _rb_used(KLRingBuffer *rb)
+{
+	return rb->fill;
+}
+
+size_t rb_used(KLRingBuffer *rb)
+{
+	size_t result;
+
+	RB_LOCK(rb);
+	result = _rb_used(rb);
+	RB_UNLOCK(rb);
+
+        return result;
+}
+
+size_t rb_unused(KLRingBuffer *rb)
+{
+	size_t result;
+
+	RB_LOCK(rb);
+        result = rb->size_max - rb->fill;
+	RB_UNLOCK(rb);
+
+	return result;
+}
+
+void rb_empty(KLRingBuffer *rb)
+{
+	RB_LOCK(rb);
+        rb->head = rb->fill = 0;
+	RB_UNLOCK(rb);
+}
+
+/**
+ * @brief  Total number of bytes in the current allocation.
+ *         Used to determine whether we need to grow the allocation upwards.
+ */
+static size_t _rb_size(KLRingBuffer *rb)
+{
+	return rb->size;
+}
+
+/**
+ * @brief       The amount of free space within the current memory allocation.
+ *              Used to determine whether we need to grow the allocation upwards.
+ *              Humans should never need to call this.
+ */
+static size_t _rb_remain_in_seg(KLRingBuffer *rb)
+{
+	return rb->size - rb->fill;
+}
+
+static int _rb_grow(KLRingBuffer *buf, size_t increment)
 {
 	if (!buf)
 		return -1;
 
-	if ((rb_size(buf) + increment) > buf->size_max)
+	if ((_rb_size(buf) + increment) > buf->size_max) {
 		return -2;
+	}
 
 	buf->data = realloc(buf->data, buf->size + increment);
 	buf->size += increment;
+
 	return 0;
 }
 
-static void rb_shrink_reset(KLRingBuffer *buf)
+static void _rb_shrink_reset(KLRingBuffer *buf)
 {
 	buf->data = realloc(buf->data, buf->size_initial);
 	buf->size = buf->size_initial;
 	buf->head = buf->fill = 0;
 }
 
-static inline void advance_tail(KLRingBuffer *buf, size_t bytes)
+static inline void _advance_tail(KLRingBuffer *buf, size_t bytes)
 {
 	buf->fill += bytes;
 }
 
-size_t rb_write(KLRingBuffer *buf, const char *from, size_t bytes)
+size_t rb_write_with_state(KLRingBuffer *buf, const char *from, size_t bytes, int *didOverflow)
 {
 	assert(buf);
 	assert(from);
 
-	if (bytes > rb_remain(buf)) {
-		if (rb_grow(buf, bytes * 128) < 0)
-			return 0;
+	*didOverflow = 0;
+	RB_LOCK(buf);
+	if (bytes > _rb_remain_in_seg(buf)) {
+		if (_rb_grow(buf, bytes * 128) < 0) {
+			RB_UNLOCK(buf);
+
+			/* Don't fail the write just because we've exceeded the maximum
+			 * amount of storage, instead, raise an overflow and store the data anyway.
+			 */
+			rb_discard(buf, bytes);
+			if (didOverflow)
+				*didOverflow = 1;
+		}
 	}
 
 	unsigned char *tail = buf->data + ((buf->head + buf->fill) % buf->size);
@@ -94,8 +201,14 @@ size_t rb_write(KLRingBuffer *buf, const char *from, size_t bytes)
 		memcpy(buf->data, from + first_write, second_write);
 	}
 
-	advance_tail(buf, bytes);
+	_advance_tail(buf, bytes);
+	RB_UNLOCK(buf);
 	return bytes;
+}
+
+size_t rb_write(KLRingBuffer *buf, const char *from, size_t bytes)
+{
+	return rb_write_with_state(buf, from, bytes, NULL);
 }
 
 #if 0
@@ -125,15 +238,22 @@ char *rb_write_pointer(KLRingBuffer *buf, size_t *writable)
 
 void rb_write_commit(KLRingBuffer *buf, size_t bytes)
 {
-    assert(bytes <= rb_remain(buf));
-    advance_tail(buf, bytes);
+    assert(bytes <= _rb_remain_in_seg(buf));
+    _advance_tail(buf, bytes);
 }
 #endif
 
-static inline void advance_head(KLRingBuffer *buf, size_t bytes)
+static inline void _advance_head(KLRingBuffer *buf, size_t bytes)
 {
 	buf->head = (buf->head + bytes) % buf->size;
 	buf->fill -= bytes;
+}
+
+void rb_discard(KLRingBuffer *rb, size_t bytes)
+{
+	RB_LOCK(rb);
+	_advance_head(rb, bytes); 
+	RB_UNLOCK(rb);
 }
 
 static size_t rb_reader(KLRingBuffer *buf, char *to, size_t bytes, int advance_read_head)
@@ -146,6 +266,8 @@ static size_t rb_reader(KLRingBuffer *buf, char *to, size_t bytes, int advance_r
 
 	if (bytes == 0)
 		return 0;
+
+	RB_LOCK(buf);
 
 	unsigned char *head = buf->data + buf->head;
 	unsigned char *end_read = buf->data + ((buf->head + bytes) % buf->size);
@@ -163,20 +285,30 @@ static size_t rb_reader(KLRingBuffer *buf, char *to, size_t bytes, int advance_r
 	}
 
 	if (advance_read_head)
-		advance_head(buf, bytes); 
+		_advance_head(buf, bytes); 
 
 	/* When the buffer is empty its a good time to
 	 * free any prior large allocations.
 	 */
-	if ((rb_used(buf) == 0) && (buf->size > buf->size_initial))
-		rb_shrink_reset(buf);
+	if ((_rb_used(buf) == 0) && (buf->size > buf->size_initial))
+		_rb_shrink_reset(buf);
 
+	RB_UNLOCK(buf);
 	return bytes;
 }
 
 size_t rb_read(KLRingBuffer *buf, char *to, size_t bytes)
 {
 	return rb_reader(buf, to, bytes, 1); /* Advance read head */
+}
+
+size_t rb_read_alloc(KLRingBuffer *buf, char **to, size_t bytes)
+{
+	*to = malloc(bytes);
+	if (!*to)
+		return 0;
+
+	return rb_reader(buf, *to, bytes, 1); /* Advance read head */
 }
 
 size_t rb_peek(KLRingBuffer *buf, char *to, size_t bytes)
@@ -212,13 +344,13 @@ const char *rb_read_pointer(KLRingBuffer *buf, size_t offset, size_t *readable)
 void rb_read_commit(KLRingBuffer *buf, size_t bytes)
 {
     assert(rb_used(buf) >= bytes);
-    advance_head(buf, bytes);
+    _advance_head(buf, bytes);
 }
 
 void rb_stream(KLRingBuffer *from, KLRingBuffer *to, size_t bytes)
 {
     assert(rb_used(from) <= bytes);
-    assert(rb_remain(to) >= bytes);
+    assert(_rb_remain_in_seg(to) >= bytes);
 
     size_t copied = 0;
     while(copied < bytes)
@@ -242,16 +374,18 @@ void rb_stream(KLRingBuffer *from, KLRingBuffer *to, size_t bytes)
         copied += copied_this_read;
     }
 
-    advance_tail(to, copied);
+    _advance_tail(to, copied);
 }
 #endif
 
-void rb_free(KLRingBuffer *buf)
+void rb_free(KLRingBuffer *rb)
 {
-	assert(buf);
-	if (buf) {
-		free(buf->data);
-		free(buf);
+	RB_LOCK(rb);
+
+	assert(rb);
+	if (rb) {
+		free(rb->data);
+		free(rb);
 	}
 }
 
