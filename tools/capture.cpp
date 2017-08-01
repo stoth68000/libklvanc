@@ -100,6 +100,7 @@ static uint32_t g_audioChannels = 2;
 static uint32_t g_audioSampleDepth = 16;
 static const char *g_videoOutputFilename = NULL;
 static const char *g_audioOutputFilename = NULL;
+static const char *g_audioInputFilename = NULL;
 static const char *g_vancOutputFilename = NULL;
 static const char *g_vancInputFilename = NULL;
 static int g_maxFrames = -1;
@@ -109,6 +110,7 @@ static int g_monitor_mode = 0;
 static int g_no_signal = 1;
 static BMDDisplayMode g_detected_mode_id = 0;
 static BMDDisplayMode g_requested_mode_id = 0;
+static int g_enable_smpte337_detector = 0;
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 static int g_monitor_prbs_audio_mode = 0;
@@ -475,6 +477,29 @@ static const char *display_mode_to_string(BMDDisplayMode m)
 	g_mode[0] = m >> 24;
 
 	return &g_mode[0];
+}
+
+static int AnalyzeAudio(const char *fn)
+{
+#if 0
+	FILE *fh = fopen(fn, "rb");
+	if (!fh) {
+		fprintf(stderr, "Unable to open [%s]\n", fn);
+		return -1;
+	}
+
+	fseek(fh, 0, SEEK_END);
+	fprintf(stdout, "Analyzing VANC file [%s] length %lu bytes\n", fn, ftell(fh));
+	fseek(fh, 0, SEEK_SET);
+
+	unsigned char *buf = (unsigned char *)malloc(maxbuflen);
+
+	while (!feof(fh)) {
+	}
+	free(buf);
+	fclose(fh);
+#endif
+	return 0;
 }
 
 static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int uiWidth, unsigned int lineNr)
@@ -969,7 +994,20 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 		if (audioOutputFile != -1) {
 			audioFrame->GetBytes(&audioFrameBytes);
+
+			uint32_t v1_header = 0xFEED0001;
+			uint32_t v1_footer = 0xDEAD0001;
+			uint32_t v1_w = sampleSize;
+			uint32_t v1_x = g_audioChannels;
+			uint32_t v1_y = audioFrame->GetSampleFrameCount();
+			uint32_t v1_z = g_audioSampleDepth;
+			write(audioOutputFile, &v1_header, sizeof(uint32_t));
+			write(audioOutputFile, &v1_w, sizeof(uint32_t));
+			write(audioOutputFile, &v1_x, sizeof(uint32_t));
+			write(audioOutputFile, &v1_y, sizeof(uint32_t));
+			write(audioOutputFile, &v1_z, sizeof(uint32_t));
 			write(audioOutputFile, audioFrameBytes, sampleSize);
+			write(audioOutputFile, &v1_footer, sizeof(uint32_t));
 		}
 
 		frameTime->frameCount++;
@@ -1234,7 +1272,8 @@ static int usage(const char *progname, int status)
 		"         vitc:  VITC\n"
 		"       serial:  Serial Timecode\n"
 		"    -f <filename>   raw video output filename\n"
-		"    -a <filename>   raw audio output filanem\n"
+		"    -a <filename>   raw audio output filaname\n"
+		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload\n"
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
@@ -1293,7 +1332,7 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:m:n:p:t:vV:I:i:l:LP:MS")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:Am:n:p:t:vV:I:i:l:LP:MS")) != -1) {
 		switch (ch) {
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 		case 'S':
@@ -1323,6 +1362,10 @@ static int _main(int argc, char *argv[])
 			break;
 		case 'a':
 			g_audioOutputFilename = optarg;
+			break;
+		case 'A':
+			g_enable_smpte337_detector = 1;
+			g_audioInputFilename = optarg;
 			break;
 		case 'I':
 			g_vancInputFilename = optarg;
@@ -1422,6 +1465,9 @@ static int _main(int argc, char *argv[])
 		return AnalyzeVANC(g_vancInputFilename);
 	}
 
+	if (g_audioInputFilename != NULL) {
+		return AnalyzeAudio(g_audioInputFilename);
+	}
 
 	if (!deckLinkIterator) {
 		fprintf(stderr, "This application requires the DeckLink drivers installed.\n");
