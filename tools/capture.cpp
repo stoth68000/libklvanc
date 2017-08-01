@@ -994,13 +994,13 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 		if (audioOutputFile != -1) {
 			audioFrame->GetBytes(&audioFrameBytes);
-
-			uint32_t v1_header = 0xFEED0001;
-			uint32_t v1_footer = 0xDEAD0001;
-			uint32_t v1_w = sampleSize;
-			uint32_t v1_x = g_audioChannels;
-			uint32_t v1_y = audioFrame->GetSampleFrameCount();
-			uint32_t v1_z = g_audioSampleDepth;
+// MMM
+			uint32_t v1_header = 0x0100EDFE;
+			uint32_t v1_footer = 0x0100ADDE;
+			uint32_t v1_w = g_audioChannels;
+			uint32_t v1_x = audioFrame->GetSampleFrameCount();
+			uint32_t v1_y = g_audioSampleDepth;
+			uint32_t v1_z = sampleSize;
 			write(audioOutputFile, &v1_header, sizeof(uint32_t));
 			write(audioOutputFile, &v1_w, sizeof(uint32_t));
 			write(audioOutputFile, &v1_x, sizeof(uint32_t));
