@@ -17,6 +17,7 @@
 #include <signal.h>
 #include <libklvanc/vanc.h>
 #include <libklvanc/smpte2038.h>
+#include <libklvanc/smpte337_detector.h>
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 #include <libklmonitoring/klmonitoring.h>
@@ -110,6 +111,9 @@ static int g_monitor_mode = 0;
 static int g_no_signal = 1;
 static BMDDisplayMode g_detected_mode_id = 0;
 static BMDDisplayMode g_requested_mode_id = 0;
+
+#define audio_v1_header 0x0100EDFE
+#define audio_v1_footer 0x0100ADDE
 static int g_enable_smpte337_detector = 0;
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
@@ -479,9 +483,15 @@ static const char *display_mode_to_string(BMDDisplayMode m)
 	return &g_mode[0];
 }
 
+static void *smpte337_callback(void *user_context, struct smpte337_detector_s *ctx, uint8_t datamode, uint8_t datatype, uint32_t payload_bitCount, uint8_t *payload)
+{
+	printf("%s() mode: %d  type: %d\n", __func__, datamode, datatype);
+exit(0);
+	return 0;
+}
+
 static int AnalyzeAudio(const char *fn)
 {
-#if 0
 	FILE *fh = fopen(fn, "rb");
 	if (!fh) {
 		fprintf(stderr, "Unable to open [%s]\n", fn);
@@ -489,16 +499,99 @@ static int AnalyzeAudio(const char *fn)
 	}
 
 	fseek(fh, 0, SEEK_END);
-	fprintf(stdout, "Analyzing VANC file [%s] length %lu bytes\n", fn, ftell(fh));
+	fprintf(stdout, "Analyzing Audio file [%s] length %lu bytes\n", fn, ftell(fh));
 	fseek(fh, 0, SEEK_SET);
 
-	unsigned char *buf = (unsigned char *)malloc(maxbuflen);
+	uint32_t v1_header = audio_v1_header;
+	uint32_t v1_footer = audio_v1_footer;
+	uint32_t v1_channels;
+	uint32_t v1_sfc;
+	uint32_t v1_depth;
+	uint32_t v1_bytes;
+
+	uint32_t frame = 0;
+
+	struct smpte337_detector_s *det[8] = { 0 };
+	FILE *ofh[8] = { 0 };
+
+	for (int i = 0; i < 8; i++) {
+		if (g_enable_smpte337_detector) {
+			det[i] = smpte337_detector_alloc((smpte337_detector_callback)smpte337_callback, (void *)det[i]);
+		}
+
+		/* Friendly note:
+		 * Convert the PCM into wav using: avconv -y -f s32le -ar 48k -ac 2 -i pairX.bin fileX.wav.
+		 */
+		char name[32];
+		sprintf(name, "pair%d.bin", i);
+		ofh[i] = fopen(name, "wb");
+	}
 
 	while (!feof(fh)) {
+		fread(&v1_header, sizeof(uint32_t), 1, fh);
+		if (v1_header != audio_v1_header) {
+			printf("%s() skipping uint32_t in stread, unusual.\n", __func__);
+			continue;
+		}
+
+		fread(&v1_channels, sizeof(uint32_t), 1, fh);
+		fread(&v1_sfc, sizeof(uint32_t), 1, fh);
+		fread(&v1_depth, sizeof(uint32_t), 1, fh);
+		fread(&v1_bytes, sizeof(uint32_t), 1, fh);
+
+		unsigned char *buf = (unsigned char *)malloc(v1_bytes);
+		if (!buf)
+			continue;
+
+		fread(buf, v1_bytes, 1, fh);
+		//fseek(fh, v1_bytes, SEEK_CUR);
+		fread(&v1_footer, sizeof(uint32_t), 1, fh);
+		if (v1_footer != 0x0100ADDE) {
+			fprintf(stderr, "%s() v1_footer problem?\n", __func__);
+			exit(0);
+		}
+		frame++;
+
+		uint32_t stride = v1_channels * (v1_depth / 8);
+		printf("id: %8d ch: %d  sfc: %d  depth: %d  stride: %d  bytes: %d\n", frame - 1, v1_channels, v1_sfc, v1_depth, stride, v1_bytes);
+		for (int i = 0; i < v1_sfc; i++) {
+			printf("   frame: %8d  ", i);
+			for (int j = 0; j < stride; j++) {
+
+				if (j && (v1_depth == 32) && ((j % 8) == 0))
+					printf(": ");
+
+				printf("%02x ", *(buf + (i * stride) + j));
+			}
+			printf("\n");
+		}
+
+		if (g_enable_smpte337_detector) {
+			for (int i = 0; i < 8; i++) {
+				int offset = (i * 2) * (v1_depth / 8);
+				size_t l = smpte337_detector_write(det[i], buf + offset, v1_sfc, v1_depth, v1_channels, stride, 2);
+			}
+		}
+
+		/* Dump each L/R pair to a seperate file. */
+		unsigned char *p = buf;
+		for (int i = 0; i < v1_sfc; i++) {
+			for (int j = 0; j < 8; j++) {
+				fwrite(p, 8, 1, ofh[j]);
+				p += 8;
+			}
+		}
+
+		free(buf);
 	}
-	free(buf);
+	for (int i = 0; i < 8; i++) {
+		if (g_enable_smpte337_detector)
+			smpte337_detector_free(det[i]);
+		fclose(ofh[i]);
+	}
+
 	fclose(fh);
-#endif
+
 	return 0;
 }
 
@@ -994,9 +1087,8 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 		if (audioOutputFile != -1) {
 			audioFrame->GetBytes(&audioFrameBytes);
-// MMM
-			uint32_t v1_header = 0x0100EDFE;
-			uint32_t v1_footer = 0x0100ADDE;
+			uint32_t v1_header = audio_v1_header;
+			uint32_t v1_footer = audio_v1_footer;
 			uint32_t v1_w = g_audioChannels;
 			uint32_t v1_x = audioFrame->GetSampleFrameCount();
 			uint32_t v1_y = g_audioSampleDepth;
@@ -1273,7 +1365,7 @@ static int usage(const char *progname, int status)
 		"       serial:  Serial Timecode\n"
 		"    -f <filename>   raw video output filename\n"
 		"    -a <filename>   raw audio output filaname\n"
-		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload\n"
+		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload, extract payload into pair files.\n"
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
@@ -1332,7 +1424,7 @@ static int _main(int argc, char *argv[])
 	pthread_mutex_init(&sleepMutex, NULL);
 	pthread_cond_init(&sleepCond, NULL);
 
-	while ((ch = getopt(argc, argv, "?h3c:s:f:a:Am:n:p:t:vV:I:i:l:LP:MS")) != -1) {
+	while ((ch = getopt(argc, argv, "?h3c:s:f:a:A:m:n:p:t:vV:I:i:l:LP:MS")) != -1) {
 		switch (ch) {
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 		case 'S':
