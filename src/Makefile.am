@@ -19,6 +19,7 @@ libklvanc_la_SOURCES += core-cache.c
 libklvanc_la_SOURCES += core-packet-kl_u64le_counter.c
 libklvanc_la_SOURCES += core-private.h xorg-list.h
 libklvanc_la_SOURCES += klbitstream_readwriter.h
+libklvanc_la_SOURCES += klringbuffer.c
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
@@ -45,4 +46,5 @@ libklvanc_include_HEADERS += libklvanc/vanc-checksum.h
 libklvanc_include_HEADERS += libklvanc/klrestricted_code_path.h
 libklvanc_include_HEADERS += libklvanc/cache.h
 libklvanc_include_HEADERS += libklvanc/vanc-kl_u64le_counter.h
+libklvanc_include_HEADERS += libklvanc/klringbuffer.h
 

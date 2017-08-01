@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "klringbuffer.h"
+#include <libklvanc/klringbuffer.h>
 
 KLRingBuffer *rb_new(size_t size, size_t size_max)
 {

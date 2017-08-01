@@ -31,11 +31,11 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <libklvanc/vanc.h>
+#include <libklvanc/klringbuffer.h>
 #include "klbitstream_readwriter.h"
 #include "udp.h"
 #include "url.h"
 #include "ts_packetizer.h"
-#include "klringbuffer.h"
 #include "pes_extractor.h"
 
 #include "version.h"

@@ -33,7 +33,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
-#include "klringbuffer.h"
+#include <libklvanc/klringbuffer.h>
 
 /* The PES Extractor will call your application in the same thread as the pe_processPacket
  * call happens. The buffer passed will be automatically freed upon completion of each callback,

@@ -30,7 +30,6 @@ SRC += genscte104.c
 SRC += udp.c
 SRC += url.c
 SRC += ts_packetizer.c
-SRC += klringbuffer.c
 SRC += pes_extractor.c
 
 bin_PROGRAMS  = klvanc_util
@@ -50,7 +49,6 @@ klvanc_genscte104_SOURCES = $(SRC)
 libklvanc_noinst_includedir = $(includedir)
 
 noinst_HEADERS  = hexdump.h
-noinst_HEADERS += klringbuffer.h
 noinst_HEADERS += pes_extractor.h
 noinst_HEADERS += ts_packetizer.h
 noinst_HEADERS += udp.h
