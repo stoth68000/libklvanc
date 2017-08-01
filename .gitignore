@@ -33,4 +33,6 @@ src/libklvanc_la-smpte2038.lo
 src/libklvanc_la-core-lines.lo
 src/libklvanc_la-core-cache.lo
 src/libklvanc_la-core-packet-kl_u64le_counter.lo
+src/libklvanc_la-klringbuffer.lo
+src/libklvanc_la-smpte337_detector.lo
 doxygen/html
