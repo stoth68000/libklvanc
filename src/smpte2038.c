@@ -99,6 +99,74 @@ void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h)
 }
 
 #define VALIDATE(obj, val) if ((obj) != (val)) { printf("%s is invalid\n", #obj); goto err; }
+
+static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct smpte2038_anc_data_packet_s *h)
+{
+	int rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
+	while (rem > 4) {
+		h->lineCount++;
+		h->lines = realloc(h->lines, h->lineCount * sizeof(struct smpte2038_anc_data_line_s));
+
+		struct smpte2038_anc_data_line_s *l = h->lines + (h->lineCount - 1);
+		memset(l, 0, sizeof(*l));
+
+		l->reserved_000000 = klbs_read_bits(bs, 6);
+		VALIDATE(l->reserved_000000, 0);
+
+		l->c_not_y_channel_flag = klbs_read_bits(bs, 1);
+		VALIDATE(l->c_not_y_channel_flag, 0);
+
+		l->line_number = klbs_read_bits(bs, 11);
+		//VALIDATE(l->line_number, 9);
+
+		l->horizontal_offset = klbs_read_bits(bs, 12);
+		//VALIDATE(l->horizontal_offset, 0);
+
+		l->DID = klbs_read_bits(bs, 10);
+
+		l->SDID = klbs_read_bits(bs, 10);
+
+		l->data_count = klbs_read_bits(bs, 10);
+
+		/* Lets put the checksum at the end of the array then pull it back
+		 * into the checksum field later, it makes for easier processing.
+		 */
+		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
+		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
+			l->user_data_words[i] = klbs_read_bits(bs, 10);
+
+		l->checksum_word = klbs_read_bits(bs, 10);
+		rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
+		/* Clock in any stuffing bits */
+		klbs_read_byte_stuff(bs);
+	}
+	return 0;
+err:
+	return -1;
+}
+
+int smpte2038_parse_pes_payload(uint8_t *payload, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result)
+{
+	int ret;
+	struct smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL)
+		return -1;
+
+	struct klbs_context_s *bs = klbs_alloc();
+        klbs_read_set_buffer(bs, payload, byteCount);
+
+	ret = smpte2038_parse_pes_payload_int(bs, h);
+
+	*result = h;
+
+	if (bs)
+		klbs_free(bs);
+
+	return ret;
+}
+
 int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result)
 {
 	int ret = -1;
@@ -159,50 +227,8 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 
 	h->PTS = a | b | c;
 
-	/* Do we have any lines remaining in the packet? */
-	int rem = (h->PES_packet_length + 6) - 15;
-	while (rem > 4) {
-		h->lineCount++;
-		h->lines = realloc(h->lines, h->lineCount * sizeof(struct smpte2038_anc_data_line_s));
-
-		struct smpte2038_anc_data_line_s *l = h->lines + (h->lineCount - 1);
-		memset(l, 0, sizeof(*l));
-
-		l->reserved_000000 = klbs_read_bits(bs, 6);
-		VALIDATE(l->reserved_000000, 0);
-
-		l->c_not_y_channel_flag = klbs_read_bits(bs, 1);
-		VALIDATE(l->c_not_y_channel_flag, 0);
-
-		l->line_number = klbs_read_bits(bs, 11);
-		//VALIDATE(l->line_number, 9);
-
-		l->horizontal_offset = klbs_read_bits(bs, 12);
-		//VALIDATE(l->horizontal_offset, 0);
-
-		l->DID = klbs_read_bits(bs, 10);
-
-		l->SDID = klbs_read_bits(bs, 10);
-
-		l->data_count = klbs_read_bits(bs, 10);
-
-		/* Lets put the checksum at the end of the array then pull it back
-		 * into the checksum field later, it makes for easier processing.
-		 */
-		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
-		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
-			l->user_data_words[i] = klbs_read_bits(bs, 10);
-
-		l->checksum_word = klbs_read_bits(bs, 10);
-	
-		rem = (h->PES_packet_length + 6) - klbs_get_byte_count(bs);
-
-		/* Clock in any stuffing bits */
-		klbs_read_byte_stuff(bs);
-	}
-
+	ret = smpte2038_parse_pes_payload_int(bs, h);
 	*result = h;
-	ret = 0;
 
 	if (bs)
 		klbs_free(bs);
