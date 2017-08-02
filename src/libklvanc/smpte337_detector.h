@@ -51,6 +51,15 @@ struct smpte337_detector_s
 
 	smpte337_detector_callback cb;
 	void *cbContext;
+
+	/*  0. The framework should attempt to determine the wordlength,
+	 *     looking for the specific syncword1/2 patterns before
+	 *     committing any data to the ring buffers.
+	 * 16. Detected operating on 16bit words.
+	 * 20. Detected operating on 20bit words.
+	 * 24. Detected operating on 24bit words.
+	 */
+	uint32_t wordLength;
 };
 
 struct smpte337_detector_s *smpte337_detector_alloc(smpte337_detector_callback cb, void *cbContext);

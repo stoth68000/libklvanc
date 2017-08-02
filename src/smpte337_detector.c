@@ -104,23 +104,68 @@ static size_t smpte337_detector_write_32b(struct smpte337_detector_s *ctx, uint8
 			/* Sample in N words into a byte orientied buffer */
 			uint8_t *x = (uint8_t *)q;
 
-			/* Flush the word into the fifo MSB first */
-			int didOverflow = 0;
-			rb_write_with_state(ctx->rb, ((const char *)x) + 3, 1, &didOverflow);
-			if (didOverflow) {
-				fprintf(stderr, "overflow occured.\n");
-			}
-			rb_write_with_state(ctx->rb, ((const char *)x) + 2, 1, &didOverflow);
-			if (didOverflow) {
-				fprintf(stderr, "overflow occured.\n");
+			if (ctx->wordLength == 16) {
+				/* Flush the word into the fifo MSB first */
+				int didOverflow = 0;
+				rb_write_with_state(ctx->rb, ((const char *)x) + 3, 1, &didOverflow);
+				if (didOverflow) {
+					fprintf(stderr, "overflow occured.\n");
+				}
+				rb_write_with_state(ctx->rb, ((const char *)x) + 2, 1, &didOverflow);
+				if (didOverflow) {
+					fprintf(stderr, "overflow occured.\n");
+				}
+				consumed += 2;
+			} else
+			if (ctx->wordLength == 24) {
+				/* Flush the word into the fifo MSB first */
+				int didOverflow = 0;
+				rb_write_with_state(ctx->rb, ((const char *)x) + 3, 1, &didOverflow);
+				if (didOverflow) {
+					fprintf(stderr, "overflow occured.\n");
+				}
+				rb_write_with_state(ctx->rb, ((const char *)x) + 2, 1, &didOverflow);
+				if (didOverflow) {
+					fprintf(stderr, "overflow occured.\n");
+				}
+				rb_write_with_state(ctx->rb, ((const char *)x) + 1, 1, &didOverflow);
+				if (didOverflow) {
+					fprintf(stderr, "overflow occured.\n");
+				}
+				consumed += 3;
 			}
 			q++;
-			consumed += 2;
 		}
 
 		p += (frameStrideBytes / sizeof(uint32_t));
 	}
 	return consumed;
+}
+
+static int smpte337_detector_hunt_syncwords(struct smpte337_detector_s *ctx, uint8_t *buf,
+	uint32_t audioFrames, uint32_t sampleDepth, uint32_t channelsPerFrame,
+	uint32_t frameStrideBytes,
+	uint32_t spanCount)
+{
+	uint32_t *p = (uint32_t *)buf;
+	for (int i = 0; i < audioFrames - 1; i++) {
+
+		uint32_t Pa = *p;
+		uint32_t Pb = *(p + (frameStrideBytes / sizeof(uint32_t)));
+
+		if ((Pa == 0xf8720000) && (Pb == 0x4e1f0000)) {
+			return 16;
+		} else
+		if ((Pa == 0x6f872000) && (Pb == 0x54e1f000)) {
+			return 20;
+		} else
+		if ((Pa == 0x96f87200) && (Pb == 0xa54e1f00)) {
+			return 24;
+		}
+
+		p += (frameStrideBytes / sizeof(uint32_t));
+	}
+	return 0;
 }
 
 static void run_detector(struct smpte337_detector_s *ctx)
@@ -141,6 +186,49 @@ static void run_detector(struct smpte337_detector_s *ctx)
 		 * Pa = dat0/1
 		 * Pb = dat2/3 ... etc
 		 */
+		if (dat[0] == 0x96 && dat[1] == 0xf8 && dat[2] == 0x72 && dat[3] == 0xa5 && dat[4] == 0x4e && dat[5] == 0x1f) {
+			/* Confirmed.... pa = 24bit, pb = 24bit */
+#if 1
+			for (int h = 0; h < 12; h++)
+				printf("%02x ", dat[h]);
+			printf("\n");
+
+			printf("mode = %d, type = %d\n", (dat[8] >> 5) & 0x03, (dat[8] & 0x1f));
+#endif
+			/* Check the burst_info.... Make sure we find AC3 */
+			if ((dat[8] & 0x1f) == 0x01) {
+				/* Bits 0-4 datatype, 1 = AC3 */
+				/* Bits 5-6 datamode, 2 = 24bit */
+				/* Bits   7 errorflg, 0 = no error */
+				uint32_t payload_bitCount = (dat[9] << 16) | dat[10] << 8 | dat[11];
+				uint32_t payload_byteCount = payload_bitCount / 8;
+				
+				if (rb_used(ctx->rb) >= (8 + payload_byteCount)) {
+					char *payload = NULL;
+					size_t l = rb_read_alloc(ctx->rb, &payload, 12 + payload_byteCount);
+					if (l != (8 + payload_byteCount)) {
+						fprintf(stderr, "[smpte337_detector] Warning, rb read failure.\n");
+
+						/* Intensionally flush the ring and start acquisition again. */
+						rb_empty(ctx->rb);
+					} else {
+						handleCallback(ctx, (dat[8] >> 5) & 0x03, dat[8] & 0x1f,
+							payload_bitCount, (uint8_t *)payload + 12);
+					}
+					if (payload)
+						free(payload);
+				} else {
+					/* Not enough data in the ring buffer, come back next time. */
+					break;
+				}
+
+			} else {
+				fprintf(stderr, "[smpte337_detector] Does not support datatype 0x%02x in %d bit words, skipping.\n",
+					dat[7] & 0x1f, ctx->wordLength);
+				rb_discard(ctx->rb, 1); /* Pop a byte, and continue the search */
+				skipped++;
+			}
+		} else
 		if (dat[0] == 0xF8 && dat[1] == 0x72 && dat[2] == 0x4e && dat[3] == 0x1f) {
 			/* Confirmed.... pa = 16bit, pb = 16bit */
 
@@ -172,6 +260,8 @@ static void run_detector(struct smpte337_detector_s *ctx)
 				}
 
 			} else {
+				fprintf(stderr, "[smpte337_detector] Does not support datatype 0x%02x in %d bit words, skipping.\n",
+					dat[7] & 0x1f, ctx->wordLength);
 				rb_discard(ctx->rb, 1); /* Pop a byte, and continue the search */
 				skipped++;
 			}
@@ -192,6 +282,18 @@ size_t smpte337_detector_write(struct smpte337_detector_s *ctx, uint8_t *buf,
 		(spanCount == 0) || (spanCount > channelsPerFrame)) {
 		return 0;
 	}
+
+	if (ctx->wordLength == 0) {
+		int ret = smpte337_detector_hunt_syncwords(ctx, buf, audioFrames, sampleDepth,
+			channelsPerFrame, frameStrideBytes, spanCount);
+		if (ret > 0) {
+			printf("Syncronized with %dbit words\n", ret);
+			ctx->wordLength = ret;
+		}
+	}
+
+	if (ctx->wordLength == 0)
+		return 0;
 
 	size_t ret = 0;
 	if (sampleDepth == 16) {
