@@ -569,7 +569,7 @@ static int AnalyzeAudio(const char *fn)
 		if (g_enable_smpte337_detector) {
 			for (int i = 0; i < 8; i++) {
 				int offset = (i * 2) * (v1_depth / 8);
-				size_t l = smpte337_detector_write(det[i], buf + offset, v1_sfc, v1_depth, v1_channels, stride, 2);
+				size_t l = smpte337_detector_write(det[i], buf + offset, v1_sfc, v1_depth, v1_channels, stride, 1);
 			}
 		}
 
