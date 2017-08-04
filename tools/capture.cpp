@@ -98,7 +98,7 @@ static IDeckLinkDisplayModeIterator *displayModeIterator;
 static BMDTimecodeFormat g_timecodeFormat = 0;
 static int g_videoModeIndex = -1;
 static uint32_t g_audioChannels = 2;
-static uint32_t g_audioSampleDepth = 16;
+static uint32_t g_audioSampleDepth = 32;
 static const char *g_videoOutputFilename = NULL;
 static const char *g_audioOutputFilename = NULL;
 static const char *g_audioInputFilename = NULL;
@@ -1371,7 +1371,7 @@ static int usage(const char *progname, int status)
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
 		"    -L              List available display modes\n"
 		"    -c <channels>   Audio Channels (2, 8 or 16 - def: 2)\n"
-		"    -s <depth>      Audio Sample Depth (16 or 32 - def: 16)\n"
+		"    -s <depth>      Audio Sample Depth (16 or 32 - def: %d)\n"
 		"    -n <frames>     Number of frames to capture (def: unlimited)\n"
 		"    -v              Increase level of verbosity (def: 0)\n"
 		"    -3              Capture Stereoscopic 3D (Requires 3D Hardware support)\n"
@@ -1394,6 +1394,7 @@ static int usage(const char *progname, int status)
 		"Capture then interpret 10bit VANC (or 8bit VANC wth -p0), from 1280x720p60\n"
 		"    %s -m13 -p1 -V vanc.raw\n"
 		"    %s          -I vanc.raw\n\n",
+		g_audioSampleDepth,
 		TS_OUTPUT_NAME,
 		basename((char *)progname),
 		basename((char *)progname),
