@@ -18,6 +18,7 @@
 #include <libklvanc/vanc.h>
 #include <libklvanc/smpte2038.h>
 #include <libklvanc/smpte337_detector.h>
+#include <libklvanc/frame-writer.h>
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 #include <libklmonitoring/klmonitoring.h>
@@ -77,7 +78,10 @@ static struct vanc_context_s *vanchdl;
 static pthread_mutex_t sleepMutex;
 static pthread_cond_t sleepCond;
 static int videoOutputFile = -1;
-static int audioOutputFile = -1;
+
+
+static struct fwr_session_s *writeSession = NULL;
+
 static int vancOutputFile = -1;
 static int g_showStartupMemory = 0;
 static int g_verbose = 0;
@@ -112,8 +116,6 @@ static int g_no_signal = 1;
 static BMDDisplayMode g_detected_mode_id = 0;
 static BMDDisplayMode g_requested_mode_id = 0;
 
-#define audio_v1_header 0x0100EDFE
-#define audio_v1_footer 0x0100ADDE
 static int g_enable_smpte337_detector = 0;
 
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
@@ -502,12 +504,11 @@ static int AnalyzeAudio(const char *fn)
 	fprintf(stdout, "Analyzing Audio file [%s] length %lu bytes\n", fn, ftell(fh));
 	fseek(fh, 0, SEEK_SET);
 
-	uint32_t v1_header = audio_v1_header;
-	uint32_t v1_footer = audio_v1_footer;
-	uint32_t v1_channels;
-	uint32_t v1_sfc;
-	uint32_t v1_depth;
-	uint32_t v1_bytes;
+	struct fwr_session_s *session;
+	if (klvanc_pcm_file_open(fn, 0, &session) < 0) {
+		fprintf(stderr, "Error opening %s\n", fn);
+		return -1;
+	}
 
 	uint32_t frame = 0;
 
@@ -527,62 +528,49 @@ static int AnalyzeAudio(const char *fn)
 		ofh[i] = fopen(name, "wb");
 	}
 
-	while (!feof(fh)) {
-		fread(&v1_header, sizeof(uint32_t), 1, fh);
-		if (v1_header != audio_v1_header) {
-			printf("%s() skipping uint32_t in stread, unusual.\n", __func__);
-			continue;
+	struct fwr_header_audio_s *f;
+
+	while (1) {
+		if (klvanc_pcm_frame_read(session, &f) < 0) {
+			break;
 		}
 
-		fread(&v1_channels, sizeof(uint32_t), 1, fh);
-		fread(&v1_sfc, sizeof(uint32_t), 1, fh);
-		fread(&v1_depth, sizeof(uint32_t), 1, fh);
-		fread(&v1_bytes, sizeof(uint32_t), 1, fh);
-
-		unsigned char *buf = (unsigned char *)malloc(v1_bytes);
-		if (!buf)
-			continue;
-
-		fread(buf, v1_bytes, 1, fh);
-		//fseek(fh, v1_bytes, SEEK_CUR);
-		fread(&v1_footer, sizeof(uint32_t), 1, fh);
-		if (v1_footer != 0x0100ADDE) {
-			fprintf(stderr, "%s() v1_footer problem?\n", __func__);
-			exit(0);
-		}
 		frame++;
 
-		uint32_t stride = v1_channels * (v1_depth / 8);
-		printf("id: %8d ch: %d  sfc: %d  depth: %d  stride: %d  bytes: %d\n", frame - 1, v1_channels, v1_sfc, v1_depth, stride, v1_bytes);
-		for (int i = 0; i < v1_sfc; i++) {
+		uint32_t stride = f->channelCount * (f->sampleDepth / 8);
+
+		printf("id: %8d ch: %d  sfc: %d  depth: %d  stride: %d  bytes: %d\n",
+			frame - 1, f->channelCount, f->frameCount, f->sampleDepth, stride, f->bufferLengthBytes);
+		for (int i = 0; i < f->frameCount; i++) {
 			printf("   frame: %8d  ", i);
 			for (int j = 0; j < stride; j++) {
 
-				if (j && (v1_depth == 32) && ((j % 8) == 0))
+				if (j && (f->sampleDepth == 32) && ((j % 8) == 0))
 					printf(": ");
 
-				printf("%02x ", *(buf + (i * stride) + j));
+				printf("%02x ", *(f->ptr + (i * stride) + j));
 			}
 			printf("\n");
 		}
 
 		if (g_enable_smpte337_detector) {
 			for (int i = 0; i < 8; i++) {
-				int offset = (i * 2) * (v1_depth / 8);
-				size_t l = smpte337_detector_write(det[i], buf + offset, v1_sfc, v1_depth, v1_channels, stride, 1);
+				int offset = (i * 2) * (f->sampleDepth / 8);
+				size_t l = smpte337_detector_write(det[i], f->ptr + offset,
+					f->frameCount, f->sampleDepth, f->channelCount, stride, 1);
 			}
 		}
 
 		/* Dump each L/R pair to a seperate file. */
-		unsigned char *p = buf;
-		for (int i = 0; i < v1_sfc; i++) {
+		unsigned char *p = f->ptr;
+		for (int i = 0; i < f->frameCount; i++) {
 			for (int j = 0; j < 8; j++) {
 				fwrite(p, 8, 1, ofh[j]);
 				p += 8;
 			}
 		}
 
-		free(buf);
+		klvanc_pcm_frame_free(session, f);
 	}
 	for (int i = 0; i < 8; i++) {
 		if (g_enable_smpte337_detector)
@@ -590,7 +578,7 @@ static int AnalyzeAudio(const char *fn)
 		fclose(ofh[i]);
 	}
 
-	fclose(fh);
+	klvanc_pcm_file_close(session);
 
 	return 0;
 }
@@ -1085,21 +1073,13 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 				interval);
 		}
 
-		if (audioOutputFile != -1) {
+		if (writeSession) {
 			audioFrame->GetBytes(&audioFrameBytes);
-			uint32_t v1_header = audio_v1_header;
-			uint32_t v1_footer = audio_v1_footer;
-			uint32_t v1_w = g_audioChannels;
-			uint32_t v1_x = audioFrame->GetSampleFrameCount();
-			uint32_t v1_y = g_audioSampleDepth;
-			uint32_t v1_z = sampleSize;
-			write(audioOutputFile, &v1_header, sizeof(uint32_t));
-			write(audioOutputFile, &v1_w, sizeof(uint32_t));
-			write(audioOutputFile, &v1_x, sizeof(uint32_t));
-			write(audioOutputFile, &v1_y, sizeof(uint32_t));
-			write(audioOutputFile, &v1_z, sizeof(uint32_t));
-			write(audioOutputFile, audioFrameBytes, sampleSize);
-			write(audioOutputFile, &v1_footer, sizeof(uint32_t));
+			struct fwr_header_audio_s *frame = 0;
+			if (klvanc_pcm_frame_create(writeSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
+				klvanc_pcm_frame_write(writeSession, frame);
+				klvanc_pcm_frame_free(writeSession, frame);
+			}
 		}
 
 		frameTime->frameCount++;
@@ -1610,8 +1590,7 @@ static int _main(int argc, char *argv[])
 		}
 	}
 	if (g_audioOutputFilename != NULL) {
-		audioOutputFile = open(g_audioOutputFilename, O_WRONLY | O_CREAT | O_TRUNC, 0664);
-		if (audioOutputFile < 0) {
+		if (klvanc_pcm_file_open(g_audioOutputFilename, 1, &writeSession) < 0) {
 			fprintf(stderr, "Could not open audio output file \"%s\"\n", g_audioOutputFilename);
 			goto bail;
 		}
@@ -1721,8 +1700,8 @@ bail:
 
 	if (videoOutputFile)
 		close(videoOutputFile);
-	if (audioOutputFile)
-		close(audioOutputFile);
+	if (writeSession)
+		klvanc_pcm_file_close(writeSession);
 	if (vancOutputFile)
 		close(vancOutputFile);
 

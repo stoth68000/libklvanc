@@ -21,6 +21,7 @@ libklvanc_la_SOURCES += core-private.h xorg-list.h
 libklvanc_la_SOURCES += klbitstream_readwriter.h
 libklvanc_la_SOURCES += klringbuffer.c
 libklvanc_la_SOURCES += smpte337_detector.c
+libklvanc_la_SOURCES += frame-writer.c
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
 	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
@@ -49,4 +50,5 @@ libklvanc_include_HEADERS += libklvanc/cache.h
 libklvanc_include_HEADERS += libklvanc/vanc-kl_u64le_counter.h
 libklvanc_include_HEADERS += libklvanc/klringbuffer.h
 libklvanc_include_HEADERS += libklvanc/smpte337_detector.h
+libklvanc_include_HEADERS += libklvanc/frame-writer.h
 

@@ -35,4 +35,5 @@ src/libklvanc_la-core-cache.lo
 src/libklvanc_la-core-packet-kl_u64le_counter.lo
 src/libklvanc_la-klringbuffer.lo
 src/libklvanc_la-smpte337_detector.lo
+src/libklvanc_la-frame-writer.lo
 doxygen/html
