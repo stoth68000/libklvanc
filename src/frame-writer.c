@@ -167,3 +167,34 @@ int klvanc_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audi
 	return 0;
 }
 
+/* -- */
+int klvanc_timing_frame_set(struct fwr_session_s *session,
+        uint32_t decklinkCaptureMode,
+        struct fwr_header_timing_s *frame)
+{
+	frame->sof = timing_v1_header;
+	frame->counter = session->counter++;
+	gettimeofday(&frame->ts1, NULL);
+	frame->decklinkCaptureMode = decklinkCaptureMode;
+	frame->eof = timing_v1_footer;
+	return 0;
+}
+
+int klvanc_timing_frame_write(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+{
+	if (fwrite(frame, 1, sizeof(*frame), session->fh) != sizeof(*frame)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+{
+	if (fread(frame, 1, sizeof(*frame), session->fh) != sizeof(*frame)) {
+		return -1;
+	}
+
+	return 0;
+}
+

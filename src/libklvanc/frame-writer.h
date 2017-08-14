@@ -42,6 +42,7 @@ extern "C" {
 struct fwr_header_audio_s
 {
 	uint32_t header;            /* See audio_v1_header */
+	struct timeval ts;
 	uint32_t channelCount;      /* 2-16 */
 	uint32_t frameCount;        /* Number of samples per channel, in this buffer. */
 	uint32_t sampleDepth;       /* 16 or 32 */
@@ -56,6 +57,8 @@ struct fwr_session_s
 {
 	FILE *fh;
 	int type; /* 1 = PCM_AUDIO. */
+
+	uint64_t counter;
 };
 
 int  klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session_s **session);
@@ -69,6 +72,56 @@ int  klvanc_pcm_frame_create(struct fwr_session_s *session,
 	struct fwr_header_audio_s **frame);
 
 int klvanc_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
+
+/* -- */
+
+#define timing_v1_header 0xC0DEADDE
+#define timing_v1_footer 0xC0DEADDF
+struct fwr_header_timing_s
+{
+	uint32_t       sof;
+	uint64_t       counter;
+	struct timeval ts1;
+	uint32_t       decklinkCaptureMode;
+	uint32_t       eof;
+} __attribute__((packed));
+
+int  klvanc_timing_frame_set(struct fwr_session_s *session,
+	uint32_t decklinkCaptureMode,
+	struct fwr_header_timing_s *frame);
+
+int klvanc_timing_frame_write(struct fwr_session_s *session, struct fwr_header_timing_s *frame);
+int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_timing_s *frame);
+
+
+#define video_v1_header 0xDFBEADDE
+#define video_v2_footer 0xDFFEADDE
+struct fwr_header_frame_s
+{
+	uint32_t sof;
+	uint32_t frameCount;
+	uint32_t width;
+	uint32_t height;
+	uint32_t strideBytes;
+	uint32_t bufferLengthBytes;
+	uint8_t  *ptr;              /* Video and VANC data */
+	uint32_t eof;
+
+} __attribute__((packed));
+#define fwr_header_video_size_pre  (sizeof(struct fwr_header_vanc_s) - sizeof(uint32_t) - sizeof(uint8_t *))
+#define fwr_header_video_size_post (sizeof(uint32_t))
+
+int  klvanc_video_file_open(const char *filename, int writeMode, struct fwr_session_s **session);
+int  klvanc_video_frame_read(struct fwr_session_s *session, struct fwr_header_audio_s **frame);
+void klvanc_video_frame_free(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
+void klvanc_video_file_close(struct fwr_session_s *session);
+
+int  klvanc_video_frame_create(struct fwr_session_s *session,
+	uint32_t frameCount, uint32_t sampleDepth, uint32_t channelCount,
+	const uint8_t *buffer,
+	struct fwr_header_audio_s **frame);
+
+int klvanc_video_frame_write(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
 
 #ifdef __cplusplus
 };

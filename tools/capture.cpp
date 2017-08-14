@@ -74,6 +74,7 @@ Decklink Hardware supported modes:
 [decklink @ 0x25da300] Mode: 13 HD 720p 60               68703630 [hp60]
 */
 
+static BMDDisplayMode selectedDisplayMode = bmdModeNTSC;
 static struct vanc_context_s *vanchdl;
 static pthread_mutex_t sleepMutex;
 static pthread_cond_t sleepCond;
@@ -494,16 +495,6 @@ exit(0);
 
 static int AnalyzeAudio(const char *fn)
 {
-	FILE *fh = fopen(fn, "rb");
-	if (!fh) {
-		fprintf(stderr, "Unable to open [%s]\n", fn);
-		return -1;
-	}
-
-	fseek(fh, 0, SEEK_END);
-	fprintf(stdout, "Analyzing Audio file [%s] length %lu bytes\n", fn, ftell(fh));
-	fseek(fh, 0, SEEK_SET);
-
 	struct fwr_session_s *session;
 	if (klvanc_pcm_file_open(fn, 0, &session) < 0) {
 		fprintf(stderr, "Error opening %s\n", fn);
@@ -531,6 +522,10 @@ static int AnalyzeAudio(const char *fn)
 	struct fwr_header_audio_s *f;
 
 	while (1) {
+		struct fwr_header_timing_s timing;
+		if (klvanc_timing_frame_read(session, &timing) < 0) {
+			break;
+		}
 		if (klvanc_pcm_frame_read(session, &f) < 0) {
 			break;
 		}
@@ -888,6 +883,12 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 	}
 	if (g_shutdown == 2)
 		return S_OK;
+
+	if (writeSession) {
+		struct fwr_header_timing_s timing;
+		klvanc_timing_frame_set(writeSession, (uint32_t)selectedDisplayMode, &timing);
+		klvanc_timing_frame_write(writeSession, &timing);
+	}
 
 	IDeckLinkVideoFrame *rightEyeFrame = NULL;
 	IDeckLinkVideoFrame3DExtensions *threeDExtensions = NULL;
@@ -1392,7 +1393,6 @@ static int _main(int argc, char *argv[])
 	DeckLinkCaptureDelegate *delegate;
 	IDeckLinkDisplayMode *displayMode;
 	BMDVideoInputFlags inputFlags = bmdVideoInputEnableFormatDetection;
-	BMDDisplayMode selectedDisplayMode = bmdModeNTSC;
 	BMDPixelFormat pixelFormat = bmdFormat8BitYUV;
 	int displayModeCount = 0;
 	int exitStatus = 1;
