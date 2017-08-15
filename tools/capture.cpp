@@ -499,7 +499,7 @@ exit(0);
 static int AnalyzeMuxed(const char *fn)
 {
 	struct fwr_session_s *session;
-	if (klvanc_pcm_file_open(fn, 0, &session) < 0) {
+	if (fwr_session_file_open(fn, 0, &session) < 0) {
 		fprintf(stderr, "Error opening %s\n", fn);
 		return -1;
 	}
@@ -513,13 +513,13 @@ static int AnalyzeMuxed(const char *fn)
 	while (1) {
 		fa = 0, fv = 0;
 
-		if (klvanc_pcm_frame_peek(session, &header) < 0) {
+		if (fwr_session_frame_peek(session, &header) < 0) {
 			break;
 		}
 
 		if (header == timing_v1_header) {
 			ftlast = ft;
-			if (klvanc_timing_frame_read(session, &ft) < 0) {
+			if (fwr_timing_frame_read(session, &ft) < 0) {
 				break;
 			}
 			struct timeval diff;
@@ -534,7 +534,7 @@ static int AnalyzeMuxed(const char *fn)
 				diff.tv_usec);
 		} else
 		if (header == video_v1_header) {
-			if (klvanc_video_frame_read(session, &fv) < 0) {
+			if (fwr_video_frame_read(session, &fv) < 0) {
 				fprintf(stderr, "No more video?\n");
 				break;
 			}
@@ -542,7 +542,7 @@ static int AnalyzeMuxed(const char *fn)
 				fv->width, fv->height, fv->strideBytes, fv->bufferLengthBytes);
 		} else
 		if (header == VANC_SOL_INDICATOR) {
-			if (klvanc_vanc_frame_read(session, &fd) < 0) {
+			if (fwr_vanc_frame_read(session, &fd) < 0) {
 				fprintf(stderr, "No more vanc?\n");
 				break;
 			}
@@ -552,7 +552,7 @@ static int AnalyzeMuxed(const char *fn)
 			printf("\n");
 		} else
 		if (header == audio_v1_header) {
-			if (klvanc_pcm_frame_read(session, &fa) < 0) {
+			if (fwr_pcm_frame_read(session, &fa) < 0) {
 				break;
 			}
 			printf("\taudio: channels: %d  depth: %d  frameCount: %d  bufferLengthBytes: %d\n",
@@ -563,22 +563,22 @@ static int AnalyzeMuxed(const char *fn)
 		}
 
 		if (fa) {
-			klvanc_pcm_frame_free(session, fa);
+			fwr_pcm_frame_free(session, fa);
 			fa = 0;
 		}
 		if (fv) {
-			klvanc_video_frame_free(session, fv);
+			fwr_video_frame_free(session, fv);
 			fv = 0;
 		}
 	}
 
-	klvanc_pcm_file_close(session);
+	fwr_session_file_close(session);
 }
 
 static int AnalyzeAudio(const char *fn)
 {
 	struct fwr_session_s *session;
-	if (klvanc_pcm_file_open(fn, 0, &session) < 0) {
+	if (fwr_session_file_open(fn, 0, &session) < 0) {
 		fprintf(stderr, "Error opening %s\n", fn);
 		return -1;
 	}
@@ -605,10 +605,10 @@ static int AnalyzeAudio(const char *fn)
 
 	while (1) {
 		struct fwr_header_timing_s timing;
-		if (klvanc_timing_frame_read(session, &timing) < 0) {
+		if (fwr_timing_frame_read(session, &timing) < 0) {
 			break;
 		}
-		if (klvanc_pcm_frame_read(session, &f) < 0) {
+		if (fwr_pcm_frame_read(session, &f) < 0) {
 			break;
 		}
 
@@ -647,7 +647,7 @@ static int AnalyzeAudio(const char *fn)
 			}
 		}
 
-		klvanc_pcm_frame_free(session, f);
+		fwr_pcm_frame_free(session, f);
 	}
 	for (int i = 0; i < 8; i++) {
 		if (g_enable_smpte337_detector)
@@ -655,7 +655,7 @@ static int AnalyzeAudio(const char *fn)
 		fclose(ofh[i]);
 	}
 
-	klvanc_pcm_file_close(session);
+	fwr_session_file_close(session);
 
 	return 0;
 }
@@ -810,7 +810,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 
 		if (muxedSession && buf) {
 			struct fwr_header_vanc_s *frame = 0;
-			if (klvanc_vanc_frame_create(muxedSession, uiLine, uiWidth, uiHeight, uiStride, (uint8_t *)buf, &frame) == 0) {
+			if (fwr_vanc_frame_create(muxedSession, uiLine, uiWidth, uiHeight, uiStride, (uint8_t *)buf, &frame) == 0) {
 				fwr_writer_enqueue(muxedSession, frame, FWR_FRAME_VANC);
 			}
 		}
@@ -975,13 +975,13 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 
 	if (writeSession) {
 		struct fwr_header_timing_s *timing;
-		klvanc_timing_frame_create(writeSession, (uint32_t)selectedDisplayMode, &timing);
-		klvanc_timing_frame_write(writeSession, timing);
-		klvanc_timing_frame_free(writeSession, timing);
+		fwr_timing_frame_create(writeSession, (uint32_t)selectedDisplayMode, &timing);
+		fwr_timing_frame_write(writeSession, timing);
+		fwr_timing_frame_free(writeSession, timing);
 	}
 	if (muxedSession) {
 		struct fwr_header_timing_s *timing;
-		klvanc_timing_frame_create(muxedSession, (uint32_t)selectedDisplayMode, &timing);
+		fwr_timing_frame_create(muxedSession, (uint32_t)selectedDisplayMode, &timing);
 		fwr_writer_enqueue(muxedSession, timing, FWR_FRAME_TIMING);
 	}
 
@@ -1000,7 +1000,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		struct fwr_header_video_s *frame;
 		videoFrame->GetBytes(&frameBytes);
 
-		if (klvanc_video_frame_create(muxedSession,
+		if (fwr_video_frame_create(muxedSession,
 			videoFrame->GetWidth(), videoFrame->GetHeight(), videoFrame->GetRowBytes(),
 			(uint8_t *)frameBytes, &frame) == 0)
 		{
@@ -1186,16 +1186,16 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		if (writeSession) {
 			audioFrame->GetBytes(&audioFrameBytes);
 			struct fwr_header_audio_s *frame = 0;
-			if (klvanc_pcm_frame_create(writeSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
-				klvanc_pcm_frame_write(writeSession, frame);
-				klvanc_pcm_frame_free(writeSession, frame);
+			if (fwr_pcm_frame_create(writeSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
+				fwr_pcm_frame_write(writeSession, frame);
+				fwr_pcm_frame_free(writeSession, frame);
 			}
 		}
 
 		if (muxedSession) {
 			audioFrame->GetBytes(&audioFrameBytes);
 			struct fwr_header_audio_s *frame = 0;
-			if (klvanc_pcm_frame_create(muxedSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
+			if (fwr_pcm_frame_create(muxedSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
 				fwr_writer_enqueue(muxedSession, frame, FWR_FRAME_AUDIO);
 			}
 		}
@@ -1717,14 +1717,14 @@ static int _main(int argc, char *argv[])
 		}
 	}
 	if (g_muxedOutputFilename != NULL) {
-		if (klvanc_pcm_file_open(g_muxedOutputFilename, 1, &muxedSession) < 0) {
+		if (fwr_session_file_open(g_muxedOutputFilename, 1, &muxedSession) < 0) {
 			fprintf(stderr, "Could not open muxed output file \"%s\"\n", g_muxedOutputFilename);
 			goto bail;
 		}
 	}
 
 	if (g_audioOutputFilename != NULL) {
-		if (klvanc_pcm_file_open(g_audioOutputFilename, 1, &writeSession) < 0) {
+		if (fwr_session_file_open(g_audioOutputFilename, 1, &writeSession) < 0) {
 			fprintf(stderr, "Could not open audio output file \"%s\"\n", g_audioOutputFilename);
 			goto bail;
 		}
@@ -1835,9 +1835,9 @@ bail:
 	if (videoOutputFile)
 		close(videoOutputFile);
 	if (writeSession)
-		klvanc_pcm_file_close(writeSession);
+		fwr_session_file_close(writeSession);
 	if (muxedSession)
-		klvanc_pcm_file_close(muxedSession);
+		fwr_session_file_close(muxedSession);
 	if (vancOutputFile)
 		close(vancOutputFile);
 

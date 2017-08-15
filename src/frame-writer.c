@@ -56,20 +56,20 @@ static void *fwr_writer_threadfunc(void *p)
 
 			switch (type) {
 			case FWR_FRAME_TIMING: /* timing */
-				klvanc_timing_frame_write(s, (struct fwr_header_timing_s *)frame);
-				klvanc_timing_frame_free(s, (struct fwr_header_timing_s *)frame);
+				fwr_timing_frame_write(s, (struct fwr_header_timing_s *)frame);
+				fwr_timing_frame_free(s, (struct fwr_header_timing_s *)frame);
 				break;
 			case FWR_FRAME_VIDEO:
-				klvanc_video_frame_write(s, (struct fwr_header_video_s *)frame);
-				klvanc_video_frame_free(s, (struct fwr_header_video_s *)frame);
+				fwr_video_frame_write(s, (struct fwr_header_video_s *)frame);
+				fwr_video_frame_free(s, (struct fwr_header_video_s *)frame);
 				break;
 			case FWR_FRAME_AUDIO:
-				klvanc_pcm_frame_write(s, (struct fwr_header_audio_s *)frame);
-				klvanc_pcm_frame_free(s, (struct fwr_header_audio_s *)frame);
+				fwr_pcm_frame_write(s, (struct fwr_header_audio_s *)frame);
+				fwr_pcm_frame_free(s, (struct fwr_header_audio_s *)frame);
 				break;
 			case FWR_FRAME_VANC:
-				klvanc_vanc_frame_write(s, (struct fwr_header_vanc_s *)frame);
-				klvanc_vanc_frame_free(s, (struct fwr_header_vanc_s *)frame);
+				fwr_vanc_frame_write(s, (struct fwr_header_vanc_s *)frame);
+				fwr_vanc_frame_free(s, (struct fwr_header_vanc_s *)frame);
 				break;
 			}
 
@@ -80,7 +80,7 @@ static void *fwr_writer_threadfunc(void *p)
 	pthread_exit(0);
 }
 
-int klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session_s **session)
+int fwr_session_file_open(const char *filename, int writeMode, struct fwr_session_s **session)
 {
 	struct fwr_session_s *s = calloc(1, sizeof(*s));
 	if (!s)
@@ -110,7 +110,7 @@ int klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session
 	return 0;
 }
 
-int klvanc_pcm_frame_read(struct fwr_session_s *session, struct fwr_header_audio_s **frame)
+int fwr_pcm_frame_read(struct fwr_session_s *session, struct fwr_header_audio_s **frame)
 {
 	struct fwr_header_audio_s *f = malloc(sizeof(*f));
 	if (!f)
@@ -151,13 +151,13 @@ int klvanc_pcm_frame_read(struct fwr_session_s *session, struct fwr_header_audio
 	return 0;
 }
 
-void klvanc_pcm_frame_free(struct fwr_session_s *session, struct fwr_header_audio_s *frame)
+void fwr_pcm_frame_free(struct fwr_session_s *session, struct fwr_header_audio_s *frame)
 {
 	free(frame->ptr);
 	free(frame);
 }
 
-void klvanc_pcm_file_close(struct fwr_session_s *session)
+void fwr_session_file_close(struct fwr_session_s *session)
 {
 	if (session->writeMode && session->thread_running) {
 		session->thread_terminate = 1;
@@ -172,7 +172,7 @@ void klvanc_pcm_file_close(struct fwr_session_s *session)
 	free(session);
 }
 
-int  klvanc_pcm_frame_create(struct fwr_session_s *session,
+int  fwr_pcm_frame_create(struct fwr_session_s *session,
         uint32_t frameCount, uint32_t sampleDepth, uint32_t channelCount,
         const uint8_t *buffer,
         struct fwr_header_audio_s **frame)
@@ -202,7 +202,7 @@ int  klvanc_pcm_frame_create(struct fwr_session_s *session,
 	return 0;
 }
 
-int klvanc_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audio_s *frame)
+int fwr_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audio_s *frame)
 {
 	if (fwrite(frame, 1, fwr_header_audio_size_pre, session->fh) != fwr_header_audio_size_pre) {
 		return -1;
@@ -219,7 +219,7 @@ int klvanc_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audi
 }
 
 /* -- */
-int klvanc_timing_frame_create(struct fwr_session_s *session,
+int fwr_timing_frame_create(struct fwr_session_s *session,
         uint32_t decklinkCaptureMode,
         struct fwr_header_timing_s **frame)
 {
@@ -237,7 +237,7 @@ int klvanc_timing_frame_create(struct fwr_session_s *session,
 	return 0;
 }
 
-int klvanc_timing_frame_write(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+int fwr_timing_frame_write(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
 {
 	if (fwrite(frame, 1, sizeof(*frame), session->fh) != sizeof(*frame)) {
 		return -1;
@@ -246,7 +246,7 @@ int klvanc_timing_frame_write(struct fwr_session_s *session, struct fwr_header_t
 	return 0;
 }
 
-int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+int fwr_timing_frame_read(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
 {
 	if (fread(frame, 1, sizeof(*frame), session->fh) != sizeof(*frame)) {
 		return -1;
@@ -261,13 +261,13 @@ int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_ti
 	return 0;
 }
 
-void klvanc_timing_frame_free(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+void fwr_timing_frame_free(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
 {
 	free(frame);
 }
 
 /* -- */
-int klvanc_video_frame_read(struct fwr_session_s *session, struct fwr_header_video_s **frame)
+int fwr_video_frame_read(struct fwr_session_s *session, struct fwr_header_video_s **frame)
 {
 	struct fwr_header_video_s *f = malloc(sizeof(*f));
 	if (!f)
@@ -323,13 +323,13 @@ int klvanc_video_frame_read(struct fwr_session_s *session, struct fwr_header_vid
 	return 0;
 }
 
-void klvanc_video_frame_free(struct fwr_session_s *session, struct fwr_header_video_s *frame)
+void fwr_video_frame_free(struct fwr_session_s *session, struct fwr_header_video_s *frame)
 {
 	free(frame->ptr);
 	free(frame);
 }
 
-void klvanc_video_file_close(struct fwr_session_s *session)
+void fwr_video_file_close(struct fwr_session_s *session)
 {
 	if (session->fh) {
 		fclose(session->fh);
@@ -338,7 +338,7 @@ void klvanc_video_file_close(struct fwr_session_s *session)
 	free(session);
 }
 
-int  klvanc_video_frame_create(struct fwr_session_s *session,
+int  fwr_video_frame_create(struct fwr_session_s *session,
         uint32_t width, uint32_t height, uint32_t strideBytes,
         const uint8_t *buffer,
         struct fwr_header_video_s **frame)
@@ -368,7 +368,7 @@ int  klvanc_video_frame_create(struct fwr_session_s *session,
 	return 0;
 }
 
-int klvanc_video_frame_write(struct fwr_session_s *session, struct fwr_header_video_s *frame)
+int fwr_video_frame_write(struct fwr_session_s *session, struct fwr_header_video_s *frame)
 {
 	if (fwrite(frame, 1, fwr_header_video_size_pre, session->fh) != fwr_header_video_size_pre) {
 		return -1;
@@ -386,7 +386,7 @@ int klvanc_video_frame_write(struct fwr_session_s *session, struct fwr_header_vi
 }
 
 /* -- */
-int klvanc_vanc_frame_read(struct fwr_session_s *session, struct fwr_header_vanc_s **frame)
+int fwr_vanc_frame_read(struct fwr_session_s *session, struct fwr_header_vanc_s **frame)
 {
 	struct fwr_header_vanc_s *f = malloc(sizeof(*f));
 	if (!f)
@@ -445,13 +445,13 @@ int klvanc_vanc_frame_read(struct fwr_session_s *session, struct fwr_header_vanc
 	return 0;
 }
 
-void klvanc_vanc_frame_free(struct fwr_session_s *session, struct fwr_header_vanc_s *frame)
+void fwr_vanc_frame_free(struct fwr_session_s *session, struct fwr_header_vanc_s *frame)
 {
 	free(frame->ptr);
 	free(frame);
 }
 
-int  klvanc_vanc_frame_create(struct fwr_session_s *session,
+int  fwr_vanc_frame_create(struct fwr_session_s *session,
 	uint32_t line,
         uint32_t width, uint32_t height, uint32_t strideBytes,
         const uint8_t *buffer,
@@ -483,7 +483,7 @@ int  klvanc_vanc_frame_create(struct fwr_session_s *session,
 	return 0;
 }
 
-int klvanc_vanc_frame_write(struct fwr_session_s *session, struct fwr_header_vanc_s *frame)
+int fwr_vanc_frame_write(struct fwr_session_s *session, struct fwr_header_vanc_s *frame)
 {
 	if (fwrite(frame, 1, fwr_header_vanc_size_pre, session->fh) != fwr_header_vanc_size_pre) {
 		return -1;
@@ -500,7 +500,7 @@ int klvanc_vanc_frame_write(struct fwr_session_s *session, struct fwr_header_van
 	return 0;
 }
 
-int klvanc_pcm_frame_peek(struct fwr_session_s *session, uint32_t *header)
+int fwr_session_frame_peek(struct fwr_session_s *session, uint32_t *header)
 {
 	size_t r = fread(header, 1, sizeof(*header), session->fh);
 	fseek(session->fh, -r, SEEK_CUR);
