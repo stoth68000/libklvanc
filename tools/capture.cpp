@@ -149,7 +149,8 @@ static void dumpAudio(uint16_t *ptr, int fc, int num_channels)
 #endif
 
 #if HAVE_CURSES_H
-pthread_t threadId;
+static pthread_t g_monitor_draw_threadId;
+static pthread_t g_monitor_input_threadId;
 
 static void cursor_expand_all()
 {
@@ -1793,8 +1794,8 @@ static int _main(int argc, char *argv[])
 #if HAVE_CURSES_H
 	if (g_monitor_mode) {
 		initscr();
-		pthread_create(&threadId, 0, thread_func_draw, NULL);
-		pthread_create(&threadId, 0, thread_func_input, NULL);
+		pthread_create(&g_monitor_draw_threadId, 0, thread_func_draw, NULL);
+		pthread_create(&g_monitor_input_threadId, 0, thread_func_input, NULL);
 	}
 #endif
 
