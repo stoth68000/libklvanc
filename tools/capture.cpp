@@ -522,11 +522,16 @@ static int AnalyzeMuxed(const char *fn)
 			if (klvanc_timing_frame_read(session, &ft) < 0) {
 				break;
 			}
-			printf("timing: counter %" PRIu64 "  mode:%s  ts:%d.%06d\n",
+			struct timeval diff;
+			fwr_timeval_subtract(&diff, &ft.ts1, &ftlast.ts1);
+
+			printf("timing: counter %" PRIu64 "  mode:%s  ts:%d.%06d  timestamp_interval:%d.%06d\n",
 				ft.counter,
 				display_mode_to_string(ft.decklinkCaptureMode),
 				ft.ts1.tv_sec,
-				ft.ts1.tv_usec);
+				ft.ts1.tv_usec,
+				diff.tv_sec,
+				diff.tv_usec);
 		} else
 		if (header == video_v1_header) {
 			if (klvanc_video_frame_read(session, &fv) < 0) {
