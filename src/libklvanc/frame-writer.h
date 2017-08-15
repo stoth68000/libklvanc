@@ -26,6 +26,13 @@
  * @brief	Helper functions to read/write raw video/pcm/vanc from/to disk.
  */
 
+/* Design
+ * Make, serialize and de-serialize four kinds of c structs to from disk.
+ * Deal with copying frames in into structs, deal with storing timing data,
+ * flush all of these frames to disk in a background thread, so that
+ * we don't disturb the decklink FrameArrival timing callback.
+ */
+
 #ifndef _FRAME_WRITER_H
 #define _FRAME_WRITER_H
 
