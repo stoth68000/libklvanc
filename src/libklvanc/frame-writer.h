@@ -61,6 +61,8 @@ struct fwr_session_s
 	uint64_t counter;
 };
 
+int klvanc_pcm_frame_peek(struct fwr_session_s *session, uint32_t *header);
+
 int  klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session_s **session);
 int  klvanc_pcm_frame_read(struct fwr_session_s *session, struct fwr_header_audio_s **frame);
 void klvanc_pcm_frame_free(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
@@ -95,11 +97,10 @@ int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_ti
 
 
 #define video_v1_header 0xDFBEADDE
-#define video_v2_footer 0xDFFEADDE
-struct fwr_header_frame_s
+#define video_v1_footer 0xDFFEADDE
+struct fwr_header_video_s
 {
 	uint32_t sof;
-	uint32_t frameCount;
 	uint32_t width;
 	uint32_t height;
 	uint32_t strideBytes;
@@ -108,20 +109,48 @@ struct fwr_header_frame_s
 	uint32_t eof;
 
 } __attribute__((packed));
-#define fwr_header_video_size_pre  (sizeof(struct fwr_header_vanc_s) - sizeof(uint32_t) - sizeof(uint8_t *))
+#define fwr_header_video_size_pre  (sizeof(struct fwr_header_video_s) - sizeof(uint32_t) - sizeof(uint8_t *))
 #define fwr_header_video_size_post (sizeof(uint32_t))
 
 int  klvanc_video_file_open(const char *filename, int writeMode, struct fwr_session_s **session);
-int  klvanc_video_frame_read(struct fwr_session_s *session, struct fwr_header_audio_s **frame);
-void klvanc_video_frame_free(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
+int  klvanc_video_frame_read(struct fwr_session_s *session, struct fwr_header_video_s **frame);
+void klvanc_video_frame_free(struct fwr_session_s *session, struct fwr_header_video_s *frame);
 void klvanc_video_file_close(struct fwr_session_s *session);
 
 int  klvanc_video_frame_create(struct fwr_session_s *session,
-	uint32_t frameCount, uint32_t sampleDepth, uint32_t channelCount,
+	uint32_t width, uint32_t height, uint32_t stride,
 	const uint8_t *buffer,
-	struct fwr_header_audio_s **frame);
+	struct fwr_header_video_s **frame);
 
-int klvanc_video_frame_write(struct fwr_session_s *session, struct fwr_header_audio_s *frame);
+int klvanc_video_frame_write(struct fwr_session_s *session, struct fwr_header_video_s *frame);
+
+/* -- */
+#define VANC_SOL_INDICATOR 0xEFBEADDE
+#define VANC_EOL_INDICATOR 0xEDFEADDE
+struct fwr_header_vanc_s
+{
+	uint32_t sol;
+	uint32_t line;
+	uint32_t width;
+	uint32_t height;
+	uint32_t strideBytes;
+	uint32_t bufferLengthBytes;
+	uint8_t  *ptr;              /* Video and VANC data */
+	uint32_t eol;
+} __attribute__((packed));
+#define fwr_header_vanc_size_pre  (sizeof(struct fwr_header_vanc_s) - sizeof(uint32_t) - sizeof(uint8_t *))
+#define fwr_header_vanc_size_post (sizeof(uint32_t))
+
+int  klvanc_vanc_frame_read(struct fwr_session_s *session, struct fwr_header_vanc_s **frame);
+void klvanc_vanc_frame_free(struct fwr_session_s *session, struct fwr_header_vanc_s *frame);
+
+int  klvanc_vanc_frame_create(struct fwr_session_s *session,
+	uint32_t line,
+	uint32_t width, uint32_t height, uint32_t stride,
+	const uint8_t *buffer,
+	struct fwr_header_vanc_s **frame);
+
+int klvanc_vanc_frame_write(struct fwr_session_s *session, struct fwr_header_vanc_s *frame);
 
 #ifdef __cplusplus
 };
