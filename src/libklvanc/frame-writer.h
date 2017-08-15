@@ -31,6 +31,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <pthread.h>
+#include "xorg-list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +61,32 @@ struct fwr_session_s
 	int type; /* 1 = PCM_AUDIO. */
 
 	uint64_t counter;
+
+	int writeMode;
+
+	pthread_mutex_t listMutex;
+	struct xorg_list list;
+	pthread_cond_t cond;
+	pthread_condattr_t condAttr;
+
+	pthread_t writerThreadId;
+	int thread_running;
+	int thread_terminate;
+	int thread_complete;
+};
+
+#define FWR_FRAME_TIMING 1
+#define FWR_FRAME_VIDEO  2
+#define FWR_FRAME_AUDIO  3
+#define FWR_FRAME_VANC   4
+
+struct fwr_writer_node_s
+{
+	struct xorg_list list;
+
+	/* FWR_FRAME_... */
+	int type;
+	void *ptr;
 };
 
 int klvanc_pcm_frame_peek(struct fwr_session_s *session, uint32_t *header);
@@ -88,13 +116,13 @@ struct fwr_header_timing_s
 	uint32_t       eof;
 } __attribute__((packed));
 
-int  klvanc_timing_frame_set(struct fwr_session_s *session,
+int  klvanc_timing_frame_create(struct fwr_session_s *session,
 	uint32_t decklinkCaptureMode,
-	struct fwr_header_timing_s *frame);
+	struct fwr_header_timing_s **frame);
 
 int klvanc_timing_frame_write(struct fwr_session_s *session, struct fwr_header_timing_s *frame);
 int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_timing_s *frame);
-
+void klvanc_timing_frame_free(struct fwr_session_s *session, struct fwr_header_timing_s *frame);
 
 #define video_v1_header 0xDFBEADDE
 #define video_v1_footer 0xDFFEADDE
@@ -175,6 +203,9 @@ __inline__ int fwr_timeval_subtract(struct timeval *result, struct timeval *x, s
      /* Return 1 if result is negative. */
      return x->tv_sec < y->tv_sec;
 }
+
+int fwr_writer_enqueue(struct fwr_session_s *session, void *ptr, int type);
+int fwr_writer_dequeue(struct fwr_session_s *session, void **ptr, int *type);
 
 #ifdef __cplusplus
 };

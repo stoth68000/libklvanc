@@ -31,25 +31,54 @@
 
 #define LOCAL_DEBUG 0
 
-#if 0
-struct fwr_header_audio_s
-{
-        uint32_t header;            /* See audio_v1_header */
-        uint32_t channelCount;      /* 2-16 */
-        uint32_t frameCount;        /* Number of samples per channel, in this buffer. */
-        uint32_t sampleDepth;       /* 16 or 32 */
-        uint32_t bufferLengthBytes; /* Size of the complete audio buffer, for all channels and framcounts. */
-        /* .... data .... */        /* Audio data */
-	uint8_t *ptr;
-        uint32_t footer;            /* See audio_v1_footer */
-} __attribute__((packed));
+extern int usleep(uint32_t usecs);
 
-struct fw_session_s
+static void *fwr_writer_threadfunc(void *p)
 {
-        FILE *fh;
-        int type; /* 1 = PCM_AUDIO. */
-};
-#endif
+	struct fwr_session_s *s = (struct fwr_session_s *)p;
+
+	s->thread_terminate = 0;
+	s->thread_running = 1;
+	while (!s->thread_terminate) {
+
+		usleep(100 * 1000);
+
+		while (1 && !s->thread_terminate) {
+			/* Wait on a timeout condition. */
+			/* Write frames to disk. */
+			/* Release frames. */
+			void *frame;
+			int type;
+			if (fwr_writer_dequeue(s, &frame, &type) < 0)
+				break;
+
+			/* Do something with the data then clean up. */
+
+			switch (type) {
+			case FWR_FRAME_TIMING: /* timing */
+				klvanc_timing_frame_write(s, (struct fwr_header_timing_s *)frame);
+				klvanc_timing_frame_free(s, (struct fwr_header_timing_s *)frame);
+				break;
+			case FWR_FRAME_VIDEO:
+				klvanc_video_frame_write(s, (struct fwr_header_video_s *)frame);
+				klvanc_video_frame_free(s, (struct fwr_header_video_s *)frame);
+				break;
+			case FWR_FRAME_AUDIO:
+				klvanc_pcm_frame_write(s, (struct fwr_header_audio_s *)frame);
+				klvanc_pcm_frame_free(s, (struct fwr_header_audio_s *)frame);
+				break;
+			case FWR_FRAME_VANC:
+				klvanc_vanc_frame_write(s, (struct fwr_header_vanc_s *)frame);
+				klvanc_vanc_frame_free(s, (struct fwr_header_vanc_s *)frame);
+				break;
+			}
+
+		}
+	}
+	s->thread_complete = 1;
+	s->thread_running = 0;
+	pthread_exit(0);
+}
 
 int klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session_s **session)
 {
@@ -65,6 +94,16 @@ int klvanc_pcm_file_open(const char *filename, int writeMode, struct fwr_session
 	if (!s->fh) {
 		free(s);
 		return -1;
+	}
+
+	s->writeMode = writeMode;
+	if (writeMode) {
+		xorg_list_init(&s->list);
+		pthread_mutex_init(&s->listMutex, NULL);
+		pthread_condattr_init(&s->condAttr);
+		pthread_cond_init(&s->cond, &s->condAttr);
+
+		pthread_create(&s->writerThreadId, 0, fwr_writer_threadfunc, s);
 	}
 
 	*session = s;
@@ -120,6 +159,12 @@ void klvanc_pcm_frame_free(struct fwr_session_s *session, struct fwr_header_audi
 
 void klvanc_pcm_file_close(struct fwr_session_s *session)
 {
+	if (session->writeMode && session->thread_running) {
+		session->thread_terminate = 1;
+		while (!session->thread_complete)
+			usleep(50 * 1000);
+	}
+
 	if (session->fh) {
 		fclose(session->fh);
 		session->fh = NULL;
@@ -174,15 +219,21 @@ int klvanc_pcm_frame_write(struct fwr_session_s *session, struct fwr_header_audi
 }
 
 /* -- */
-int klvanc_timing_frame_set(struct fwr_session_s *session,
+int klvanc_timing_frame_create(struct fwr_session_s *session,
         uint32_t decklinkCaptureMode,
-        struct fwr_header_timing_s *frame)
+        struct fwr_header_timing_s **frame)
 {
-	frame->sof = timing_v1_header;
-	frame->counter = session->counter++;
-	gettimeofday(&frame->ts1, NULL);
-	frame->decklinkCaptureMode = decklinkCaptureMode;
-	frame->eof = timing_v1_footer;
+	struct fwr_header_timing_s *f = malloc(sizeof(*f));
+	if (!f)
+		return -1;
+
+	f->sof = timing_v1_header;
+	f->counter = session->counter++;
+	gettimeofday(&f->ts1, NULL);
+	f->decklinkCaptureMode = decklinkCaptureMode;
+	f->eof = timing_v1_footer;
+
+	*frame = f;
 	return 0;
 }
 
@@ -208,6 +259,11 @@ int klvanc_timing_frame_read(struct fwr_session_s *session, struct fwr_header_ti
 		return -1;
 
 	return 0;
+}
+
+void klvanc_timing_frame_free(struct fwr_session_s *session, struct fwr_header_timing_s *frame)
+{
+	free(frame);
 }
 
 /* -- */
@@ -413,7 +469,7 @@ int  klvanc_vanc_frame_create(struct fwr_session_s *session,
 	f->width = width;
 	f->height = height;
 	f->strideBytes = strideBytes;
-	f->bufferLengthBytes = height * strideBytes;
+	f->bufferLengthBytes = strideBytes;
 	f->ptr = malloc(f->bufferLengthBytes);
 	if (!f->ptr) {
 		free(f);
@@ -452,5 +508,43 @@ int klvanc_pcm_frame_peek(struct fwr_session_s *session, uint32_t *header)
 		return -1;
 
 	return 0;
+}
+
+int fwr_writer_enqueue(struct fwr_session_s *session, void *ptr, int type)
+{
+	struct fwr_writer_node_s *n = malloc(sizeof(*n));
+	if (!n)
+		return -1;
+
+	n->ptr = ptr;
+	n->type = type;
+
+	pthread_mutex_lock(&session->listMutex);
+	xorg_list_append(&n->list, &session->list);
+	pthread_mutex_unlock(&session->listMutex);
+
+	pthread_cond_broadcast(&session->cond);
+	
+	return 0;
+}
+
+int fwr_writer_dequeue(struct fwr_session_s *session, void **ptr, int *type)
+{
+	int ret = -1;
+
+	struct fwr_writer_node_s *n = NULL;
+	pthread_mutex_lock(&session->listMutex);
+	if (!xorg_list_is_empty(&session->list)) {
+		n = xorg_list_first_entry(&session->list, struct fwr_writer_node_s, list);
+
+		*ptr = n->ptr;
+		*type = n->type;
+		xorg_list_del(&n->list);
+		ret = 0;
+
+	}
+	pthread_mutex_unlock(&session->listMutex);
+
+	return ret;
 }
 

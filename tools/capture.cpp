@@ -808,11 +808,10 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 		 */
 		convert_colorspace_and_parse_vanc(buf, uiWidth, uiLine);
 
-		if (muxedSession) {
+		if (muxedSession && buf) {
 			struct fwr_header_vanc_s *frame = 0;
 			if (klvanc_vanc_frame_create(muxedSession, uiLine, uiWidth, uiHeight, uiStride, (uint8_t *)buf, &frame) == 0) {
-				klvanc_vanc_frame_write(muxedSession, frame);
-				klvanc_vanc_frame_free(muxedSession, frame);
+				fwr_writer_enqueue(muxedSession, frame, FWR_FRAME_VANC);
 			}
 		}
 
@@ -975,14 +974,15 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 		return S_OK;
 
 	if (writeSession) {
-		struct fwr_header_timing_s timing;
-		klvanc_timing_frame_set(writeSession, (uint32_t)selectedDisplayMode, &timing);
-		klvanc_timing_frame_write(writeSession, &timing);
+		struct fwr_header_timing_s *timing;
+		klvanc_timing_frame_create(writeSession, (uint32_t)selectedDisplayMode, &timing);
+		klvanc_timing_frame_write(writeSession, timing);
+		klvanc_timing_frame_free(writeSession, timing);
 	}
 	if (muxedSession) {
-		struct fwr_header_timing_s timing;
-		klvanc_timing_frame_set(muxedSession, (uint32_t)selectedDisplayMode, &timing);
-		klvanc_timing_frame_write(muxedSession, &timing);
+		struct fwr_header_timing_s *timing;
+		klvanc_timing_frame_create(muxedSession, (uint32_t)selectedDisplayMode, &timing);
+		fwr_writer_enqueue(muxedSession, timing, FWR_FRAME_TIMING);
 	}
 
 	IDeckLinkVideoFrame *rightEyeFrame = NULL;
@@ -1004,8 +1004,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			videoFrame->GetWidth(), videoFrame->GetHeight(), videoFrame->GetRowBytes(),
 			(uint8_t *)frameBytes, &frame) == 0)
 		{
-			klvanc_video_frame_write(muxedSession, frame);
-			klvanc_video_frame_free(muxedSession, frame);
+			fwr_writer_enqueue(muxedSession, frame, FWR_FRAME_VIDEO);
 		}
 
 	}
@@ -1197,8 +1196,7 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFrameArrived(IDeckLinkVideoInputFrame
 			audioFrame->GetBytes(&audioFrameBytes);
 			struct fwr_header_audio_s *frame = 0;
 			if (klvanc_pcm_frame_create(muxedSession, audioFrame->GetSampleFrameCount(), g_audioSampleDepth, g_audioChannels, (const uint8_t *)audioFrameBytes, &frame) == 0) {
-				klvanc_pcm_frame_write(muxedSession, frame);
-				klvanc_pcm_frame_free(muxedSession, frame);
+				fwr_writer_enqueue(muxedSession, frame, FWR_FRAME_AUDIO);
 			}
 		}
 
