@@ -80,7 +80,6 @@ static pthread_mutex_t sleepMutex;
 static pthread_cond_t sleepCond;
 static int videoOutputFile = -1;
 
-
 static struct fwr_session_s *writeSession = NULL;
 
 static int vancOutputFile = -1;
@@ -151,7 +150,6 @@ static void dumpAudio(uint16_t *ptr, int fc, int num_channels)
 
 #if HAVE_CURSES_H
 pthread_t threadId;
-//static struct vanc_cache_s *selected = 0;
 
 static void cursor_expand_all()
 {
