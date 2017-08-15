@@ -683,8 +683,6 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 	}
 }
 
-#define VANC_SOL_INDICATOR 0xEFBEADDE
-#define VANC_EOL_INDICATOR 0xEDFEADDE
 #define TS_OUTPUT_NAME "/tmp/smpte2038-sample.ts"
 static int AnalyzeVANC(const char *fn)
 {
