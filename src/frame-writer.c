@@ -33,6 +33,8 @@
 
 extern int usleep(uint32_t usecs);
 
+static int fwr_writer_dequeue(struct fwr_session_s *session, void **ptr, int *type);
+
 static void *fwr_writer_threadfunc(void *p)
 {
 	struct fwr_session_s *s = (struct fwr_session_s *)p;
@@ -329,15 +331,6 @@ void fwr_video_frame_free(struct fwr_session_s *session, struct fwr_header_video
 	free(frame);
 }
 
-void fwr_video_file_close(struct fwr_session_s *session)
-{
-	if (session->fh) {
-		fclose(session->fh);
-		session->fh = NULL;
-	}
-	free(session);
-}
-
 int  fwr_video_frame_create(struct fwr_session_s *session,
         uint32_t width, uint32_t height, uint32_t strideBytes,
         const uint8_t *buffer,
@@ -528,7 +521,7 @@ int fwr_writer_enqueue(struct fwr_session_s *session, void *ptr, int type)
 	return 0;
 }
 
-int fwr_writer_dequeue(struct fwr_session_s *session, void **ptr, int *type)
+static int fwr_writer_dequeue(struct fwr_session_s *session, void **ptr, int *type)
 {
 	int ret = -1;
 
