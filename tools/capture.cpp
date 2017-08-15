@@ -491,7 +491,6 @@ static const char *display_mode_to_string(BMDDisplayMode m)
 static void *smpte337_callback(void *user_context, struct smpte337_detector_s *ctx, uint8_t datamode, uint8_t datatype, uint32_t payload_bitCount, uint8_t *payload)
 {
 	printf("%s() mode: %d  type: %d\n", __func__, datamode, datatype);
-exit(0);
 	return 0;
 }
 
