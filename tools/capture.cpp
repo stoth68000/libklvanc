@@ -1461,7 +1461,7 @@ static int usage(const char *progname, int status)
 		"        rp188:  RP 188\n"
 		"         vitc:  VITC\n"
 		"       serial:  Serial Timecode\n"
-		"    -f <filename>   raw video output filename\n"
+		"    -f <filename>   raw video output filename (DEPRECATED - Use -x instead)\n"
 		"    -a <filename>   raw audio output filaname\n"
 		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload, extract payload into pair files.\n"
 		"    -V <filename>   raw vanc output filename\n"
