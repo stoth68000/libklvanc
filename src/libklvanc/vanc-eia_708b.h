@@ -130,6 +130,33 @@ struct packet_eia_708b_s
  */
 int dump_EIA_708B(struct vanc_context_s *ctx, void *p);
 
+/**
+ * @brief	Convert type struct packet_eia_708b_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct packet_eia_708bs *pkt - A EIA-708 VANC entry, received from the EIA-708 parser
+ * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_EIA_708B_to_words(struct packet_eia_708b_s *pkt, uint16_t **words, uint16_t *wordCount);
+
+/**
+ * @brief	Convert type struct packet_eia_708b_s into a block of bytes which represents\n
+ *              an EIA-708 packet
+ *              On success, caller MUST free the resulting *bytes array.
+ * @param[in]	struct packet_eia_708b_s *pkt - A EIA-608 VANC entry, received from the EIA-708 parser
+ * @param[out]	uint8_t **bytes - An array of bytes representing the serialized CDP packet
+ * @param[out]	uint16_t *byteCount - Number of bytes in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **bytes, uint16_t *byteCount);
+
+
 #ifdef __cplusplus
 };
 #endif  
