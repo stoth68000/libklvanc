@@ -28,7 +28,7 @@
 #include <string.h>
 
 #define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
-#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
+#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%llx\n", #m, m);
 
 static const char *gpiEdge(unsigned char edge)
 {
