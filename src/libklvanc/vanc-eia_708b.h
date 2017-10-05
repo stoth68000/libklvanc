@@ -131,6 +131,37 @@ struct packet_eia_708b_s
 int dump_EIA_708B(struct vanc_context_s *ctx, void *p);
 
 /**
+ * @brief	Create an EIA-708 VANC packet
+ * @param[out]	struct packet_eia_708b_s **pkt - Pointer to newly created packet
+ * @return	0 - Success
+ * @return	< 0 - Error
+ */
+int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt);
+
+/**
+ * @brief	Destroy an EIA-708 VANC packet
+ * @param[in]	struct packet_eia_708b_s *pkt - Packet to be destroyed
+ * @return	none
+ */
+void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt);
+
+/**
+ * @brief	Set the framerate on an EIA-708 packet
+ * @param[in]	struct packet_eia_708b_s *pkt - Packet to be modified
+ * @param[in]	int num - numerator (e.g. 1001)
+ * @return	  0 - success
+ * @return	< 0 - Unknown framerate specified
+ */
+int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int den);
+
+/**
+ * @brief	Finalize a packet and prepare to serialize to output
+ * @param[in]	struct packet_eia_708b_s *pkt - A EIA-608 VANC entry, received from the EIA-708 parser
+ * @param[in]	uint16_t seqNum - Sequence Number.  This value should increment with each packet output over the final SDI link.
+ */
+void klvanc_finalize_EIA_708B(struct packet_eia_708b_s *pkt, uint16_t seqNum);
+
+/**
  * @brief	Convert type struct packet_eia_708b_s into a more traditional line of\n
  *              vanc words, so that we may push out as VANC data.
  *              On success, caller MUST free the resulting *words array.

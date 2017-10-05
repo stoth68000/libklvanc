@@ -57,6 +57,50 @@ static const char *cc_framerate_lookup(int frate)
 	}
 }
 
+int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt)
+{
+	struct packet_eia_708b_s *p = calloc(1, sizeof(*p));
+	if (p == NULL)
+		return -ENOMEM;
+
+	/* Pre-set some mandatory fields */
+	p->header.cdp_identifier = 0x9669;
+	p->ccdata.ccdata_id = 0x72;
+	p->ccsvc.ccsvcinfo_id = 0x73;
+	p->footer.cdp_footer_id = 0x74;
+
+	*pkt = p;
+	return 0;
+}
+
+void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt)
+{
+	free(pkt);
+}
+
+int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int den)
+{
+	if (num == 1001 && den == 24000)
+		pkt->header.cdp_frame_rate = 0x01;
+	else if (num == 1 && den == 24)
+		pkt->header.cdp_frame_rate = 0x02;
+	else if (num == 1 && den == 25)
+		pkt->header.cdp_frame_rate = 0x03;
+	else if (num == 1001 && den == 30000)
+		pkt->header.cdp_frame_rate = 0x04;
+	else if (num == 1 && den == 30)
+		pkt->header.cdp_frame_rate = 0x05;
+	else if (num == 1 && den == 50)
+		pkt->header.cdp_frame_rate = 0x06;
+	else if (num == 1001 && den == 60000)
+		pkt->header.cdp_frame_rate = 0x07;
+	else if (num == 1 && den == 60)
+		pkt->header.cdp_frame_rate = 0x08;
+	else
+		return -1;
+	return 0;
+}
+
 int dump_EIA_708B(struct vanc_context_s *ctx, void *p)
 {
 	struct packet_eia_708b_s *pkt = p;
@@ -244,6 +288,12 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 
 	*pp = pkt;
 	return KLAPI_OK;
+}
+
+void klvanc_finalize_EIA_708B(struct packet_eia_708b_s *pkt, uint16_t seqNum)
+{
+	pkt->header.cdp_hdr_sequence_cntr = seqNum;
+	pkt->footer.cdp_ftr_sequence_cntr = seqNum;
 }
 
 int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **bytes, uint16_t *byteCount)
