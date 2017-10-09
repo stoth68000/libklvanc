@@ -57,6 +57,52 @@ static const char *cc_framerate_lookup(int frate)
 	}
 }
 
+int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt)
+{
+	struct packet_eia_708b_s *p = calloc(1, sizeof(*p));
+	if (p == NULL)
+		return -ENOMEM;
+
+	/* Pre-set some mandatory fields.  These are ID fields with well-defined
+           values an API user would never want to have to explicitly set on their
+           own.  See CEA-708 Sec 11.2 for their meaning.  */
+	p->header.cdp_identifier = 0x9669;
+	p->ccdata.ccdata_id = 0x72;
+	p->ccsvc.ccsvcinfo_id = 0x73;
+	p->footer.cdp_footer_id = 0x74;
+
+	*pkt = p;
+	return 0;
+}
+
+void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt)
+{
+	free(pkt);
+}
+
+int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int den)
+{
+	if (num == 1001 && den == 24000)
+		pkt->header.cdp_frame_rate = 0x01;
+	else if (num == 1 && den == 24)
+		pkt->header.cdp_frame_rate = 0x02;
+	else if (num == 1 && den == 25)
+		pkt->header.cdp_frame_rate = 0x03;
+	else if (num == 1001 && den == 30000)
+		pkt->header.cdp_frame_rate = 0x04;
+	else if (num == 1 && den == 30)
+		pkt->header.cdp_frame_rate = 0x05;
+	else if (num == 1 && den == 50)
+		pkt->header.cdp_frame_rate = 0x06;
+	else if (num == 1001 && den == 60000)
+		pkt->header.cdp_frame_rate = 0x07;
+	else if (num == 1 && den == 60)
+		pkt->header.cdp_frame_rate = 0x08;
+	else
+		return -1;
+	return 0;
+}
+
 int dump_EIA_708B(struct vanc_context_s *ctx, void *p)
 {
 	struct packet_eia_708b_s *pkt = p;
@@ -204,7 +250,7 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	}
 
 	if (pkt->header.svcinfo_present) {
-		/* cc_data_section (Sec 11.2.5) */
+		/* ccsvcinfo_section (Sec 11.2.5) */
 		pkt->ccsvc.ccsvcinfo_id = klbs_read_bits(bs, 8);
 		klbs_read_bits(bs, 1); /* Marker Bits */
 		pkt->ccsvc.svc_info_start = klbs_read_bits(bs, 1);
@@ -246,3 +292,127 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	return KLAPI_OK;
 }
 
+void klvanc_finalize_EIA_708B(struct packet_eia_708b_s *pkt, uint16_t seqNum)
+{
+	pkt->header.cdp_hdr_sequence_cntr = seqNum;
+	pkt->footer.cdp_ftr_sequence_cntr = seqNum;
+}
+
+int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **bytes, uint16_t *byteCount)
+{
+	if (!pkt || !bytes) {
+		return -1;
+	}
+
+	*bytes = malloc(255);
+	if (*bytes == NULL)
+		return -ENOMEM;
+
+	/* Serialize the EIA-708 struct into a binary blob */
+	struct klbs_context_s *bs = klbs_alloc();
+	klbs_write_set_buffer(bs, *bytes, 255);
+
+	/* CDP Header (Sec 11.2.2) */
+	klbs_write_bits(bs, pkt->header.cdp_identifier, 16);
+	klbs_write_bits(bs, 0x00, 8); /* length will be filled in later */
+	klbs_write_bits(bs, pkt->header.cdp_frame_rate, 4);
+	klbs_write_bits(bs, 0x0f, 4); /* Reserved */
+	klbs_write_bits(bs, pkt->header.time_code_present, 1);
+	klbs_write_bits(bs, pkt->header.ccdata_present, 1);
+	klbs_write_bits(bs, pkt->header.svcinfo_present, 1);
+	klbs_write_bits(bs, pkt->header.svc_info_start, 1);
+	klbs_write_bits(bs, pkt->header.svc_info_change, 1);
+	klbs_write_bits(bs, pkt->header.svc_info_complete, 1);
+	klbs_write_bits(bs, pkt->header.caption_service_active, 1);
+	klbs_write_bits(bs, 0x01, 1); /* Reserved */
+	klbs_write_bits(bs, pkt->header.cdp_hdr_sequence_cntr, 16);
+
+        if (pkt->header.time_code_present) {
+		/* timecode_section (Sec 11.2.3) */
+		klbs_write_bits(bs, pkt->tc.time_code_section_id, 8);
+		klbs_write_bits(bs, 0x03, 2); /* Reserved */
+		klbs_write_bits(bs, pkt->tc.tc_10hrs, 2);
+		klbs_write_bits(bs, pkt->tc.tc_1hrs, 4);
+		klbs_write_bits(bs, 0x01, 1); /* Reserved */
+		klbs_write_bits(bs, pkt->tc.tc_10min, 3);
+		klbs_write_bits(bs, pkt->tc.tc_1min, 4);
+		klbs_write_bits(bs, pkt->tc.tc_field_flag, 1);
+		klbs_write_bits(bs, pkt->tc.tc_10sec, 3);
+		klbs_write_bits(bs, pkt->tc.tc_1sec, 4);
+		klbs_write_bits(bs, 0x01, 1); /* Reserved */
+		klbs_write_bits(bs, pkt->tc.tc_10fr, 3);
+		klbs_write_bits(bs, pkt->tc.tc_1fr, 4);
+        }
+
+	if (pkt->header.ccdata_present) {
+		/* cc_data_section (Sec 11.2.4) */
+		klbs_write_bits(bs, pkt->ccdata.ccdata_id, 8);
+		klbs_write_bits(bs, 0x07, 3); /* Marker bits */
+		klbs_write_bits(bs, pkt->ccdata.cc_count, 5);
+		for (int i = 0; i < pkt->ccdata.cc_count; i++) {
+			klbs_write_bits(bs, 0x1f, 5); /* Marker bits */
+			klbs_write_bits(bs, pkt->ccdata.cc[i].cc_valid, 1);
+			klbs_write_bits(bs, pkt->ccdata.cc[i].cc_type, 2);
+			klbs_write_bits(bs, pkt->ccdata.cc[i].cc_data[0], 8);
+			klbs_write_bits(bs, pkt->ccdata.cc[i].cc_data[1], 8);
+		}
+	}
+
+	if (pkt->header.svcinfo_present) {
+		/* ccsvcinfo_section (Sec 11.2.5) */
+		klbs_write_bits(bs, pkt->ccsvc.ccsvcinfo_id, 8);
+		klbs_write_bits(bs, 0x01, 1); /* Marker bits */
+		klbs_write_bits(bs, pkt->ccsvc.svc_info_start, 1);
+		klbs_write_bits(bs, pkt->ccsvc.svc_info_change, 1);
+		klbs_write_bits(bs, pkt->ccsvc.svc_info_complete, 1);
+		klbs_write_bits(bs, pkt->ccsvc.svc_count, 4);
+		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
+			klbs_write_bits(bs, 0x07, 3); /* Marker bits */
+			klbs_write_bits(bs, pkt->ccsvc.svc[i].caption_service_number, 5);
+			for (int n = 0; n < 6; n++) {
+				klbs_write_bits(bs, pkt->ccsvc.svc[i].svc_data_byte[n], 8);
+			}
+		}
+	}
+
+	/* cdp_footer section (Sec 11.2.6) */
+	klbs_write_bits(bs, pkt->footer.cdp_footer_id, 8);
+	klbs_write_bits(bs, pkt->footer.cdp_ftr_sequence_cntr, 16);
+	klbs_write_bits(bs, pkt->footer.packet_checksum, 8);
+
+	klbs_write_buffer_complete(bs);
+
+	/* Set length */
+	(*bytes)[2] = klbs_get_byte_count(bs);
+
+	/* Compute CDP checksum as last byte */
+	uint8_t sum = 0;
+	for (int i = 0; i < klbs_get_byte_count(bs) - 1; i++) {
+		sum += (*bytes)[i];
+	}
+	(*bytes)[klbs_get_byte_count(bs) - 1] = ~sum + 1;
+
+	*byteCount = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
+int convert_EIA_708B_to_words(struct packet_eia_708b_s *pkt, uint16_t **words, uint16_t *wordCount)
+{
+	uint8_t *buf;
+	uint16_t byteCount;
+	int ret;
+
+	ret = convert_EIA_708B_to_packetBytes(pkt, &buf, &byteCount);
+	if (ret != 0)
+		return ret;
+
+	/* Create the final array of VANC bytes (with correct DID/SDID,
+	   checksum, etc) */
+	vanc_sdi_create_payload(0x01, 0x61, buf, byteCount, words, wordCount, 10);
+
+	free(buf);
+
+	return 0;
+}
