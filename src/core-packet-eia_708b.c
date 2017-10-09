@@ -383,8 +383,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	klbs_write_buffer_complete(bs);
 
 	/* Set length */
-	uint8_t buffer_size = klbs_get_byte_count(bs);
-	(*bytes)[2] = buffer_size;
+	(*bytes)[2] = klbs_get_byte_count(bs);
 
 	/* Compute CDP checksum as last byte */
 	uint8_t sum = 0;
