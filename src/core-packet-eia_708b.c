@@ -306,7 +306,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 
 	*bytes = malloc(255);
 	if (*bytes == NULL)
-		return -1;
+		return -ENOMEM;
 
 	/* Serialize the EIA-708 struct into a binary blob */
 	struct klbs_context_s *bs = klbs_alloc();
@@ -416,7 +416,7 @@ int convert_EIA_708B_to_words(struct packet_eia_708b_s *pkt, uint16_t **words, u
 
 	ret = convert_EIA_708B_to_packetBytes(pkt, &buf, &byteCount);
 	if (ret != 0)
-		return -1;
+		return ret;
 
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
