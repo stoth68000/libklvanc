@@ -63,7 +63,9 @@ int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt)
 	if (p == NULL)
 		return -ENOMEM;
 
-	/* Pre-set some mandatory fields */
+	/* Pre-set some mandatory fields.  These are ID fields with well-defined
+           values an API user would never want to have to explicitly set on their
+           own.  See CEA-708 Sec 11.2 for their meaning.  */
 	p->header.cdp_identifier = 0x9669;
 	p->ccdata.ccdata_id = 0x72;
 	p->ccsvc.ccsvcinfo_id = 0x73;
@@ -248,7 +250,7 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	}
 
 	if (pkt->header.svcinfo_present) {
-		/* cc_data_section (Sec 11.2.5) */
+		/* ccsvcinfo_section (Sec 11.2.5) */
 		pkt->ccsvc.ccsvcinfo_id = klbs_read_bits(bs, 8);
 		klbs_read_bits(bs, 1); /* Marker Bits */
 		pkt->ccsvc.svc_info_start = klbs_read_bits(bs, 1);
@@ -310,6 +312,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, *bytes, 255);
 
+	/* CDP Header (Sec 11.2.2) */
 	klbs_write_bits(bs, pkt->header.cdp_identifier, 16);
 	klbs_write_bits(bs, 0x00, 8); /* length will be filled in later */
 	klbs_write_bits(bs, pkt->header.cdp_frame_rate, 4);
@@ -325,6 +328,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	klbs_write_bits(bs, pkt->header.cdp_hdr_sequence_cntr, 16);
 
         if (pkt->header.time_code_present) {
+		/* timecode_section (Sec 11.2.3) */
 		klbs_write_bits(bs, pkt->tc.time_code_section_id, 8);
 		klbs_write_bits(bs, 0x03, 2); /* Reserved */
 		klbs_write_bits(bs, pkt->tc.tc_10hrs, 2);
@@ -341,6 +345,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
         }
 
 	if (pkt->header.ccdata_present) {
+		/* cc_data_section (Sec 11.2.4) */
 		klbs_write_bits(bs, pkt->ccdata.ccdata_id, 8);
 		klbs_write_bits(bs, 0x07, 3); /* Marker bits */
 		klbs_write_bits(bs, pkt->ccdata.cc_count, 5);
@@ -354,6 +359,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	}
 
 	if (pkt->header.svcinfo_present) {
+		/* ccsvcinfo_section (Sec 11.2.5) */
 		klbs_write_bits(bs, pkt->ccsvc.ccsvcinfo_id, 8);
 		klbs_write_bits(bs, 0x01, 1); /* Marker bits */
 		klbs_write_bits(bs, pkt->ccsvc.svc_info_start, 1);
@@ -369,6 +375,7 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 		}
 	}
 
+	/* cdp_footer section (Sec 11.2.6) */
 	klbs_write_bits(bs, pkt->footer.cdp_footer_id, 8);
 	klbs_write_bits(bs, pkt->footer.cdp_ftr_sequence_cntr, 16);
 	klbs_write_bits(bs, pkt->footer.packet_checksum, 8);
