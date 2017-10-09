@@ -141,7 +141,6 @@ int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt);
 /**
  * @brief	Destroy an EIA-708 VANC packet
  * @param[in]	struct packet_eia_708b_s *pkt - Packet to be destroyed
- * @return	none
  */
 void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt);
 
@@ -149,7 +148,8 @@ void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt);
  * @brief	Set the framerate on an EIA-708 packet
  * @param[in]	struct packet_eia_708b_s *pkt - Packet to be modified
  * @param[in]	int num - numerator (e.g. 1001)
- * @return	  0 - success
+ * @param[in]	int denominator - numerator (e.g. 30000)
+ * @return	  0 - Success
  * @return	< 0 - Unknown framerate specified
  */
 int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int den);
@@ -166,7 +166,7 @@ void klvanc_finalize_EIA_708B(struct packet_eia_708b_s *pkt, uint16_t seqNum);
  *              vanc words, so that we may push out as VANC data.
  *              On success, caller MUST free the resulting *words array.
  * @param[in]	struct packet_eia_708bs *pkt - A EIA-708 VANC entry, received from the EIA-708 parser
- * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t **words - An array of words representing a fully formed vanc line.
  * @param[out]	uint16_t *wordCount - Number of words in the array.
  * @return        0 - Success
  * @return      < 0 - Error
