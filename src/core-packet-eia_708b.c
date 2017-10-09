@@ -392,15 +392,6 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	}
 	(*bytes)[klbs_get_byte_count(bs) - 1] = ~sum + 1;
 
-#if 0
-	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
-	printf(" ->payload  = ");
-	for (int i = 0; i < klbs_get_byte_count(bs); i++) {
-		printf("%02x ", (*bytes)[i]);
-	}
-	printf("\n");
-#endif
-
 	*byteCount = klbs_get_byte_count(bs);
 	klbs_free(bs);
 
