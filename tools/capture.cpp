@@ -1459,7 +1459,8 @@ static int usage(const char *progname, int status)
 		"       serial:  Serial Timecode\n"
 		"    -f <filename>   raw video output filename (DEPRECATED - Use -x instead)\n"
 		"    -a <filename>   raw audio output filaname\n"
-		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload, extract payload into pair files.\n"
+		"    -A <filename>   Attempt to detect SMPTE337 on the audio file payload, extract payload into pair files,\n"
+		"                    inspect audio buffers at a byte level. Input should be a file created with -a.\n"
 		"    -V <filename>   raw vanc output filename\n"
 		"    -I <filename>   Interpret and display input VANC filename (See -V)\n"
 		"    -l <linenr>     During -I parse, process a specific line# (def: 0 all)\n"
@@ -1478,7 +1479,8 @@ static int usage(const char *progname, int status)
 #if HAVE_LIBKLMONITORING_KLMONITORING_H
 		"    -S              Validate PRBS15 sequences are correct on all audio channels (def: disabled).\n"
 #endif
-		"    -X <filename>   Create a muxed audio+video+vanc output file.\n"
+		"    -x <filename>   Create a muxed audio+video+vanc output file.\n"
+		"    -X <filename>   Analyze a muxed audio+video+vanc input file.\n"
 		"\n"
 		"Capture and display all VANC messages and show line/msg counts in an interactive UI (1080i 59.94):\n"
 		"    %s -m9 -p1 -M\n\n"
