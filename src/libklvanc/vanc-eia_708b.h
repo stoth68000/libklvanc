@@ -73,12 +73,12 @@ struct klvanc_packet_eia_708b_ccdata_entry
 	uint8_t cc_data[2];
 };
 
-#define MAX_CC_COUNT 30
+#define KLVANC_MAX_CC_COUNT 30
 struct klvanc_packet_eia_708b_ccdata_section
 {
 	uint8_t ccdata_id;
 	uint8_t cc_count;
-	struct klvanc_packet_eia_708b_ccdata_entry cc[MAX_CC_COUNT];
+	struct klvanc_packet_eia_708b_ccdata_entry cc[KLVANC_MAX_CC_COUNT];
 };
 
 
@@ -88,7 +88,7 @@ struct klvanc_packet_eia_708b_ccsvcinfo_entry
 	uint8_t svc_data_byte[6];
 };
 
-#define MAX_CCSVC_COUNT 16
+#define KLVANC_MAX_CCSVC_COUNT 16
 struct klvanc_packet_eia_708b_ccsvcinfo_section
 {
 	uint8_t ccsvcinfo_id;
@@ -96,7 +96,7 @@ struct klvanc_packet_eia_708b_ccsvcinfo_section
 	uint8_t svc_info_change;
 	uint8_t svc_info_complete;
 	uint8_t svc_count;
-	struct klvanc_packet_eia_708b_ccsvcinfo_entry svc[MAX_CCSVC_COUNT];
+	struct klvanc_packet_eia_708b_ccsvcinfo_entry svc[KLVANC_MAX_CCSVC_COUNT];
 };
 
 struct klvanc_packet_eia_708b_cdp_footer
