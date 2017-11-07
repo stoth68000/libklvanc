@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *afd_to_string(enum payload_afd_e afd)
+const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd)
 {
 	switch(afd) {
 	case AFD_BOX_16x9_TOP:
@@ -53,7 +53,7 @@ const char *afd_to_string(enum payload_afd_e afd)
 	}
 }
 
-const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar)
+const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar)
 {
 	switch(ar) {
 	case ASPECT_4x3:
@@ -65,16 +65,16 @@ const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar)
 	}
 }
 
-int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p)
+int klvanc_dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct packet_payload_information_s *pkt = p;
+	struct klvanc_packet_payload_information_s *pkt = p;
 
 	printf("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
-		afd_to_string(pkt->afd),
-		aspectRatio_to_string(pkt->aspectRatio),
+		klvanc_afd_to_string(pkt->afd),
+		klvanc_aspectRatio_to_string(pkt->aspectRatio),
 		pkt->barDataFlags,
 		pkt->barDataValue[0],
 		pkt->barDataValue[1]
@@ -83,12 +83,13 @@ int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p)
 	return KLAPI_OK;
 }
 
-int parse_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
+int parse_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx,
+			      struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct packet_payload_information_s *pkt = calloc(1, sizeof(*pkt));
+	struct klvanc_packet_payload_information_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 

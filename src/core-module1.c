@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int vanc_module01_dump(struct vanc_context_s *ctx)
+int vanc_module01_dump(struct klvanc_context_s *ctx)
 {
 	VALIDATE(ctx);
 

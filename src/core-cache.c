@@ -29,19 +29,19 @@
  * a user may ask "what message types have I seen on what lines?".
  */
 
-int vanc_cache_alloc(struct vanc_context_s *ctx)
+int klvanc_cache_alloc(struct klvanc_context_s *ctx)
 {
-	ctx->cacheLines = calloc(0x10000, sizeof(struct vanc_cache_s));
+	ctx->cacheLines = calloc(0x10000, sizeof(struct klvanc_cache_s));
     if (!ctx->cacheLines)
         return -1;
 
     return 0;
 }
 
-void vanc_cache_free(struct vanc_context_s *ctx)
+void klvanc_cache_free(struct klvanc_context_s *ctx)
 {
     /* Free any cached lines otherwise we'll memory leak. */
-    vanc_cache_reset(ctx);
+    klvanc_cache_reset(ctx);
 
     if (ctx->cacheLines) {
 	    free(ctx->cacheLines);
@@ -49,7 +49,7 @@ void vanc_cache_free(struct vanc_context_s *ctx)
     }
 }
 
-struct vanc_cache_s * vanc_cache_lookup(struct vanc_context_s *ctx, uint8_t didnr, uint8_t sdidnr)
+struct klvanc_cache_s * klvanc_cache_lookup(struct klvanc_context_s *ctx, uint8_t didnr, uint8_t sdidnr)
 {
     if (!ctx)
         return NULL;
@@ -59,7 +59,7 @@ struct vanc_cache_s * vanc_cache_lookup(struct vanc_context_s *ctx, uint8_t didn
     return &ctx->cacheLines[ (((didnr) << 8) | (sdidnr)) ];
 };
 
-int vanc_cache_update(struct vanc_context_s *ctx, struct packet_header_s *pkt)
+int klvanc_cache_update(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *pkt)
 {
     if (!ctx)
         return -1;
@@ -72,25 +72,25 @@ int vanc_cache_update(struct vanc_context_s *ctx, struct packet_header_s *pkt)
 	if (pkt->lineNr >= 2048)
 		return -1;
 
-	struct vanc_cache_s *s = vanc_cache_lookup(ctx, pkt->did, pkt->dbnsdid);
+	struct klvanc_cache_s *s = klvanc_cache_lookup(ctx, pkt->did, pkt->dbnsdid);
 	if (s->activeCount == 0) {
 		s->did = pkt->did;
 		s->sdid = pkt->dbnsdid;
-		s->desc = vanc_lookupDescriptionByType(pkt->type);
-		s->spec = vanc_lookupSpecificationByType(pkt->type);
+		s->desc = klvanc_lookupDescriptionByType(pkt->type);
+		s->spec = klvanc_lookupSpecificationByType(pkt->type);
 	}
 	gettimeofday(&s->lastUpdated, NULL);
 
-	struct vanc_cache_line_s *line = &s->lines[ pkt->lineNr ];
+	struct klvanc_cache_line_s *line = &s->lines[ pkt->lineNr ];
 	line->active = 1;
 	s->activeCount++;
 
 	pthread_mutex_lock(&line->mutex);
 	if (line->pkt) {
-		vanc_packet_free(line->pkt);
+		klvanc_packet_free(line->pkt);
 		line->pkt = 0;
 	}
-	vanc_packet_copy(&line->pkt, pkt);
+	klvanc_packet_copy(&line->pkt, pkt);
 	pthread_mutex_unlock(&line->mutex);
 
 	line->count++;
@@ -98,7 +98,7 @@ int vanc_cache_update(struct vanc_context_s *ctx, struct packet_header_s *pkt)
 	return 0;
 }
 
-void vanc_cache_reset(struct vanc_context_s *ctx)
+void klvanc_cache_reset(struct klvanc_context_s *ctx)
 {
     if (!ctx)
         return;
@@ -107,11 +107,11 @@ void vanc_cache_reset(struct vanc_context_s *ctx)
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(ctx, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(ctx, d, s);
 			e->activeCount = 0;
 
 			for (int l = 0; l < 2048; l++) {
-				struct vanc_cache_line_s *line = &e->lines[ l ];
+				struct klvanc_cache_line_s *line = &e->lines[ l ];
 				if (!line->active)
 					continue;
 
@@ -120,7 +120,7 @@ void vanc_cache_reset(struct vanc_context_s *ctx)
 
 				pthread_mutex_lock(&line->mutex);
 				if (line->pkt) {
-					vanc_packet_free(line->pkt);
+					klvanc_packet_free(line->pkt);
 					line->pkt = 0;
 				}
 				pthread_mutex_unlock(&line->mutex);

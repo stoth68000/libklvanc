@@ -38,9 +38,9 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_eia_608_s
+struct klvanc_packet_eia_608_s
 {
-	struct packet_header_s hdr;
+	struct klvanc_packet_header_s hdr;
 	int nr;
 	unsigned char payload[3];
 
@@ -58,7 +58,7 @@ struct packet_eia_608_s
  * @return	0 - Success
  * @return	< 0 - Error
  */
-int dump_EIA_608(struct vanc_context_s *ctx, void *p);
+int klvanc_dump_EIA_608(struct klvanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
 };

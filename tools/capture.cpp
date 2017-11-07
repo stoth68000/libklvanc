@@ -72,7 +72,7 @@ Decklink Hardware supported modes:
 [decklink @ 0x25da300] Mode: 13 HD 720p 60               68703630 [hp60]
 */
 
-static struct vanc_context_s *vanchdl;
+static struct klvanc_context_s *vanchdl;
 static pthread_mutex_t sleepMutex;
 static pthread_cond_t sleepCond;
 static int videoOutputFile = -1;
@@ -86,7 +86,7 @@ static uint64_t lastGoodKLFrameCounter = 0;
 /* SMPTE 2038 */
 static int g_packetizeSMPTE2038 = 0;
 static int g_packetizePID = 0;
-static struct smpte2038_packetizer_s *smpte2038_ctx = 0;
+static struct klvanc_smpte2038_packetizer_s *smpte2038_ctx = 0;
 static uint8_t g_cc = 0;
 /* END:SMPTE 2038 */
 
@@ -145,7 +145,7 @@ static void cursor_expand_all()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 			e->expandUI = 1;
@@ -157,7 +157,7 @@ static void cursor_expand()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -174,12 +174,12 @@ static void cursor_expand()
 
 static void cursor_down()
 {
-	struct vanc_cache_s *def = 0;
-	struct vanc_cache_s *prev = 0;
+	struct klvanc_cache_s *def = 0;
+	struct klvanc_cache_s *prev = 0;
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -201,12 +201,12 @@ static void cursor_down()
 
 static void cursor_up()
 {
-	struct vanc_cache_s *def = 0;
-	struct vanc_cache_s *prev = 0;
+	struct klvanc_cache_s *def = 0;
+	struct klvanc_cache_s *prev = 0;
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e->activeCount)
 				continue;
 
@@ -258,7 +258,7 @@ static void vanc_monitor_stats_dump_curses()
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e)
 				continue;
 
@@ -276,12 +276,12 @@ static void vanc_monitor_stats_dump_curses()
 			}
 
 			for (int l = 0; l < 2048; l++) {
-				struct vanc_cache_line_s *line = &e->lines[ l ];
+				struct klvanc_cache_line_s *line = &e->lines[ l ];
 				if (!line->active)
 					continue;
 
 				pthread_mutex_lock(&line->mutex);
-				struct packet_header_s *pkt = line->pkt;
+				struct klvanc_packet_header_s *pkt = line->pkt;
 
 				mvprintw(linecount++, 13, "line #%d count #%lu horizontal offset word #%d", l, line->count,
 					pkt->horizontalOffset);
@@ -341,7 +341,7 @@ static void vanc_monitor_stats_dump()
 {
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
-			struct vanc_cache_s *e = vanc_cache_lookup(vanchdl, d, s);
+			struct klvanc_cache_s *e = klvanc_cache_lookup(vanchdl, d, s);
 			if (!e)
 				continue;
 
@@ -413,7 +413,7 @@ static void *thread_func_draw(void *p)
 	while (!g_shutdown) {
 		if (g_monitor_reset) {
 			g_monitor_reset = 0;
-			vanc_cache_reset(vanchdl);
+			klvanc_cache_reset(vanchdl);
 		}
 
 		clear();
@@ -494,7 +494,7 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 	if (klvanc_v210_line_to_nv20_c(src, p_anc, sizeof(decoded_words), (uiWidth / 6) * 6) < 0)
 		return;
 
-	int ret = vanc_packet_parse(vanchdl, lineNr, decoded_words, sizeof(decoded_words) / (sizeof(unsigned short)));
+	int ret = klvanc_packet_parse(vanchdl, lineNr, decoded_words, sizeof(decoded_words) / (sizeof(unsigned short)));
 	if (ret < 0) {
 		/* No VANC on this line */
 	}
@@ -553,7 +553,7 @@ static int AnalyzeVANC(const char *fn)
 			hexdump(buf, uiStride, 64);
 
 		if (uiLine == 1 && g_packetizeSMPTE2038) {
-			if (smpte2038_packetizer_end(smpte2038_ctx, 0) == 0) {
+			if (klvanc_smpte2038_packetizer_end(smpte2038_ctx, 0) == 0) {
 				printf("%s() PES buffer is complete\n", __func__);
 
 				uint8_t *pkts = 0;
@@ -572,7 +572,7 @@ static int AnalyzeVANC(const char *fn)
 					free(pkts);
 				}
 			}
-			smpte2038_packetizer_begin(smpte2038_ctx);
+			klvanc_smpte2038_packetizer_begin(smpte2038_ctx);
 		}
 		convert_colorspace_and_parse_vanc(buf, uiStride, uiLine);
 	}
@@ -600,7 +600,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 		return;
 
 	if (g_packetizeSMPTE2038)
-		smpte2038_packetizer_begin(smpte2038_ctx);
+		klvanc_smpte2038_packetizer_begin(smpte2038_ctx);
 
 	BMDDisplayMode dm = vanc->GetDisplayMode();
 	BMDPixelFormat pf = vanc->GetPixelFormat();
@@ -707,7 +707,7 @@ static void ProcessVANC(IDeckLinkVideoInputFrame * frame)
 		BMDTimeValue stream_time;
 		BMDTimeValue frame_duration;
 		frame->GetStreamTime(&stream_time, &frame_duration, 90000);
-		if (smpte2038_packetizer_end(smpte2038_ctx, stream_time) == 0) {
+		if (klvanc_smpte2038_packetizer_end(smpte2038_ctx, stream_time) == 0) {
 			printf("%s() PES buffer is complete\n", __func__);
 		}
 	}
@@ -1099,40 +1099,40 @@ HRESULT DeckLinkCaptureDelegate::VideoInputFormatChanged(BMDVideoInputFormatChan
 }
 
 /* CALLBACKS for message notification */
-static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
+static int cb_PAYLOAD_INFORMATION(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_payload_information_s *pkt)
 {
 	/* Have the library display some debug */
 	if (!g_monitor_mode)
-		dump_PAYLOAD_INFORMATION(ctx, pkt);
+		klvanc_dump_PAYLOAD_INFORMATION(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
+static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_708b_s *pkt)
 {
 	/* Have the library display some debug */
 	if (!g_monitor_mode)
-		dump_EIA_708B(ctx, pkt);
+		klvanc_dump_EIA_708B(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
+static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_608_s *pkt)
 {
 	/* Have the library display some debug */
 	if (!g_monitor_mode)
-		dump_EIA_608(ctx, pkt);
+		klvanc_dump_EIA_608(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt)
 {
 	int ret;
 
 	/* Have the library display some debug */
 	if (!g_monitor_mode) {
-		ret = dump_SCTE_104(ctx, pkt);
+		ret = klvanc_dump_SCTE_104(ctx, pkt);
 		if (ret != 0)
 			fprintf(stderr, "Error dumping SCTE 104 packet!\n");
 	}
@@ -1140,7 +1140,7 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	return 0;
 }
 
-static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
+static int cb_all(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_header_s *pkt)
 {
 #if HAVE_CURSES_H
 #if 0
@@ -1149,18 +1149,19 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 #endif
 
 	if (g_packetizeSMPTE2038) {
-		if (smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {
+		if (klvanc_smpte2038_packetizer_append(smpte2038_ctx, pkt) < 0) {
 		}
 	}
 
 	return 0;
 }
 
-static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_context_s *ctx, struct packet_kl_u64le_counter_s *pkt)
+static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct klvanc_context_s *ctx,
+					  struct klvanc_packet_kl_u64le_counter_s *pkt)
 {
 	/* Have the library display some debug */
 	if (!g_monitor_mode && g_verbose)
-		dump_KL_U64LE_COUNTER(ctx, pkt);
+		klvanc_dump_KL_U64LE_COUNTER(ctx, pkt);
 
 	if (lastGoodKLFrameCounter && lastGoodKLFrameCounter + 1 != pkt->counter) {
 		char t[160];
@@ -1177,7 +1178,7 @@ static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_co
 	return 0;
 }
 
-static struct vanc_callbacks_s callbacks =
+static struct klvanc_callbacks_s callbacks =
 {
 	.payload_information    = cb_PAYLOAD_INFORMATION,
 	.eia_708b               = cb_EIA_708B,
@@ -1402,18 +1403,18 @@ static int _main(int argc, char *argv[])
 
  	if (g_packetizeSMPTE2038) {
 		unlink(TS_OUTPUT_NAME);
-		if (smpte2038_packetizer_alloc(&smpte2038_ctx) < 0) {
+		if (klvanc_smpte2038_packetizer_alloc(&smpte2038_ctx) < 0) {
 			fprintf(stderr, "Unable to allocate a SMPTE2038 context.\n");
 			goto bail;
 		}
 	}
 
-        if (vanc_context_create(&vanchdl) < 0) {
+        if (klvanc_context_create(&vanchdl) < 0) {
                 fprintf(stderr, "Error initializing library context\n");
                 exit(1);
         }
 
-	vanc_context_enable_cache(vanchdl);
+	klvanc_context_enable_cache(vanchdl);
 
 	vanchdl->verbose = g_verbose;
 	vanchdl->callbacks = &callbacks;
@@ -1569,8 +1570,8 @@ static int _main(int argc, char *argv[])
 #if HAVE_CURSES_H
 	vanc_monitor_stats_dump();
 #endif
-        vanc_context_destroy(vanchdl);
-	smpte2038_packetizer_free(&smpte2038_ctx);
+        klvanc_context_destroy(vanchdl);
+	klvanc_smpte2038_packetizer_free(&smpte2038_ctx);
 
 #if HAVE_CURSES_H
 	if (g_monitor_mode)

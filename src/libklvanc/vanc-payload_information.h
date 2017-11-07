@@ -38,7 +38,7 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  */
-enum payload_aspect_ratio_e
+enum klvanc_payload_aspect_ratio_e
 {
 	ASPECT_UNDEFINED = 0,
 	ASPECT_4x3,
@@ -48,7 +48,7 @@ enum payload_aspect_ratio_e
 /**
  * @brief	TODO - Brief description goes here.
  */
-enum payload_afd_e
+enum klvanc_payload_afd_e
 {
 	AFD_UNDEFINED = 0,
 	AFD_BOX_16x9_TOP,
@@ -65,11 +65,11 @@ enum payload_afd_e
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_payload_information_s
+struct klvanc_packet_payload_information_s
 {
-	struct packet_header_s hdr;
-	enum payload_aspect_ratio_e aspectRatio;
-	enum payload_afd_e afd;
+	struct klvanc_packet_header_s hdr;
+	enum klvanc_payload_aspect_ratio_e aspectRatio;
+	enum klvanc_payload_afd_e afd;
 	unsigned short barDataValue[2];
 	unsigned char barDataFlags;
 };
@@ -80,7 +80,7 @@ struct packet_payload_information_s
  * @return	Success - User facing printable string.
  * @return	Error - NULL
  */
-const char *afd_to_string(enum payload_afd_e afd);
+const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd);
 
 /**
  * @brief	TODO - Brief description goes here.
@@ -88,7 +88,7 @@ const char *afd_to_string(enum payload_afd_e afd);
  * @return	Success - User facing printable string.
  * @return	Error - NULL
  */
-const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar);
+const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar);
 
 /**
  * @brief	TODO - Brief description goes here.
@@ -96,7 +96,7 @@ const char *aspectRatio_to_string(enum payload_aspect_ratio_e ar);
  * @return	0 - Success
  * @return	< 0 - Error
  */
-int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p);
+int klvanc_dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
 };

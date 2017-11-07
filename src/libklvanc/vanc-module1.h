@@ -35,11 +35,11 @@ extern "C" {
 
 /**
  * @brief	TODO - Brief description goes here.
- * @param[in]	struct vanc_context_s *ctx
+ * @param[in]	struct klvanc_context_s *ctx
  * @return	0 - Success
  * @return	< 0 - Error
  */
-int vanc_module01_dump(struct vanc_context_s *ctx);
+int klvanc_module01_dump(struct klvanc_context_s *ctx);
 
 #ifdef __cplusplus
 };

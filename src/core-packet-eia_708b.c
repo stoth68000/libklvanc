@@ -57,9 +57,9 @@ static const char *cc_framerate_lookup(int frate)
 	}
 }
 
-int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt)
+int klvanc_create_eia708_cdp(struct klvanc_packet_eia_708b_s **pkt)
 {
-	struct packet_eia_708b_s *p = calloc(1, sizeof(*p));
+	struct klvanc_packet_eia_708b_s *p = calloc(1, sizeof(*p));
 	if (p == NULL)
 		return -ENOMEM;
 
@@ -75,12 +75,12 @@ int klvanc_create_eia708_cdp(struct packet_eia_708b_s **pkt)
 	return 0;
 }
 
-void klvanc_destroy_eia708_cdp(struct packet_eia_708b_s *pkt)
+void klvanc_destroy_eia708_cdp(struct klvanc_packet_eia_708b_s *pkt)
 {
 	free(pkt);
 }
 
-int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int den)
+int klvanc_set_framerate_EIA_708B(struct klvanc_packet_eia_708b_s *pkt, int num, int den)
 {
 	if (num == 1001 && den == 24000)
 		pkt->header.cdp_frame_rate = 0x01;
@@ -103,9 +103,9 @@ int klvanc_set_framerate_EIA_708B(struct packet_eia_708b_s *pkt, int num, int de
 	return 0;
 }
 
-int dump_EIA_708B(struct vanc_context_s *ctx, void *p)
+int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 {
-	struct packet_eia_708b_s *pkt = p;
+	struct klvanc_packet_eia_708b_s *pkt = p;
 
 	if (ctx->verbose)
 		printf("%s() %p\n", __func__, (void *)pkt);
@@ -182,14 +182,14 @@ int dump_EIA_708B(struct vanc_context_s *ctx, void *p)
 	return KLAPI_OK;
 }
 
-int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
+int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	struct klbs_context_s *bs = klbs_alloc();
 
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct packet_eia_708b_s *pkt = calloc(1, sizeof(*pkt));
+	struct klvanc_packet_eia_708b_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 
@@ -292,13 +292,13 @@ int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	return KLAPI_OK;
 }
 
-void klvanc_finalize_EIA_708B(struct packet_eia_708b_s *pkt, uint16_t seqNum)
+void klvanc_finalize_EIA_708B(struct klvanc_packet_eia_708b_s *pkt, uint16_t seqNum)
 {
 	pkt->header.cdp_hdr_sequence_cntr = seqNum;
 	pkt->footer.cdp_ftr_sequence_cntr = seqNum;
 }
 
-int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **bytes, uint16_t *byteCount)
+int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt, uint8_t **bytes, uint16_t *byteCount)
 {
 	if (!pkt || !bytes) {
 		return -1;
@@ -398,19 +398,19 @@ int convert_EIA_708B_to_packetBytes(struct packet_eia_708b_s *pkt, uint8_t **byt
 	return 0;
 }
 
-int convert_EIA_708B_to_words(struct packet_eia_708b_s *pkt, uint16_t **words, uint16_t *wordCount)
+int klvanc_convert_EIA_708B_to_words(struct klvanc_packet_eia_708b_s *pkt, uint16_t **words, uint16_t *wordCount)
 {
 	uint8_t *buf;
 	uint16_t byteCount;
 	int ret;
 
-	ret = convert_EIA_708B_to_packetBytes(pkt, &buf, &byteCount);
+	ret = klvanc_convert_EIA_708B_to_packetBytes(pkt, &buf, &byteCount);
 	if (ret != 0)
 		return ret;
 
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
-	vanc_sdi_create_payload(0x01, 0x61, buf, byteCount, words, wordCount, 10);
+	klvanc_sdi_create_payload(0x01, 0x61, buf, byteCount, words, wordCount, 10);
 
 	free(buf);
 

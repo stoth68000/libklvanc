@@ -38,9 +38,9 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_kl_u64le_counter_s
+struct klvanc_packet_kl_u64le_counter_s
 {
-	struct packet_header_s hdr;
+	struct klvanc_packet_header_s hdr;
 	uint64_t counter;
 };
 
@@ -50,7 +50,7 @@ struct packet_kl_u64le_counter_s
  * @return	0 - Success
  * @return	< 0 - Error
  */
-int dump_KL_U64LE_COUNTER(struct vanc_context_s *ctx, void *p);
+int klvanc_dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
 };

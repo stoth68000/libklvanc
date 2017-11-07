@@ -35,15 +35,15 @@
 extern "C" {
 #endif  
 
-struct vanc_cache_line_s
+struct klvanc_cache_line_s
 {
 	int             active;
 	uint64_t        count;
 	pthread_mutex_t mutex;
-	struct packet_header_s *pkt;
+	struct klvanc_packet_header_s *pkt;
 };
 
-struct vanc_cache_s
+struct klvanc_cache_s
 {
 	uint32_t       did, sdid;
 	const char    *desc, *spec;
@@ -51,35 +51,35 @@ struct vanc_cache_s
 	int            hasCursor;
 	int            expandUI;
 	uint32_t       activeCount;
-	struct vanc_cache_line_s lines[2048];
+	struct klvanc_cache_line_s lines[2048];
 };
 
 /**
  * @brief	    Begin caching and summarizing VANC payload, useful when you want to
  *              query what VANC messages, and how many you seen on what lines.
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_context_enable_cache(struct vanc_context_s *ctx);
+int klvanc_context_enable_cache(struct klvanc_context_s *ctx);
 
 /**
  * @brief	    When caching and summarizing VANC payload is enabled, use this to reset any
  *              internal counters, line counts and restart the stats collection process.
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-void vanc_cache_reset(struct vanc_context_s *ctx);
+void klvanc_cache_reset(struct klvanc_context_s *ctx);
 
 /**
  * @brief	    When caching and summarizing VANC payload is enabled, lookup any statistics
  *              related to didnr and sdidnr.
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-struct vanc_cache_s * vanc_cache_lookup(struct vanc_context_s *ctx, uint8_t didnr, uint8_t sdidnr);
+struct klvanc_cache_s * klvanc_cache_lookup(struct klvanc_context_s *ctx, uint8_t didnr, uint8_t sdidnr);
 
 #ifdef __cplusplus
 };
