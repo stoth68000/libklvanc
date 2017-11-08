@@ -50,7 +50,7 @@ static struct type_s
 	int (*dump)(struct klvanc_context_s *, void *);
 } types[] = {
 	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, },
-	{ 0x41, 0x05, VANC_TYPE_PAYLOAD_INFORMATION, "SMPTE 2016-3 AFD", "Payload Information", parse_PAYLOAD_INFORMATION, klvanc_dump_PAYLOAD_INFORMATION, },
+	{ 0x41, 0x05, VANC_TYPE_AFD, "SMPTE 2016-3 AFD", "Active Format Description", parse_AFD, klvanc_dump_AFD, },
 	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 2", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, },
 #ifdef SCTE_104_PACKET_TYPE_1
 	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, },

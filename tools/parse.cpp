@@ -203,12 +203,12 @@ static int pkt_filtered(klvanc_packet_header_s *pkt)
 }
 
 /* CALLBACKS for message notification */
-static int cb_PAYLOAD_INFORMATION(void *callback_context, struct klvanc_context_s *ctx,
-				  struct klvanc_packet_payload_information_s *pkt)
+static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx,
+				  struct klvanc_packet_afd_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		klvanc_dump_PAYLOAD_INFORMATION(ctx, pkt);
+		klvanc_dump_AFD(ctx, pkt);
 	}
 
 	return 0;
@@ -273,7 +273,7 @@ static int cb_all(void *callback_context, struct klvanc_context_s *ctx,
 
 static struct klvanc_callbacks_s callbacks =
 {
-	.payload_information    = cb_PAYLOAD_INFORMATION,
+	.afd			= cb_AFD,
 	.eia_708b               = cb_EIA_708B,
 	.eia_608                = cb_EIA_608,
 	.scte_104               = cb_SCTE_104,

@@ -20,14 +20,14 @@
  */
 
 /**
- * @file	vanc-payload_information.h
+ * @file	vanc-afd.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	SMPTE 2016-3 Vertical Ancillary Data Mapping of Active Format Description and Bar Data
  */
 
-#ifndef _VANC_PAYLOAD_INFORMATION_H
-#define _VANC_PAYLOAD_INFORMATION_H
+#ifndef _VANC_AFD_H
+#define _VANC_AFD_H
 
 #include <libklvanc/vanc-packets.h>
 
@@ -65,7 +65,7 @@ enum klvanc_payload_afd_e
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct klvanc_packet_payload_information_s
+struct klvanc_packet_afd_s
 {
 	struct klvanc_packet_header_s hdr;
 	enum klvanc_payload_aspect_ratio_e aspectRatio;
@@ -96,10 +96,10 @@ const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar);
  * @return	0 - Success
  * @return	< 0 - Error
  */
-int klvanc_dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p);
+int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p);
 
 #ifdef __cplusplus
 };
 #endif  
 
-#endif /* _VANC_PAYLOAD_INFORMATION_H */
+#endif /* _VANC_AFD_H */

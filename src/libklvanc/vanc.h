@@ -56,7 +56,7 @@ struct klvanc_packet_header_s;
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct klvanc_packet_payload_information_s;
+struct klvanc_packet_afd_s;
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -88,7 +88,7 @@ struct klvanc_packet_kl_u64le_counter_s;
  */
 struct klvanc_callbacks_s
 {
-	int (*payload_information)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_payload_information_s *);
+	int (*afd)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_afd_s *);
 	int (*eia_708b)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_eia_708b_s *);
 	int (*eia_608)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_eia_608_s *);
 	int (*scte_104)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_scte_104_s *);
@@ -174,7 +174,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
 #include <libklvanc/vanc-module1.h>
-#include <libklvanc/vanc-payload_information.h>
+#include <libklvanc/vanc-afd.h>
 #include <libklvanc/vanc-eia_708b.h>
 #include <libklvanc/vanc-eia_608.h>
 #include <libklvanc/vanc-scte_104.h>

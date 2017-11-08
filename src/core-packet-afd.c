@@ -65,12 +65,12 @@ const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar)
 	}
 }
 
-int klvanc_dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p)
+int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct klvanc_packet_payload_information_s *pkt = p;
+	struct klvanc_packet_afd_s *pkt = p;
 
 	printf("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
 		klvanc_afd_to_string(pkt->afd),
@@ -83,13 +83,13 @@ int klvanc_dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p)
 	return KLAPI_OK;
 }
 
-int parse_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx,
+int parse_AFD(struct klvanc_context_s *ctx,
 			      struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct klvanc_packet_payload_information_s *pkt = calloc(1, sizeof(*pkt));
+	struct klvanc_packet_afd_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 
@@ -139,8 +139,8 @@ int parse_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx,
 	pkt->barDataValue[1]  = sanitizeWord(hdr->payload[6]) << 8;
 	pkt->barDataValue[1] |= sanitizeWord(hdr->payload[7]);
 
-	if (ctx->callbacks && ctx->callbacks->payload_information)
-		ctx->callbacks->payload_information(ctx->callback_context, ctx, pkt);
+	if (ctx->callbacks && ctx->callbacks->afd)
+		ctx->callbacks->afd(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

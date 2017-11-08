@@ -40,10 +40,10 @@
 #define VALIDATE(ctx) \
  if (!ctx) return -EINVAL;
 
-/* core-packet-payload_information.c */
-int dump_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx, void *p);
-int parse_PAYLOAD_INFORMATION(struct klvanc_context_s *ctx,
-			      struct klvanc_packet_header_s *hdr, void **pp);
+/* core-packet-afd.c */
+int dump_AFD(struct klvanc_context_s *ctx, void *p);
+int parse_AFD(struct klvanc_context_s *ctx,
+	      struct klvanc_packet_header_s *hdr, void **pp);
 
 /* core-packet-eia_708b.c */
 int dump_EIA_708B(struct klvanc_context_s *ctx, void *p);
