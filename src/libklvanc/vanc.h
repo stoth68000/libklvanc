@@ -105,6 +105,7 @@ struct klvanc_cache_s;
 struct klvanc_context_s
 {
 	int verbose;
+	int allow_bad_checksums;
 	struct klvanc_callbacks_s *callbacks;
 	void *callback_context;
 

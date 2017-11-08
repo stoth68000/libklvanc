@@ -230,28 +230,30 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 		/* Update the internal VANC cache */
 		klvanc_cache_update(ctx, hdr);
 
-		if (ctx->callbacks && ctx->callbacks->all)
-			ctx->callbacks->all(ctx->callback_context, ctx, hdr);
+		if (hdr->checksumValid || ctx->allow_bad_checksums) {
+			if (ctx->callbacks && ctx->callbacks->all)
+				ctx->callbacks->all(ctx->callback_context, ctx, hdr);
 
-		/* formally decode the entire packet */
-		void *decodedPacket;
-		ret = parseByType(ctx, hdr, &decodedPacket);
-		if (ret == KLAPI_OK) {
-			if (ctx->verbose == 2) {
-				ret = dumpByType(ctx, decodedPacket);
-				if (ret < 0) {
-					fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+			/* formally decode the entire packet */
+			void *decodedPacket;
+			ret = parseByType(ctx, hdr, &decodedPacket);
+			if (ret == KLAPI_OK) {
+				if (ctx->verbose == 2) {
+					ret = dumpByType(ctx, decodedPacket);
+					if (ret < 0) {
+						fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+					}
+				}
+			} else {
+				if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
+					fprintf(stderr, "Failed parsing by type\n");
+					klvanc_dump_packet_console(ctx, hdr);
 				}
 			}
-		} else {
- 			if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
-				fprintf(stderr, "Failed parsing by type\n");
-				klvanc_dump_packet_console(ctx, hdr);
-			 }
-		}
 
-		if (decodedPacket)
-			free(decodedPacket);
+			if (decodedPacket)
+				free(decodedPacket);
+		}
 
 		free(hdr);
 
