@@ -111,6 +111,7 @@ struct klvanc_context_s
 	/* Internal use by the library */
 	void *priv;
 	struct klrestricted_code_path_block_s rcp_failedToDecode;
+	unsigned int checksum_failures;
 
 	/* Optional: A cache of VANC lines we've detected in the stream.
 	 * see klvanc_context_enable_monitor().

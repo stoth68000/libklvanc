@@ -143,6 +143,8 @@ static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int
 	p->checksum = *(arr + 6 + i);
 	p->checksumValid = klvanc_checksum_is_valid(arr + 3,
 		p->payloadLengthWords + 4 /* payload + header + len + crc */);
+	if (!p->checksumValid)
+		ctx->checksum_failures++;
 
 	p->type = lookupTypeByDID(p->did, p->dbnsdid);
 
