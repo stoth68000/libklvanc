@@ -23,7 +23,7 @@
  * @file	cache.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2017 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	VANC Caching functionality
  */
 
 #ifndef _VANC_CACHE_H

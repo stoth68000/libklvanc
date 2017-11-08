@@ -23,7 +23,7 @@
  * @file	vanc-scte_104.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	SCTE-104 Automation System to Compression System Communications Applications Program Interface 
  */
 
 #ifndef _VANC_SCTE_104_H

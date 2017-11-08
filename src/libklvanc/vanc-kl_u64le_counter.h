@@ -23,7 +23,7 @@
  * @file	vanc-kl_u64le_counter.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2017 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	VANC counter library used for diagnostics/debugging
  */
 
 #ifndef _VANC_KL_U64LE_COUNTER_H

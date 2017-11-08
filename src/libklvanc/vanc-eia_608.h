@@ -23,7 +23,7 @@
  * @file	vanc-eia_608.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	EIA/CEA-608 Closed Captions
  */
 
 #ifndef _VANC_EIA_608_H
