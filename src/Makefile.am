@@ -37,7 +37,6 @@ libklvanc_include_HEADERS += libklvanc/smpte2038.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_708b.h
 libklvanc_include_HEADERS += libklvanc/vanc-eia_608.h
 libklvanc_include_HEADERS += libklvanc/vanc-scte_104.h
-libklvanc_include_HEADERS += libklvanc/vanc-module1.h
 libklvanc_include_HEADERS += libklvanc/vanc-packets.h
 libklvanc_include_HEADERS += libklvanc/vanc-lines.h
 libklvanc_include_HEADERS += libklvanc/vanc-afd.h
