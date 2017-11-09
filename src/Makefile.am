@@ -4,7 +4,6 @@ AUTOMAKE_OPTIONS = foreign
 lib_LTLIBRARIES = libklvanc.la
 
 libklvanc_la_SOURCES  = core.c
-libklvanc_la_SOURCES += core-module1.c
 libklvanc_la_SOURCES += core-packet-eia_708b.c
 libklvanc_la_SOURCES += core-packet-eia_608.c
 libklvanc_la_SOURCES += core-packet-scte_104.c
