@@ -175,7 +175,6 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
  */
 void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
-#include <libklvanc/vanc-module1.h>
 #include <libklvanc/vanc-afd.h>
 #include <libklvanc/vanc-eia_708b.h>
 #include <libklvanc/vanc-eia_608.h>
