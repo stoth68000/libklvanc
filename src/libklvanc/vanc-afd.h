@@ -98,6 +98,55 @@ const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar);
  */
 int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p);
 
+/**
+ * @brief	Create an AFD VANC packet
+ * @param[out]	struct klvanc_packet_afd_s **pkt - Pointer to newly created packet
+ * @return	0 - Success
+ * @return	< 0 - Error
+ */
+int klvanc_create_AFD(struct klvanc_packet_afd_s **pkt);
+
+/**
+ * @brief	Destroy an AFD VANC packet
+ * @param[in]	struct klvanc_packet_afd_s *pkt - Packet to be destroyed
+ */
+void klvanc_destroy_AFD(struct klvanc_packet_afd_s *pkt);
+
+/**
+ * @brief	Set the AFD value on an AFD packet
+ * @param[in]	struct klvanc_packet_afd_s *pkt - Packet to be modified
+ * @param[in]	unsigned char val - Value to set the AFD field to
+ * @return	  0 - Success
+ * @return	< 0 - Unknown framerate specified
+ */
+int klvanc_set_AFD_val(struct klvanc_packet_afd_s *pkt, unsigned char val);
+
+/**
+ * @brief	Convert type struct klvanc_packet_afd_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct klvanc_packet_afd_s *pkt - A AFD VANC entry
+ * @param[out]	uint16_t **words - An array of words representing a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_AFD_to_words(struct klvanc_packet_afd_s *pkt, uint16_t **words, uint16_t *wordCount);
+
+/**
+ * @brief	Convert type struct klvanc_packet_afd_s into a block of bytes which represents\n
+ *              an AFD packet
+ *              On success, caller MUST free the resulting *bytes array.
+ * @param[in]	struct klvanc_packet_afd_s *pkt - A AFD VANC entry, received from the AFD parser
+ * @param[out]	uint8_t **bytes - An array of bytes representing the serialized AFD packet
+ * @param[out]	uint16_t *byteCount - Number of bytes in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t **bytes, uint16_t *byteCount);
+
 #ifdef __cplusplus
 };
 #endif  
