@@ -23,7 +23,7 @@
  * @file	pixels.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	Common colorspace conversion functions for VANC
  */
 
 #ifndef _PIXELS_H

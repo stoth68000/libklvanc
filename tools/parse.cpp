@@ -17,7 +17,7 @@
 #include "hexdump.h"
 #include "version.h"
 
-static struct vanc_context_s *vanchdl;
+static struct klvanc_context_s *vanchdl;
 FILE *vancOutputFile = NULL;
 static int g_verbose = 0;
 static int g_saveVanc = 0;
@@ -52,7 +52,7 @@ static void convert_colorspace_and_parse_vanc(unsigned char *buf, unsigned int u
 	if (klvanc_v210_line_to_nv20_c(src, p_anc, sizeof(decoded_words), (uiWidth / 6) * 6) < 0)
 		return;
 
-	int ret = vanc_packet_parse(vanchdl, lineNr, decoded_words, sizeof(decoded_words) / (sizeof(unsigned short)));
+	int ret = klvanc_packet_parse(vanchdl, lineNr, decoded_words, sizeof(decoded_words) / (sizeof(unsigned short)));
 	if (ret < 0) {
 		/* No VANC on this line */
 	}
@@ -181,7 +181,7 @@ static int AnalyzeVANC(const char *fn)
 	return 0;
 }
 
-static int pkt_filtered(packet_header_s *pkt)
+static int pkt_filtered(klvanc_packet_header_s *pkt)
 {
 	if (g_filter_did > 0) {
 		if (g_filter_sdid > 0) {
@@ -203,46 +203,51 @@ static int pkt_filtered(packet_header_s *pkt)
 }
 
 /* CALLBACKS for message notification */
-static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
+static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx,
+				  struct klvanc_packet_afd_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		dump_PAYLOAD_INFORMATION(ctx, pkt);
+		klvanc_dump_AFD(ctx, pkt);
 	}
 
 	return 0;
 }
 
-static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
+static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx,
+		       struct klvanc_packet_eia_708b_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		dump_EIA_708B(ctx, pkt);
+		klvanc_dump_EIA_708B(ctx, pkt);
 	}
 
 	return 0;
 }
 
-static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
+static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx,
+		      struct klvanc_packet_eia_608_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		dump_EIA_608(ctx, pkt);
+		klvanc_dump_EIA_608(ctx, pkt);
 	}
 
 	return 0;
 }
 
-static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx,
+		       struct klvanc_packet_scte_104_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		dump_SCTE_104(ctx, pkt);
+		klvanc_dump_SCTE_104(ctx, pkt);
 	}
 	return 0;
 }
 
-static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
+static int cb_all(void *callback_context, struct klvanc_context_s *ctx,
+		  struct klvanc_packet_header_s *pkt)
 {
 	if (pkt_filtered(pkt)) {
 		g_filterMatch = 1;
@@ -266,9 +271,9 @@ static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct pac
 	return 0;
 }
 
-static struct vanc_callbacks_s callbacks =
+static struct klvanc_callbacks_s callbacks =
 {
-	.payload_information    = cb_PAYLOAD_INFORMATION,
+	.afd			= cb_AFD,
 	.eia_708b               = cb_EIA_708B,
 	.eia_608                = cb_EIA_608,
 	.scte_104               = cb_SCTE_104,
@@ -337,7 +342,7 @@ static int _main(int argc, char *argv[])
 		goto bail;
 	}
 
-        if (vanc_context_create(&vanchdl) < 0) {
+        if (klvanc_context_create(&vanchdl) < 0) {
                 fprintf(stderr, "Error initializing library context\n");
                 exit(1);
         }
@@ -358,7 +363,7 @@ static int _main(int argc, char *argv[])
 		return AnalyzeVANC(g_vancInputFilename);
 	}
 
-        vanc_context_destroy(vanchdl);
+        klvanc_context_destroy(vanchdl);
 
 bail:
 

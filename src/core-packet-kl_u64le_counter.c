@@ -28,24 +28,24 @@
 #include <string.h>
 #include <inttypes.h>
 
-int dump_KL_U64LE_COUNTER(struct vanc_context_s *ctx, void *p)
+int klvanc_dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct packet_kl_u64le_counter_s *pkt = p;
+	struct klvanc_packet_kl_u64le_counter_s *pkt = p;
 
 	printf("%s() KL_U64LE_COUNTER: %" PRIu64 " [%" PRIx64 "]\n", __func__, pkt->counter, pkt->counter);
 
 	return KLAPI_OK;
 }
 
-int parse_KL_U64LE_COUNTER(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
+int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
 		printf("%s()\n", __func__);
 
-	struct packet_kl_u64le_counter_s *pkt = calloc(1, sizeof(*pkt));
+	struct klvanc_packet_kl_u64le_counter_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 

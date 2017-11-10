@@ -40,33 +40,40 @@
 #define VALIDATE(ctx) \
  if (!ctx) return -EINVAL;
 
-/* core-packet-payload_information.c */
-int dump_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, void *p);
-int parse_PAYLOAD_INFORMATION(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+/* core-packet-afd.c */
+int dump_AFD(struct klvanc_context_s *ctx, void *p);
+int parse_AFD(struct klvanc_context_s *ctx,
+	      struct klvanc_packet_header_s *hdr, void **pp);
 
 /* core-packet-eia_708b.c */
-int dump_EIA_708B(struct vanc_context_s *ctx, void *p);
-int parse_EIA_708B(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+int dump_EIA_708B(struct klvanc_context_s *ctx, void *p);
+int parse_EIA_708B(struct klvanc_context_s *ctx,
+		   struct klvanc_packet_header_s *hdr, void **pp);
 
 /* core-packet-eia_608.c */
-int dump_EIA_608(struct vanc_context_s *ctx, void *p);
-int parse_EIA_608(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+int dump_EIA_608(struct klvanc_context_s *ctx, void *p);
+int parse_EIA_608(struct klvanc_context_s *ctx,
+		  struct klvanc_packet_header_s *hdr, void **pp);
 
 /* core-packet-eia_608.c */
-int dump_SCTE_104(struct vanc_context_s *ctx, void *p);
-int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+int dump_SCTE_104(struct klvanc_context_s *ctx, void *p);
+int parse_SCTE_104(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr,
+		   void **pp);
 
 /* core-packet-kl_u64le_counter.c */
-int dump_KL_U64LE_COUNTER(struct vanc_context_s *ctx, void *p);
-int parse_KL_U64LE_COUNTER(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp);
+int dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p);
+int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx,
+			   struct klvanc_packet_header_s *hdr, void **pp);
 
-void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header_s *hdr);
+void klvanc_dump_packet_console(struct klvanc_context_s *ctx,
+				struct klvanc_packet_header_s *hdr);
 
 /* We don't expect anything outside of the VANC framework to need toascii
  * call these, so we'll keep them private / internal calls.
  */
-extern int  vanc_cache_alloc(struct vanc_context_s *ctx);
-extern void vanc_cache_free(struct vanc_context_s *ctx);
-extern int  vanc_cache_update(struct vanc_context_s *ctx, struct packet_header_s *pkt);
+extern int  klvanc_cache_alloc(struct klvanc_context_s *ctx);
+extern void klvanc_cache_free(struct klvanc_context_s *ctx);
+extern int  klvanc_cache_update(struct klvanc_context_s *ctx,
+				struct klvanc_packet_header_s *pkt);
 
 #endif

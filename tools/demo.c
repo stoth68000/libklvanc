@@ -24,51 +24,51 @@
 #include <libklvanc/vanc.h>
 
 /* CALLBACKS for message notification */
-static int cb_PAYLOAD_INFORMATION(void *callback_context, struct vanc_context_s *ctx, struct packet_payload_information_s *pkt)
+static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_afd_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	dump_PAYLOAD_INFORMATION(ctx, pkt);
+	klvanc_dump_AFD(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_EIA_708B(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_708b_s *pkt)
+static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_708b_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	dump_EIA_708B(ctx, pkt);
+	klvanc_dump_EIA_708B(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_EIA_608(void *callback_context, struct vanc_context_s *ctx, struct packet_eia_608_s *pkt)
+static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_608_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	dump_EIA_608(ctx, pkt);
+	klvanc_dump_EIA_608(ctx, pkt);
 
 	return 0;
 }
 
-static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt)
 {
 	int ret = -1;
 	printf("%s:%s()\n", __FILE__, __func__);
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	dump_SCTE_104(ctx, pkt);
+	klvanc_dump_SCTE_104(ctx, pkt);
 
 	uint16_t *words;
 	uint16_t wordCount;
-	ret = convert_SCTE_104_to_words(pkt, &words, &wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(pkt, &words, &wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		return -1;
@@ -84,21 +84,21 @@ static int cb_SCTE_104(void *callback_context, struct vanc_context_s *ctx, struc
 	return 0;
 }
 
-static int cb_all(void *callback_context, struct vanc_context_s *ctx, struct packet_header_s *pkt)
+static int cb_all(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_header_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 	return 0;
 }
 
-static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct vanc_context_s *ctx, struct packet_kl_u64le_counter_s *pkt)
+static int cb_VANC_TYPE_KL_UINT64_COUNTER(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_kl_u64le_counter_s *pkt)
 {
 	printf("%s:%s()\n", __FILE__, __func__);
 	return 0;
 }
 
-static struct vanc_callbacks_s callbacks = 
+static struct klvanc_callbacks_s callbacks =
 {
-	.payload_information	= cb_PAYLOAD_INFORMATION,
+	.afd			= cb_AFD,
 	.eia_708b		= cb_EIA_708B,
 	.eia_608		= cb_EIA_608,
 	.scte_104		= cb_SCTE_104,
@@ -107,7 +107,7 @@ static struct vanc_callbacks_s callbacks =
 };
 /* END - CALLBACKS for message notification */
 
-static int test_PAYLOAD_INFORMATION(struct vanc_context_s *ctx)
+static int test_AFD(struct klvanc_context_s *ctx)
 {
 	unsigned short arr[] = {
 		0x000,
@@ -128,14 +128,14 @@ static int test_PAYLOAD_INFORMATION(struct vanc_context_s *ctx)
 	};
 
 	/* report that this was from line 13, informational only. */
-	int ret = vanc_packet_parse(ctx, 13, arr, sizeof(arr) / (sizeof(unsigned short)));
+	int ret = klvanc_packet_parse(ctx, 13, arr, sizeof(arr) / (sizeof(unsigned short)));
 	if (ret < 0)
 		return ret;
 
 	return 0;
 }
 
-static int test_EIA_708B(struct vanc_context_s *ctx)
+static int test_EIA_708B(struct klvanc_context_s *ctx)
 {
 	unsigned short arr[] = {
 		0x0, 0x0, 0x0, /* Spurious junk prefix for testing */
@@ -153,7 +153,7 @@ static int test_EIA_708B(struct vanc_context_s *ctx)
 		0x1b4 /* Checksum */
 	};
 
-	int ret = vanc_packet_parse(ctx, 1, arr, sizeof(arr) / (sizeof(unsigned short)));
+	int ret = klvanc_packet_parse(ctx, 1, arr, sizeof(arr) / (sizeof(unsigned short)));
 	if (ret < 0)
 		return ret;
 
@@ -171,7 +171,7 @@ static int test_checksum()
 		0x0200, 0x0200, 0x0200, 0x0200 ,0x0200, 0x0200, 0x0101
 	};
 
-	uint16_t sum = vanc_checksum_calculate(&arr[3], 31);
+	uint16_t sum = klvanc_checksum_calculate(&arr[3], 31);
 	if (sum != 0x28c)
 		return -1;
 
@@ -184,7 +184,7 @@ static int test_checksum()
 		0x028c
 	};
 
-	if (!vanc_checksum_is_valid(&arr2[3], 32))
+	if (!klvanc_checksum_is_valid(&arr2[3], 32))
 		return -1;
 
 	printf("Checksum test passed.\n");
@@ -210,7 +210,7 @@ static unsigned char __0_vancentry[] = {
 	0x02, 0x56, 0x02, 0x4e, 0x01, 0x54, 0x02, 0x00, 0x02, 0x06
 };
 
-static int test_scte_104(struct vanc_context_s *ctx)
+static int test_scte_104(struct klvanc_context_s *ctx)
 {
 	printf("\nParsing a new SCTE104 VANC packet......\n");
 	uint16_t *arr = malloc(sizeof(__0_vancentry) / 2 * sizeof(uint16_t));
@@ -227,7 +227,7 @@ static int test_scte_104(struct vanc_context_s *ctx)
 	}
 	printf("\n");
 
-	int ret = vanc_packet_parse(ctx, 13, arr, sizeof(__0_vancentry) / sizeof(unsigned short));
+	int ret = klvanc_packet_parse(ctx, 13, arr, sizeof(__0_vancentry) / sizeof(unsigned short));
 	free(arr);
 
 	return ret;
@@ -235,10 +235,10 @@ static int test_scte_104(struct vanc_context_s *ctx)
 
 int demo_main(int argc, char *argv[])
 {
-	struct vanc_context_s *ctx;
+	struct klvanc_context_s *ctx;
 	int ret;
 
-	if (vanc_context_create(&ctx) < 0) {
+	if (klvanc_context_create(&ctx) < 0) {
 		fprintf(stderr, "Error initializing library context\n");
 		exit(1);
 	}
@@ -246,9 +246,9 @@ int demo_main(int argc, char *argv[])
 	ctx->callbacks = &callbacks;
 	printf("Library initialized.\n");
 
-	ret = test_PAYLOAD_INFORMATION(ctx);
+	ret = test_AFD(ctx);
 	if (ret < 0)
-		fprintf(stderr, "PAYLOAD_INFORMATION failed to parse\n");
+		fprintf(stderr, "AFD failed to parse\n");
 
 	ret = test_EIA_708B(ctx);
 	if (ret < 0)
@@ -262,7 +262,7 @@ int demo_main(int argc, char *argv[])
 	if (ret < 0)
 		fprintf(stderr, "Checksum calculation failed\n");
 
-	vanc_context_destroy(ctx);
+	klvanc_context_destroy(ctx);
 	printf("Library destroyed.\n");
 
 	return 0;

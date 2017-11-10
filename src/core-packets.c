@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int isValidHeader(struct vanc_context_s *ctx, unsigned short *arr, unsigned int len)
+static int isValidHeader(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len)
 {
 	int ret = 0;
 	if (len > 7) {
@@ -43,23 +43,23 @@ static int isValidHeader(struct vanc_context_s *ctx, unsigned short *arr, unsign
 static struct type_s
 {
 	unsigned short did, sdid;
-	enum packet_type_e type;
+	enum klvanc_packet_type_e type;
 	const char *spec;
 	const char *description;
-	int (*parse)(struct vanc_context_s *, struct packet_header_s *, void **);
-	int (*dump)(struct vanc_context_s *, void *);
+	int (*parse)(struct klvanc_context_s *, struct klvanc_packet_header_s *, void **);
+	int (*dump)(struct klvanc_context_s *, void *);
 } types[] = {
-	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, dump_KL_U64LE_COUNTER, },
-	{ 0x41, 0x05, VANC_TYPE_PAYLOAD_INFORMATION, "SMPTE 2016-3 AFD", "Payload Information", parse_PAYLOAD_INFORMATION, dump_PAYLOAD_INFORMATION, },
-	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 2", "SCTE 104", parse_SCTE_104, dump_SCTE_104, },
+	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, },
+	{ 0x41, 0x05, VANC_TYPE_AFD, "SMPTE 2016-3 AFD", "Active Format Description", parse_AFD, klvanc_dump_AFD, },
+	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 2", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, },
 #ifdef SCTE_104_PACKET_TYPE_1
-	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, dump_SCTE_104, },
+	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, },
 #endif
-	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, dump_EIA_708B, },
-	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, dump_EIA_608, },
+	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, klvanc_dump_EIA_708B, },
+	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, klvanc_dump_EIA_608, },
 };
 
-static enum packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
+static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if ((types[i].did == did) && (types[i].sdid == sdid))
@@ -69,7 +69,7 @@ static enum packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdi
 	return VANC_TYPE_UNDEFINED;
 }
 
-const char *vanc_lookupDescriptionByType(enum packet_type_e type)
+const char *klvanc_lookupDescriptionByType(enum klvanc_packet_type_e type)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if (types[i].type == type)
@@ -79,7 +79,7 @@ const char *vanc_lookupDescriptionByType(enum packet_type_e type)
 	return "UNDEFINED";
 }
 
-const char *vanc_lookupSpecificationByType(enum packet_type_e type)
+const char *klvanc_lookupSpecificationByType(enum klvanc_packet_type_e type)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if (types[i].type == type)
@@ -90,7 +90,7 @@ const char *vanc_lookupSpecificationByType(enum packet_type_e type)
 }
 
 
-static int parseByType(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
+static int parseByType(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	*pp = 0;
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
@@ -101,7 +101,7 @@ static int parseByType(struct vanc_context_s *ctx, struct packet_header_s *hdr, 
 	return -EINVAL;
 }
 
-static int dumpByType(struct vanc_context_s *ctx, struct packet_header_s *hdr)
+static int dumpByType(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
 {
 	for (int i = 0; i < (sizeof(types) / sizeof(struct type_s)); i++) {
 		if ((types[i].type == hdr->type) && (types[i].dump))
@@ -111,14 +111,14 @@ static int dumpByType(struct vanc_context_s *ctx, struct packet_header_s *hdr)
 	return -EINVAL;
 }
 
-static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int len,
-	struct packet_header_s **hdr)
+static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len,
+	struct klvanc_packet_header_s **hdr)
 {
 	if (!isValidHeader(ctx, arr, len)) {
 		return -EINVAL;
 	}
 
-	struct packet_header_s *p = calloc(1, sizeof(struct packet_header_s));
+	struct klvanc_packet_header_s *p = calloc(1, sizeof(struct klvanc_packet_header_s));
 	if (!p)
 		return -ENOMEM;
 
@@ -141,8 +141,10 @@ static int parse(struct vanc_context_s *ctx, unsigned short *arr, unsigned int l
 		p->payload[i] = *(arr + 6 + i);
 	}
 	p->checksum = *(arr + 6 + i);
-	p->checksumValid = vanc_checksum_is_valid(arr + 3,
+	p->checksumValid = klvanc_checksum_is_valid(arr + 3,
 		p->payloadLengthWords + 4 /* payload + header + len + crc */);
+	if (!p->checksumValid)
+		ctx->checksum_failures++;
 
 	p->type = lookupTypeByDID(p->did, p->dbnsdid);
 
@@ -172,7 +174,7 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
 	fprintf(stderr, "\n             CS: [%03x]\n", *(vanc + i));
 }
 
-void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header_s *hdr)
+void klvanc_dump_packet_console(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
 {
 	printf("hdr->type   = %d\n", hdr->type);
 	printf(" ->adf      = 0x%04x/0x%04x/0x%04x\n", hdr->adf[0], hdr->adf[1], hdr->adf[2]);
@@ -191,7 +193,7 @@ void klvanc_dump_packet_console(struct vanc_context_s *ctx, struct packet_header
 	printf("\n");
 }
 
-int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len)
+int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len)
 {
 	int attempts = 0;
 	VALIDATE(ctx);
@@ -208,7 +210,7 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 	unsigned int i = 0;
 	while (i < len - 7) {
 		/* Do a basic header parse */
-		struct packet_header_s *hdr;
+		struct klvanc_packet_header_s *hdr;
 		int ret = parse(ctx, arr + i, len - i, &hdr);
 		if (ret < 0) {
 			i++;
@@ -226,30 +228,32 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 		attempts++;
 
 		/* Update the internal VANC cache */
-		vanc_cache_update(ctx, hdr);
+		klvanc_cache_update(ctx, hdr);
 
-		if (ctx->callbacks && ctx->callbacks->all)
-			ctx->callbacks->all(ctx->callback_context, ctx, hdr);
+		if (hdr->checksumValid || ctx->allow_bad_checksums) {
+			if (ctx->callbacks && ctx->callbacks->all)
+				ctx->callbacks->all(ctx->callback_context, ctx, hdr);
 
-		/* formally decode the entire packet */
-		void *decodedPacket;
-		ret = parseByType(ctx, hdr, &decodedPacket);
-		if (ret == KLAPI_OK) {
-			if (ctx->verbose == 2) {
-				ret = dumpByType(ctx, decodedPacket);
-				if (ret < 0) {
-					fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+			/* formally decode the entire packet */
+			void *decodedPacket;
+			ret = parseByType(ctx, hdr, &decodedPacket);
+			if (ret == KLAPI_OK) {
+				if (ctx->verbose == 2) {
+					ret = dumpByType(ctx, decodedPacket);
+					if (ret < 0) {
+						fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+					}
+				}
+			} else {
+				if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
+					fprintf(stderr, "Failed parsing by type\n");
+					klvanc_dump_packet_console(ctx, hdr);
 				}
 			}
-		} else {
- 			if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
-				fprintf(stderr, "Failed parsing by type\n");
-				klvanc_dump_packet_console(ctx, hdr);
-			 }
-		}
 
-		if (decodedPacket)
-			free(decodedPacket);
+			if (decodedPacket)
+				free(decodedPacket);
+		}
 
 		free(hdr);
 
@@ -262,7 +266,7 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
 	return attempts;
 }
 
-int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
+int klvanc_sdi_create_payload(uint8_t sdid, uint8_t did,
         const uint8_t *src, uint16_t srcByteCount,
         uint16_t **dst, uint16_t *dstWordCount,
         uint32_t bitDepth)
@@ -310,14 +314,14 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	return 0;
 }
 
-int vanc_packet_copy(struct packet_header_s **dst, struct packet_header_s *src)
+int klvanc_packet_copy(struct klvanc_packet_header_s **dst, struct klvanc_packet_header_s *src)
 {
 	*dst = malloc(sizeof(*src));
 	memcpy(*dst, src, sizeof(*src));
 	return 0;
 }
 
-void vanc_packet_free(struct packet_header_s *src)
+void klvanc_packet_free(struct klvanc_packet_header_s *src)
 {
 	free(src);
 }

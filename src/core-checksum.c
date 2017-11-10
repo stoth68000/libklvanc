@@ -39,7 +39,7 @@
  * 000 03FF 03FF 111 222 333 CHKSUM
  * So pass the address of 111 with a wordCount of 3.
  */
-uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount)
+uint16_t klvanc_checksum_calculate(uint16_t *words, int wordCount)
 {
 	uint16_t s = 0;
 	for (uint16_t i = 0; i < wordCount; i++) {
@@ -61,7 +61,7 @@ uint16_t vanc_checksum_calculate(uint16_t *words, int wordCount)
  *
  * Returns: Boolean true or false.
  */
-int vanc_checksum_is_valid(uint16_t *words, int wordCount)
+int klvanc_checksum_is_valid(uint16_t *words, int wordCount)
 {
 #define LOCAL_DEBUG 0
 #if 0
@@ -70,7 +70,7 @@ int vanc_checksum_is_valid(uint16_t *words, int wordCount)
 		printf("%04x ", *(words + i));
 	printf("\n");
 #endif
-	uint16_t sum = vanc_checksum_calculate(words, wordCount - 1);
+	uint16_t sum = klvanc_checksum_calculate(words, wordCount - 1);
 	if (sum != *(words + (wordCount - 1))) {
 #if LOCAL_DEBUG
 		fprintf(stderr, "Checksum calculated as %04x, but passed as %04x\n", sum, *(words + (wordCount - 1)));
