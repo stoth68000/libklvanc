@@ -36,6 +36,7 @@
 #define _VANC_H
 
 #include <stdint.h>
+#include <stdarg.h>
 #include <sys/errno.h>
 #include <sys/errno.h>
 #include <libklvanc/klrestricted_code_path.h>
@@ -109,6 +110,8 @@ struct klvanc_context_s
 	struct klvanc_callbacks_s *callbacks;
 	void *callback_context;
 
+	void (*log_cb)(void *p, int level, const char *fmt, ...);
+
 	/* Internal use by the library */
 	void *priv;
 	struct klrestricted_code_path_block_s rcp_failedToDecode;
@@ -127,6 +130,11 @@ struct klvanc_context_s
 	 */
 	struct klvanc_cache_s *cacheLines;
 };
+
+#define LIBKLVANC_LOGLEVEL_ERR 0
+#define LIBKLVANC_LOGLEVEL_WARN 1
+#define LIBKLVANC_LOGLEVEL_INFO 2
+#define LIBKLVANC_LOGLEVEL_DEBUG 3
 
 /**
  * @brief	Create or destroy some basic application/library context.\n
@@ -173,7 +181,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
  * @param[in]	unsigned int linenr - SDI line number the array data came from. Used for information / tracking purposes only.
  * @param[in]	int onlyvalid - Brief description goes here.
  */
-void klvanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
+void klvanc_dump_words_console(struct klvanc_context_s *ctx, uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
 #include <libklvanc/vanc-afd.h>
 #include <libklvanc/vanc-eia_708b.h>

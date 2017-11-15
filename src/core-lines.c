@@ -19,7 +19,10 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <libklvanc/vanc.h>
 #include <libklvanc/vanc-lines.h>
+
+#include "core-private.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,8 +50,8 @@ void klvanc_line_free(struct klvanc_line_s *line)
 	free(line);
 }
 
-int klvanc_line_insert(struct klvanc_line_set_s *vanc_lines, uint16_t * pixels,
-		     int pixel_width, int line_number, int horizontal_offset)
+int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *vanc_lines,
+		       uint16_t * pixels, int pixel_width, int line_number, int horizontal_offset)
 {
 	int i;
 	struct klvanc_line_s *line = vanc_lines->lines[0];
@@ -83,7 +86,7 @@ int klvanc_line_insert(struct klvanc_line_set_s *vanc_lines, uint16_t * pixels,
 
 	if (i == KLVANC_MAX_VANC_LINES) {
 		/* Array is full */
-		fprintf(stderr, "array of lines is full!\n");
+		PRINT_DEBUG("array of lines is full!\n");
 		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
@@ -92,7 +95,7 @@ int klvanc_line_insert(struct klvanc_line_set_s *vanc_lines, uint16_t * pixels,
 	/* Now insert the VANC entry into the line */
 	if (line->num_entries == KLVANC_MAX_VANC_ENTRIES) {
 		/* Array is full */
-		fprintf(stderr, "line is full!\n");
+		PRINT_DEBUG("line is full!\n");
 		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
@@ -115,8 +118,8 @@ static int vanc_ent_comp(const void *a, const void *b)
 	return 1;
 }
 
-int klvanc_generate_vanc_line(struct klvanc_line_s *line, uint16_t ** outbuf,
-			      int *out_len, int line_pixel_width)
+int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
+			      uint16_t ** outbuf, int *out_len, int line_pixel_width)
 {
 	int pixels_used = 0;
 	int i;
@@ -143,15 +146,14 @@ int klvanc_generate_vanc_line(struct klvanc_line_s *line, uint16_t ** outbuf,
 		for (int j = 3; j < entry->pixel_width; j++) {
 			if (entry->payload[j] <= 0x0003
 			    || entry->payload[j] >= 0x03FC) {
-				fprintf(stderr,
+				PRINT_DEBUG(
 					"VANC line %d has entry with illegal payload at offset %d. Skipping.  offset=%d len=%d",
 					line->line_number, j, entry->h_offset,
 					entry->pixel_width);
 				for (int k = 0; k < entry->pixel_width; k++) {
-					fprintf(stderr, "%04x ",
-						entry->payload[k]);
+					PRINT_DEBUG("%04x ", entry->payload[k]);
 				}
-				fprintf(stderr, "\n");
+				PRINT_DEBUG("\n");
 				entry->pixel_width = 0;
 				break;
 			}
@@ -160,7 +162,7 @@ int klvanc_generate_vanc_line(struct klvanc_line_s *line, uint16_t ** outbuf,
 		/* Don't let sum of all VANC entries overflow end of line */
 		if ((entry->h_offset + entry->pixel_width) > line_pixel_width) {
 			/* Set the length to zero so this entry gets skipped */
-			fprintf(stderr,
+			PRINT_DEBUG(
 				"VANC line %d would overflow thus skipping.  offset=%d len=%d",
 				line->line_number, entry->h_offset,
 				entry->pixel_width);

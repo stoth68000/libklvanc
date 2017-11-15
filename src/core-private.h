@@ -76,4 +76,11 @@ extern void klvanc_cache_free(struct klvanc_context_s *ctx);
 extern int  klvanc_cache_update(struct klvanc_context_s *ctx,
 				struct klvanc_packet_header_s *pkt);
 
+/* Logging Macros */
+#define PRINT_ERR(...) if (ctx->log_cb) ctx->log_cb(NULL, LIBKLVANC_LOGLEVEL_ERR, __VA_ARGS__);
+#define PRINT_DEBUG(...) if (ctx->log_cb) ctx->log_cb(NULL, LIBKLVANC_LOGLEVEL_DEBUG, __VA_ARGS__);
+#define PRINT_DEBUG_MEMBER_INT(m) if (ctx->log_cb) ctx->log_cb(NULL, LIBKLVANC_LOGLEVEL_DEBUG, " %s = 0x%x\n", #m, m);
+#define PRINT_DEBUG_MEMBER_INTI(m, n) if (ctx->log_cb) ctx->log_cb(NULL, LIBKLVANC_LOGLEVEL_DEBUG, "%*c%s = 0x%x\n", n, ' ', #m, m);
+#define PRINT_DEBUG_MEMBER_INT64(m) if (ctx->log_cb) ctx->log_cb(NULL, LIBKLVANC_LOGLEVEL_DEBUG, " %s = 0x%" PRIx64 "\n", #m, m);
+
 #endif

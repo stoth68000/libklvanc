@@ -27,9 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PRINT_DEBUG_MEMBER_INT(m, n) printf("%*c%s = 0x%x\n", n, ' ', #m, m);
-#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
-
 static const char *cc_type_lookup(int cc_type)
 {
 	switch (cc_type) {
@@ -108,76 +105,76 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 	struct klvanc_packet_eia_708b_s *pkt = p;
 
 	if (ctx->verbose)
-		printf("%s() %p\n", __func__, (void *)pkt);
+		PRINT_DEBUG("%s() %p\n", __func__, (void *)pkt);
 
-	printf(" pkt->header.cdp_identifier = 0x%04x (%s)\n",
-	       pkt->header.cdp_identifier,
-	       pkt->header.cdp_identifier == 0x9669 ? "VALID" : "INVALID");
+	PRINT_DEBUG(" pkt->header.cdp_identifier = 0x%04x (%s)\n",
+		    pkt->header.cdp_identifier,
+		    pkt->header.cdp_identifier == 0x9669 ? "VALID" : "INVALID");
 
-	PRINT_DEBUG_MEMBER_INT(pkt->header.cdp_length, 1);
-	printf(" pkt->header.cdp_frame_rate = 0x%02x (%s FPS)\n",
-	       pkt->header.cdp_frame_rate,
-	       cc_framerate_lookup(pkt->header.cdp_frame_rate));
-	PRINT_DEBUG_MEMBER_INT(pkt->header.time_code_present, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.ccdata_present, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.svcinfo_present, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.svc_info_start, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.svc_info_change, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.svc_info_complete, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.caption_service_active, 1);
-	PRINT_DEBUG_MEMBER_INT(pkt->header.cdp_hdr_sequence_cntr, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.cdp_length, 1);
+	PRINT_DEBUG(" pkt->header.cdp_frame_rate = 0x%02x (%s FPS)\n",
+		    pkt->header.cdp_frame_rate,
+		    cc_framerate_lookup(pkt->header.cdp_frame_rate));
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.time_code_present, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.ccdata_present, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.svcinfo_present, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.svc_info_start, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.svc_info_change, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.svc_info_complete, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.caption_service_active, 1);
+	PRINT_DEBUG_MEMBER_INTI(pkt->header.cdp_hdr_sequence_cntr, 1);
 	if (pkt->header.time_code_present) {
 
 	}
 
 	if (pkt->header.ccdata_present) {
-		printf("  pkt->ccdata.ccdata_id = 0x%02x (%s)\n",
-		       pkt->ccdata.ccdata_id,
-		       pkt->ccdata.ccdata_id == 0x72 ? "VALID" : "INVALID");
-		PRINT_DEBUG_MEMBER_INT(pkt->ccdata.cc_count, 2);
+		PRINT_DEBUG("  pkt->ccdata.ccdata_id = 0x%02x (%s)\n",
+			    pkt->ccdata.ccdata_id,
+			    pkt->ccdata.ccdata_id == 0x72 ? "VALID" : "INVALID");
+		PRINT_DEBUG_MEMBER_INTI(pkt->ccdata.cc_count, 2);
 		for (int i = 0; i < pkt->ccdata.cc_count; i++) {
-			printf("  pkt->ccdata.cc[%d]\n", i);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccdata.cc[i].cc_valid, 3);
-			printf("   pkt->ccdata.cc[i].cc_type = 0x%02x (%s)\n",
-			       pkt->ccdata.cc[i].cc_type,
-			       cc_type_lookup(pkt->ccdata.cc[i].cc_type));
-			PRINT_DEBUG_MEMBER_INT(pkt->ccdata.cc[i].cc_data[0], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccdata.cc[i].cc_data[1], 3);
+			PRINT_DEBUG("  pkt->ccdata.cc[%d]\n", i);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccdata.cc[i].cc_valid, 3);
+			PRINT_DEBUG("   pkt->ccdata.cc[i].cc_type = 0x%02x (%s)\n",
+				    pkt->ccdata.cc[i].cc_type,
+				    cc_type_lookup(pkt->ccdata.cc[i].cc_type));
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccdata.cc[i].cc_data[0], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccdata.cc[i].cc_data[1], 3);
 		}
 	}
 
 	if (pkt->header.svcinfo_present) {
-		printf("  pkt->svcinfo.ccsvcinfo_id = 0x%02x (%s)\n",
-		       pkt->ccsvc.ccsvcinfo_id,
-		       pkt->ccsvc.ccsvcinfo_id == 0x73 ? "VALID" : "INVALID");
-		PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc_info_start, 2);
-		PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc_info_change, 2);
-		PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc_info_complete, 2);
-		PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc_count, 2);
+		PRINT_DEBUG("  pkt->svcinfo.ccsvcinfo_id = 0x%02x (%s)\n",
+			    pkt->ccsvc.ccsvcinfo_id,
+			    pkt->ccsvc.ccsvcinfo_id == 0x73 ? "VALID" : "INVALID");
+		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_info_start, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_info_change, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_info_complete, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_count, 2);
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
-			printf("  pkt->ccssvc.entry[%d]\n", i);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].caption_service_number, 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[0], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[1], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[2], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[3], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[4], 3);
-			PRINT_DEBUG_MEMBER_INT(pkt->ccsvc.svc[i].svc_data_byte[5], 3);
+			PRINT_DEBUG("  pkt->ccssvc.entry[%d]\n", i);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].caption_service_number, 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[0], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[1], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[2], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[3], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[4], 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[5], 3);
 		}
 	}
 
 	/* FIXME: add support for "future_section" (Sec 11.2.7) */
 
-	printf(" pkt->footer.cdp_footer_id = 0x%02x (%s)\n",
-	       pkt->footer.cdp_footer_id,
-	       pkt->footer.cdp_footer_id == 0x74 ? "VALID" : "INVALID");
-	printf(" pkt->footer.cdp_ftr_sequence_cntr = 0x%02x (%s)\n",
-	       pkt->footer.cdp_ftr_sequence_cntr,
-	       pkt->footer.cdp_ftr_sequence_cntr == pkt->header.cdp_hdr_sequence_cntr ? "Matches Header" : "INVALID: does not match header");
+	PRINT_DEBUG(" pkt->footer.cdp_footer_id = 0x%02x (%s)\n",
+		    pkt->footer.cdp_footer_id,
+		    pkt->footer.cdp_footer_id == 0x74 ? "VALID" : "INVALID");
+	PRINT_DEBUG(" pkt->footer.cdp_ftr_sequence_cntr = 0x%02x (%s)\n",
+		    pkt->footer.cdp_ftr_sequence_cntr,
+		    pkt->footer.cdp_ftr_sequence_cntr == pkt->header.cdp_hdr_sequence_cntr ? "Matches Header" : "INVALID: does not match header");
 
-	printf(" pkt->footer.packet_checksum = 0x%02x (%s)\n",
-	       pkt->footer.packet_checksum,
-	       pkt->checksum_valid == 1 ? "VALID" : "INVALID");
+	PRINT_DEBUG(" pkt->footer.packet_checksum = 0x%02x (%s)\n",
+		    pkt->footer.packet_checksum,
+		    pkt->checksum_valid == 1 ? "VALID" : "INVALID");
 
 	return KLAPI_OK;
 }
@@ -187,7 +184,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	struct klbs_context_s *bs = klbs_alloc();
 
 	if (ctx->verbose)
-		printf("%s()\n", __func__);
+		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_eia_708b_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
