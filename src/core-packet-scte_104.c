@@ -1014,7 +1014,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 	if (pkt->so_msg.opID != 0xffff) {
 		/* We don't currently support anything but Multiple Operation
 		   Messages */
-//		PRINT_ERR("msg opid not 0xffff.  Provided=0x%x\n", pkt->so_msg.opID);
+		PRINT_ERR("msg opid not 0xffff.  Provided=0x%x\n", pkt->so_msg.opID);
 		return -1;
 	}
 
