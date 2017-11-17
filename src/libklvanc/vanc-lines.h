@@ -105,8 +105,8 @@ void klvanc_line_free(struct klvanc_line_s *line);
  * @return      0 - Success
  * @return      -ENOMEM - insufficient memory to store the VANC packet
  */
-int klvanc_line_insert(struct klvanc_line_set_s *vanc_lines, uint16_t *pixels,
-		      int pixel_width, int line_number, int horizontal_offset);
+int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *vanc_lines,
+		       uint16_t *pixels, int pixel_width, int line_number, int horizontal_offset);
 
 /**
  * @brief	Generate pixel array representing a fully formed VANC line.  This
@@ -131,7 +131,8 @@ int klvanc_line_insert(struct klvanc_line_set_s *vanc_lines, uint16_t *pixels,
  * @return      0 - Success
  * @return      -ENOMEM - insufficient memory to store the VANC packet
  */
-int klvanc_generate_vanc_line(struct klvanc_line_s *line, uint16_t **out_buf, int *out_len, int line_pixel_width);
+int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
+			      uint16_t **out_buf, int *out_len, int line_pixel_width);
 
 #ifdef __cplusplus
 };

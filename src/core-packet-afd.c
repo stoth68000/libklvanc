@@ -120,17 +120,16 @@ const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar)
 int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
-		printf("%s()\n", __func__);
+		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_afd_s *pkt = p;
 
-	printf("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
-		klvanc_afd_to_string(pkt->afd),
-		klvanc_aspectRatio_to_string(pkt->aspectRatio),
-		pkt->barDataFlags,
-		pkt->barDataValue[0],
-		pkt->barDataValue[1]
-		);
+	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
+		    klvanc_afd_to_string(pkt->afd),
+		    klvanc_aspectRatio_to_string(pkt->aspectRatio),
+		    pkt->barDataFlags,
+		    pkt->barDataValue[0],
+		    pkt->barDataValue[1]);
 
 	return KLAPI_OK;
 }
@@ -139,7 +138,7 @@ int parse_AFD(struct klvanc_context_s *ctx,
 			      struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
-		printf("%s()\n", __func__);
+		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_afd_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)

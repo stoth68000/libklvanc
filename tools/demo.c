@@ -68,7 +68,7 @@ static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx, str
 
 	uint16_t *words;
 	uint16_t wordCount;
-	ret = klvanc_convert_SCTE_104_to_words(pkt, &words, &wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, &words, &wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		return -1;

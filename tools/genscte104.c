@@ -62,7 +62,7 @@ static int testcase_1(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -117,7 +117,7 @@ static int testcase_2(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -168,7 +168,7 @@ static int testcase_3(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -237,7 +237,7 @@ static int testcase_4(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -290,7 +290,7 @@ static int testcase_5(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -334,7 +334,7 @@ static int testcase_6(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -384,7 +384,7 @@ static int testcase_7(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -436,7 +436,7 @@ static int testcase_8(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -486,7 +486,7 @@ static int testcase_9(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -536,7 +536,7 @@ static int testcase_10(struct klvanc_context_s *ctx, uint16_t **words, uint16_t 
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -586,7 +586,7 @@ static int testcase_11(struct klvanc_context_s *ctx, uint16_t **words, uint16_t 
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
@@ -636,7 +636,7 @@ static int testcase_12(struct klvanc_context_s *ctx, uint16_t **words, uint16_t 
 		return -1;
 	}
 
-	ret = klvanc_convert_SCTE_104_to_words(pkt, words, wordCount);
+	ret = klvanc_convert_SCTE_104_to_words(ctx, pkt, words, wordCount);
 	if (ret != 0) {
 		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		klvanc_free_SCTE_104(pkt);
