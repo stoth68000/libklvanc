@@ -225,6 +225,8 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 	int numWords = bufSize / 2;
 	int mismatch = 0;
 
+	vancResultCount = 0;
+
 	printf("\nParsing a new SCTE104 VANC packet......\n");
 	uint16_t *arr = malloc(bufSize);
 	if (arr == NULL)
@@ -254,6 +256,12 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 			mismatch = 1;
 			break;
 		}
+	}
+	if (vancResultCount == 0) {
+		/* No output at all.  This is usually because the VANC parser choked
+		   on the VANC checksum and thus the parser never ran */
+		fprintf(stderr, "No output generated\n");
+		mismatch = 1;
 	}
 	
 	free(arr);
