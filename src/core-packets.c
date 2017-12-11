@@ -36,7 +36,7 @@ static int isValidHeader(struct klvanc_context_s *ctx, unsigned short *arr, unsi
 	}
 
 	if (ctx->verbose > 1)
-		printf("%04x %04x %04x %s\n", *(arr + 0), *(arr + 1), *(arr + 2), ret ? "valid": "invalid");
+		PRINT_DEBUG("%04x %04x %04x %s\n", *(arr + 0), *(arr + 1), *(arr + 2), ret ? "valid": "invalid");
 	return ret;
 }
 
@@ -164,45 +164,46 @@ static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int
 	return KLAPI_OK;
 }
 
-void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid)
+void klvanc_dump_words_console(struct klvanc_context_s *ctx, uint16_t *vanc,
+			       int maxlen, unsigned int linenr, int onlyvalid)
 {
 	if (onlyvalid && (*(vanc + 1) != 0x3ff) && (*(vanc + 2) != 0x3ff))
 		return;
 
-	fprintf(stderr, "LineNr: %03d ADF: [%03x][%03x][%03x] DID: [%03x] DBN/SDID: [%03x] DC: [%03x]\n",
-		linenr, *(vanc + 0), *(vanc + 1), *(vanc + 2), *(vanc + 3),
-		*(vanc + 4), *(vanc + 5));
+	PRINT_DEBUG("LineNr: %03d ADF: [%03x][%03x][%03x] DID: [%03x] DBN/SDID: [%03x] DC: [%03x]\n",
+		    linenr, *(vanc + 0), *(vanc + 1), *(vanc + 2), *(vanc + 3),
+		    *(vanc + 4), *(vanc + 5));
 
-	fprintf(stderr, "           Desc: %s [SMPTE %s]\n",
-		klvanc_didLookupDescription(*(vanc + 3) & 0xff, *(vanc + 4) & 0xff),
-		klvanc_didLookupSpecification(*(vanc + 3) & 0xff, *(vanc + 4) & 0xff));
+	PRINT_DEBUG("           Desc: %s [SMPTE %s]\n",
+		    klvanc_didLookupDescription(*(vanc + 3) & 0xff, *(vanc + 4) & 0xff),
+		    klvanc_didLookupSpecification(*(vanc + 3) & 0xff, *(vanc + 4) & 0xff));
 
 	/* Spec says DC is a maximum number of 255 words */
 	int i, words = *(vanc + 5) & 0xff;
-	fprintf(stderr, "           Data: ");
+	PRINT_DEBUG("           Data: ");
 	for (i = 6; i < (6 + words); i++) {
-		fprintf(stderr, "[%03x] ", *(vanc + i));
+		PRINT_DEBUG("[%03x] ", *(vanc + i));
 	}
-	fprintf(stderr, "\n             CS: [%03x]\n", *(vanc + i));
+	PRINT_DEBUG("\n             CS: [%03x]\n", *(vanc + i));
 }
 
 void klvanc_dump_packet_console(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
 {
-	printf("hdr->type   = %d\n", hdr->type);
-	printf(" ->adf      = 0x%04x/0x%04x/0x%04x\n", hdr->adf[0], hdr->adf[1], hdr->adf[2]);
-	printf(" ->did/sdid = 0x%02x / 0x%02x [%s %s] via SDI line %d\n",
-		hdr->did,
-		hdr->dbnsdid,
-		klvanc_didLookupSpecification(hdr->did, hdr->dbnsdid),
-		klvanc_didLookupDescription(hdr->did, hdr->dbnsdid),
-		hdr->lineNr);
-	printf(" ->h_offset = %d\n", hdr->horizontalOffset);
-	printf(" ->checksum = 0x%04x (%s)\n", hdr->checksum, hdr->checksumValid ? "VALID" : "INVALID");
-	printf(" ->payloadLengthWords = %d\n", hdr->payloadLengthWords);
-	printf(" ->payload  = ");
+	PRINT_DEBUG("hdr->type   = %d\n", hdr->type);
+	PRINT_DEBUG(" ->adf      = 0x%04x/0x%04x/0x%04x\n", hdr->adf[0], hdr->adf[1], hdr->adf[2]);
+	PRINT_DEBUG(" ->did/sdid = 0x%02x / 0x%02x [%s %s] via SDI line %d\n",
+		    hdr->did,
+		    hdr->dbnsdid,
+		    klvanc_didLookupSpecification(hdr->did, hdr->dbnsdid),
+		    klvanc_didLookupDescription(hdr->did, hdr->dbnsdid),
+		    hdr->lineNr);
+	PRINT_DEBUG(" ->h_offset = %d\n", hdr->horizontalOffset);
+	PRINT_DEBUG(" ->checksum = 0x%04x (%s)\n", hdr->checksum, hdr->checksumValid ? "VALID" : "INVALID");
+	PRINT_DEBUG(" ->payloadLengthWords = %d\n", hdr->payloadLengthWords);
+	PRINT_DEBUG(" ->payload  = ");
 	for (int i = 0; i < hdr->payloadLengthWords; i++)
-		printf("%02x ", sanitizeWord(hdr->payload[i]));
-	printf("\n");
+		PRINT_DEBUG("%02x ", sanitizeWord(hdr->payload[i]));
+	PRINT_DEBUG("\n");
 }
 
 int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len)
@@ -214,7 +215,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 
 	if (len > 16384) {
 		/* Safety */
-		fprintf(stderr, "%s() length %d exceeds 16384, ignoring.\n", __func__, len);
+		PRINT_ERR("%s() length %d exceeds 16384, ignoring.\n", __func__, len);
 		return -EINVAL;
 	}
 
@@ -253,12 +254,12 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 				if (ctx->verbose == 2) {
 					ret = dumpByType(ctx, decodedPacket);
 					if (ret < 0) {
-						fprintf(stderr, "Failed to dump by type, missing dumper function?\n");
+						PRINT_ERR("Failed to dump by type, missing dumper function?\n");
 					}
 				}
 			} else {
 				if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
-					fprintf(stderr, "Failed parsing by type\n");
+					PRINT_ERR("Failed parsing by type\n");
 					klvanc_dump_packet_console(ctx, hdr);
 				}
 			}

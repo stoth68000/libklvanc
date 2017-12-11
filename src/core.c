@@ -27,6 +27,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Default logging implementation just writes to stderr */
+static void vanc_default_logger(void *ctx, int level, const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+}
+
 int klvanc_context_dump(struct klvanc_context_s *ctx)
 {
 	VALIDATE(ctx);
@@ -49,6 +58,9 @@ int klvanc_context_create(struct klvanc_context_s **ctx)
 
 	if (ret == KLAPI_OK)
 		*ctx = p;
+
+	/* Set the default logger */
+	(*ctx)->log_cb = vanc_default_logger;
 
 	return ret;
 }

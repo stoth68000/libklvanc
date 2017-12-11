@@ -32,18 +32,18 @@ int klvanc_dump_EIA_608(struct klvanc_context_s *ctx, void *p)
 	struct klvanc_packet_eia_608_s *pkt = p;
 
 	if (ctx->verbose)
-		printf("%s() %p\n", __func__, (void *)pkt);
+		PRINT_DEBUG("%s() %p\n", __func__, (void *)pkt);
 
-	printf("%s() EIA608: %02x %02x %02x : marker-bits %02x cc_valid %d cc_type %d cc_data_1 %02x cc_data_2 %02x\n",
-		__func__,
-		pkt->payload[0],
-		pkt->payload[1],
-		pkt->payload[2],
-		pkt->marker_bits,
-		pkt->cc_valid,
-		pkt->cc_type,
-		pkt->cc_data_1,
-		pkt->cc_data_2);
+	PRINT_DEBUG("%s() EIA608: %02x %02x %02x : marker-bits %02x cc_valid %d cc_type %d cc_data_1 %02x cc_data_2 %02x\n",
+		    __func__,
+		    pkt->payload[0],
+		    pkt->payload[1],
+		    pkt->payload[2],
+		    pkt->marker_bits,
+		    pkt->cc_valid,
+		    pkt->cc_type,
+		    pkt->cc_data_1,
+		    pkt->cc_data_2);
 
 	return KLAPI_OK;
 }
@@ -51,7 +51,7 @@ int klvanc_dump_EIA_608(struct klvanc_context_s *ctx, void *p)
 int parse_EIA_608(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
-		printf("%s()\n", __func__);
+		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_eia_608_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
