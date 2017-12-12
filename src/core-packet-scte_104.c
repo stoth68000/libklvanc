@@ -1068,6 +1068,8 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
 		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
+		if (o->data != NULL)	// FIX: memory leak if pkt is from parser
+			free(o->data);
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
 			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
