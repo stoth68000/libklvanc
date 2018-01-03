@@ -109,6 +109,7 @@ struct klvanc_context_s
 	int allow_bad_checksums;
 	struct klvanc_callbacks_s *callbacks;
 	void *callback_context;
+	int warn_on_decode_failure;
 
 	void (*log_cb)(void *p, int level, const char *fmt, ...);
 
