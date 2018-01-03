@@ -106,10 +106,10 @@ struct klvanc_cache_s;
 struct klvanc_context_s
 {
 	int verbose;
-	int allow_bad_checksums;
+	int allow_bad_checksums; /*!< defaults to false. If true, any frames with bad CRCS are not ignored, they are passed via callback to application. */
 	struct klvanc_callbacks_s *callbacks;
 	void *callback_context;
-	int warn_on_decode_failure;
+	int warn_on_decode_failure; /*!< defaults to false. If true, framework will warn every 60 seconds when it discovered an unsupported DID. */
 
 	void (*log_cb)(void *p, int level, const char *fmt, ...);
 
