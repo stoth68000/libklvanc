@@ -246,9 +246,11 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 					}
 				}
 			} else {
-				if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
-					PRINT_ERR("Failed parsing by type\n");
-					klvanc_dump_packet_console(ctx, hdr);
+				if (ctx->warn_on_decode_failure) {
+					if (klrestricted_code_path_block_execute(&ctx->rcp_failedToDecode)) {
+						PRINT_ERR("Failed parsing by type\n");
+						klvanc_dump_packet_console(ctx, hdr);
+					}
 				}
 			}
 
