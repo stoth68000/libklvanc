@@ -26,33 +26,41 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
-#define PRINT_DEBUG_MEMBER_INT(m) printf(" %s = 0x%x\n", #m, m);
-#define PRINT_DEBUG_MEMBER_INT64(m) printf(" %s = 0x%lx\n", #m, m);
-
-static void print_debug_member_timestamp(struct multiple_operation_message_timestamp *ts)
+static const char *gpiEdge(unsigned char edge)
 {
-	printf( " m->timestamp type = 0x%02x ", ts->time_type);
+	switch (edge) {
+	case 0x00: return "Open->Closed";
+	case 0x01: return "Closed->Open";
+	default:   return "Undefined";
+	}
+}
+
+static void print_debug_member_timestamp(struct klvanc_context_s *ctx, struct klvanc_multiple_operation_message_timestamp *ts)
+{
+	PRINT_DEBUG( " m->timestamp type = 0x%02x ", ts->time_type);
 	switch (ts->time_type) {
 	case 1:
-		printf("(UTC Time)\n");
-		printf(" m->timestamp value = %d.%06d (UTC seconds)\n", ts->time_type_1.UTC_seconds, ts->time_type_1.UTC_microseconds);
+		PRINT_DEBUG("(UTC Time)\n");
+		PRINT_DEBUG("   m->timestamp value = %d.%06d (UTC seconds)\n", ts->time_type_1.UTC_seconds, ts->time_type_1.UTC_microseconds);
                 break;
         case 2:
-		printf("(SMPTE VITC timecode)\n");
-		printf(" m->timestamp value = %02d:%02d:%02d:%02d (hh:mm:ss:ff)\n", ts->time_type_2.hours, ts->time_type_2.minutes,
+		PRINT_DEBUG("(SMPTE VITC timecode)\n");
+		PRINT_DEBUG("   m->timestamp value = %02d:%02d:%02d:%02d (hh:mm:ss:ff)\n", ts->time_type_2.hours, ts->time_type_2.minutes,
 		       ts->time_type_2.seconds, ts->time_type_2.frames);
                 break;
         case 3:
-		printf("(GPI input)\n");
-		printf(" m->timestamp value = %d:%d (GPI number, edge)\n", ts->time_type_3.GPI_number, ts->time_type_3.GPI_edge);
+		PRINT_DEBUG("(GPI input)\n");
+		PRINT_DEBUG("   m->timestamp GPI number = %d\n", ts->time_type_3.GPI_number);
+		PRINT_DEBUG("   m->timestamp GPI edge = 0x%02x (%s)\n", ts->time_type_3.GPI_edge, gpiEdge(ts->time_type_3.GPI_edge));
                 break;
         case 0:
                 /* The spec says no time is defined, this is a legitimate state. */
-		printf("(none)\n");
+		PRINT_DEBUG("(none)\n");
 		break;
         default:
-		printf("(unknown/unsupported)\n");
+		PRINT_DEBUG("(unknown/unsupported)\n");
         }
 }
 
@@ -126,15 +134,86 @@ static const char *mom_operationName(unsigned short opID)
 	}
 }
 
-static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */, char *indent)
+static const char *seg_type_id(unsigned char type_id)
 {
-	printf("%s", indent);
-	for (unsigned int i = 0; i < len; i++)
-		printf("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n%s");
-	printf("\n");
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1 */
+	switch (type_id) {
+	case 0x00: return "Not Indicated";
+	case 0x01: return "Content Identification";
+	case 0x10: return "Program Start";
+	case 0x11: return "Program End";
+	case 0x12: return "Program Early Termination";
+	case 0x13: return "Program Breakaway";
+	case 0x14: return "Program Resumption";
+	case 0x15: return "Program Runover Planned";
+	case 0x16: return "Program Runover Unplanned";
+	case 0x17: return "Program Overlap Start";
+	case 0x18: return "Program Blackout Override";
+	case 0x19: return "Program Start - In Progress";
+	case 0x20: return "Chapter Start";
+	case 0x21: return "Chapter End";
+	case 0x30: return "Provider Advertisement Start";
+	case 0x31: return "Provider Advertisement End";
+	case 0x32: return "Distributor Advertisement Start";
+	case 0x33: return "Distributor Advertisement End";
+	case 0x34: return "Provider Placement Opportunity Start";
+	case 0x35: return "Provider Placement Opportunity End";
+	case 0x36: return "Distributor Placement Opportunity Start";
+	case 0x37: return "Distributor Placement Opportunity End";
+	case 0x40: return "Unscheduled Event Start";
+	case 0x41: return "Unscheduled Event End";
+	case 0x50: return "Network Start";
+	case 0x51: return "Network End";
+	default:   return "Unknown";
+	}
 }
 
-static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_request_data *d)
+static const char *seg_upid_type(unsigned char upid_type)
+{
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1, Table 21 */
+	switch (upid_type) {
+	case 0x00: return "Not Used";
+	case 0x01: return "User Defined (Deprecated)";
+	case 0x02: return "ISCI (Deprecated)";
+	case 0x03: return "Ad-ID";
+	case 0x04: return "UMID";
+	case 0x05: return "ISAN (Deprecated)";
+	case 0x06: return "ISAN";
+	case 0x07: return "TID";
+	case 0x08: return "TI";
+	case 0x09: return "ADI";
+	case 0x0a: return "EIDR";
+	case 0x0b: return "ATSC Content Identifier";
+	case 0x0c: return "MPU()";
+	case 0x0d: return "MID()";
+	case 0x0e: return "ADS Information";
+	case 0x0f: return "URI";
+	default:   return "Reserved";
+	}
+}
+
+static const char *seg_device_restrictions(unsigned char val)
+{
+	/* Values come from SCTE 35 2016, Sec 10.3.3.1, Table 21 */
+	switch (val) {
+	case 0x00: return "Restrict Group 0";
+	case 0x01: return "Restrict Group 1";
+	case 0x02: return "Restrict Group 2";
+	case 0x03: return "None";
+	default:   return "Unknown";
+	}
+}
+
+static void hexdump(struct klvanc_context_s *ctx, unsigned char *buf, unsigned int len, int bytesPerRow /* Typically 16 */, char *indent)
+{
+	PRINT_DEBUG("%s", indent);
+	for (unsigned int i = 0; i < len; i++)
+		PRINT_DEBUG("%02x%s", buf[i], ((i + 1) % bytesPerRow) ? " " : "\n%s");
+	PRINT_DEBUG("\n");
+}
+
+static unsigned char *parse_splice_request_data(struct klvanc_context_s *ctx, unsigned char *p,
+						struct klvanc_splice_request_data *d)
 {
 	d->splice_insert_type  = *(p++);
 	d->splice_event_id     = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
@@ -155,7 +234,7 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 		break;
 	default:
 		/* We don't support this splice command */
-		fprintf(stderr, "%s() splice_insert_type 0x%x [%s], error.\n", __func__,
+		PRINT_ERR("%s() splice_insert_type 0x%x [%s], error.\n", __func__,
 			d->splice_insert_type,
 		spliceInsertTypeName(d->splice_insert_type));
 	}
@@ -164,7 +243,8 @@ static unsigned char *parse_splice_request_data(unsigned char *p, struct splice_
 }
 
 #define MAX_DESC_SIZE 255
-static int gen_splice_request_data(struct splice_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_splice_request_data(struct klvanc_splice_request_data *d,
+				   unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -211,7 +291,8 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 	return 0;
 }
 
-static int gen_time_signal_request_data(struct time_signal_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_time_signal_request_data(struct klvanc_time_signal_request_data *d,
+					unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -234,7 +315,9 @@ static int gen_time_signal_request_data(struct time_signal_request_data *d, unsi
 	return 0;
 }
 
-static unsigned char *parse_descriptor_request_data(unsigned char *p, struct insert_descriptor_request_data *d, unsigned int descriptor_size)
+static unsigned char *parse_descriptor_request_data(unsigned char *p,
+						    struct klvanc_insert_descriptor_request_data *d,
+						    unsigned int descriptor_size)
 {
 	d->descriptor_count = *(p++);
 	d->total_length = descriptor_size;
@@ -248,7 +331,8 @@ static unsigned char *parse_descriptor_request_data(unsigned char *p, struct ins
 	return p;
 }
 
-static int gen_descriptor_request_data(struct insert_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_descriptor_request_data(struct klvanc_insert_descriptor_request_data *d,
+				       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -274,7 +358,8 @@ static int gen_descriptor_request_data(struct insert_descriptor_request_data *d,
 }
 
 
-static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_descriptor_request_data *d)
+static unsigned char *parse_dtmf_request_data(unsigned char *p,
+					      struct klvanc_dtmf_descriptor_request_data *d)
 {
 	d->pre_roll_time  = *(p++);
 	d->dtmf_length = *(p++);
@@ -287,7 +372,8 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p, struct dtmf_desc
 	return p;
 }
 
-static int gen_dtmf_request_data(struct dtmf_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_dtmf_request_data(struct klvanc_dtmf_descriptor_request_data *d,
+				 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -314,7 +400,7 @@ static int gen_dtmf_request_data(struct dtmf_descriptor_request_data *d, unsigne
 }
 
 static unsigned char *parse_avail_request_data(unsigned char *p,
-					       struct avail_descriptor_request_data *d)
+					       struct klvanc_avail_descriptor_request_data *d)
 {
 	d->num_provider_avails = *(p++);
 	memset(d->provider_avail_id, 0, sizeof(d->provider_avail_id));
@@ -326,7 +412,7 @@ static unsigned char *parse_avail_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_avail_request_data(struct avail_descriptor_request_data *d,
+static int gen_avail_request_data(struct klvanc_avail_descriptor_request_data *d,
 				  unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -353,7 +439,7 @@ static int gen_avail_request_data(struct avail_descriptor_request_data *d,
 }
 
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
-						      struct segmentation_descriptor_request_data *d)
+						      struct klvanc_segmentation_descriptor_request_data *d)
 {
 	d->event_id  = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->event_cancel_indicator = *(p++);
@@ -378,7 +464,8 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_segmentation_request_data(struct segmentation_descriptor_request_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_segmentation_request_data(struct klvanc_segmentation_descriptor_request_data *d,
+					 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -419,7 +506,7 @@ static int gen_segmentation_request_data(struct segmentation_descriptor_request_
 }
 
 static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
-							     struct proprietary_command_request_data *d,
+							     struct klvanc_proprietary_command_request_data *d,
 							     unsigned int descriptor_size)
 {
 	memset(d->proprietary_data, 0, sizeof(d->proprietary_data));
@@ -434,7 +521,7 @@ static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_proprietary_command_request_data(struct proprietary_command_request_data *d,
+static int gen_proprietary_command_request_data(struct klvanc_proprietary_command_request_data *d,
 						unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -462,14 +549,14 @@ static int gen_proprietary_command_request_data(struct proprietary_command_reque
 	return 0;
 }
 
-static unsigned char *parse_tier_data(unsigned char *p, struct tier_data *d)
+static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data *d)
 {
 	d->tier_data = *(p + 0) << 8 | *(p + 1); p += 2;
 
 	return p;
 }
 
-static int gen_tier_data(struct tier_data *d,  unsigned char **outBuf, uint16_t *outSize)
+static int gen_tier_data(struct klvanc_tier_data *d, unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -492,7 +579,7 @@ static int gen_tier_data(struct tier_data *d,  unsigned char **outBuf, uint16_t 
 	return 0;
 }
 
-static unsigned char *parse_time_descriptor(unsigned char *p, struct time_descriptor_data *d)
+static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time_descriptor_data *d)
 {
 	struct klbs_context_s *bs = klbs_alloc();
 	klbs_read_set_buffer(bs, p, 12);
@@ -506,7 +593,8 @@ static unsigned char *parse_time_descriptor(unsigned char *p, struct time_descri
 	return p;
 }
 
-static int gen_time_descriptor(struct time_descriptor_data *d,  unsigned char **outBuf, uint16_t *outSize)
+static int gen_time_descriptor(struct klvanc_time_descriptor_data *d,
+			       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -531,7 +619,8 @@ static int gen_time_descriptor(struct time_descriptor_data *d,  unsigned char **
 	return 0;
 }
 
-static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_operation_message_timestamp *ts)
+static unsigned char *parse_mom_timestamp(struct klvanc_context_s *ctx, unsigned char *p,
+					  struct klvanc_multiple_operation_message_timestamp *ts)
 {
 	ts->time_type = *(p++);
 	switch (ts->time_type) {
@@ -556,82 +645,83 @@ static unsigned char *parse_mom_timestamp(unsigned char *p, struct multiple_oper
 		/* The spec says no time is defined, this is a legitimate state. */
 		break;
 	default:
-		fprintf(stderr, "%s() unsupported time_type 0x%x, assuming no time.\n", __func__, ts->time_type);
+		PRINT_ERR("%s() unsupported time_type 0x%x, assuming no time.\n", __func__, ts->time_type);
 	}
 
 	return p;
 }
 
-static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+static int dump_mom(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt)
 {
-	struct multiple_operation_message *m = &pkt->mo_msg;
+	struct klvanc_multiple_operation_message *m = &pkt->mo_msg;
 
-	printf("SCTE104 multiple_operation_message struct\n");
+	PRINT_DEBUG("SCTE104 multiple_operation_message struct\n");
 	PRINT_DEBUG_MEMBER_INT(pkt->payloadDescriptorByte);
 
 	PRINT_DEBUG_MEMBER_INT(m->rsvd);
-	printf("    rsvd = %s\n", m->rsvd == 0xFFFF ? "Multiple_Ops (Reserved)" : "UNSUPPORTED");
+	PRINT_DEBUG("    rsvd = %s\n", m->rsvd == 0xFFFF ? "Multiple_Ops (Reserved)" : "UNSUPPORTED");
 	PRINT_DEBUG_MEMBER_INT(m->messageSize);
 	PRINT_DEBUG_MEMBER_INT(m->protocol_version);
 	PRINT_DEBUG_MEMBER_INT(m->AS_index);
 	PRINT_DEBUG_MEMBER_INT(m->message_number);
 	PRINT_DEBUG_MEMBER_INT(m->DPI_PID_index);
 	PRINT_DEBUG_MEMBER_INT(m->SCTE35_protocol_version);
-	print_debug_member_timestamp(&m->timestamp);
+	print_debug_member_timestamp(ctx, &m->timestamp);
 	PRINT_DEBUG_MEMBER_INT(m->num_ops);
 
 	for (int i = 0; i < m->num_ops; i++) {
-       		struct multiple_operation_message_operation *o = &m->ops[i];
-		printf("\n opID[%d] = %s\n", i, mom_operationName(o->opID));
+		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
+		PRINT_DEBUG("\n opID[%d] = %s\n", i, mom_operationName(o->opID));
 		PRINT_DEBUG_MEMBER_INT(o->opID);
 		PRINT_DEBUG_MEMBER_INT(o->data_length);
 		if (o->data_length)
-			hexdump(o->data, o->data_length, 32, "    ");
+			hexdump(ctx, o->data, o->data_length, 32, "    ");
 		if (o->opID == MO_SPLICE_REQUEST_DATA) {
-			struct splice_request_data *d = &o->sr_data;
+			struct klvanc_splice_request_data *d = &o->sr_data;
 			PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
-			printf("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
+			PRINT_DEBUG("    splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
 			PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
 			PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
 			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
-			printf("    pre_roll_time = %d (milliseconds)\n", d->pre_roll_time);
+			PRINT_DEBUG("    pre_roll_time = %d (milliseconds)\n", d->pre_roll_time);
 			PRINT_DEBUG_MEMBER_INT(d->brk_duration);
-			printf("    break_duration = %d (1/10th seconds)\n", d->brk_duration);
+			PRINT_DEBUG("    break_duration = %d (1/10th seconds)\n", d->brk_duration);
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
 			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
 		} else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA) {
-			struct insert_descriptor_request_data *d = &o->descriptor_data;
+			struct klvanc_insert_descriptor_request_data *d = &o->descriptor_data;
 			PRINT_DEBUG_MEMBER_INT(d->descriptor_count);
 			PRINT_DEBUG_MEMBER_INT(d->total_length);
 			for (int j = 0; j < d->total_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->descriptor_bytes[j]);
 			}
 		} else if (o->opID == MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA) {
-			struct avail_descriptor_request_data *d = &o->avail_descriptor_data;
+			struct klvanc_avail_descriptor_request_data *d = &o->avail_descriptor_data;
 			PRINT_DEBUG_MEMBER_INT(d->num_provider_avails);
 			for (int j = 0; j < d->num_provider_avails; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->provider_avail_id[j]);
 			}
 		} else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA) {
-			struct dtmf_descriptor_request_data *d = &o->dtmf_data;
+			struct klvanc_dtmf_descriptor_request_data *d = &o->dtmf_data;
 			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
 			PRINT_DEBUG_MEMBER_INT(d->dtmf_length);
 			for (int j = 0; j < d->dtmf_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->dtmf_char[j]);
 			}
 		} else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA) {
-			struct segmentation_descriptor_request_data *d = &o->segmentation_data;
+			struct klvanc_segmentation_descriptor_request_data *d = &o->segmentation_data;
 			PRINT_DEBUG_MEMBER_INT(d->event_id);
 			PRINT_DEBUG_MEMBER_INT(d->event_cancel_indicator);
 			PRINT_DEBUG_MEMBER_INT(d->duration);
-			printf("    duration = %d (seconds)\n", d->duration);
+			PRINT_DEBUG("    duration = %d (seconds)\n", d->duration);
 			PRINT_DEBUG_MEMBER_INT(d->upid_type);
+			PRINT_DEBUG(" d->upid_type = 0x%02x (%s)\n", d->upid_type, seg_upid_type(d->upid_type));
 			PRINT_DEBUG_MEMBER_INT(d->upid_length);
 			for (int j = 0; j < d->upid_length; j++) {
 				PRINT_DEBUG_MEMBER_INT(d->upid[j]);
 			}
-			PRINT_DEBUG_MEMBER_INT(d->type_id);
+			PRINT_DEBUG(" d->type_id = 0x%02x (%s)\n", d->type_id, seg_type_id(d->type_id));
 			PRINT_DEBUG_MEMBER_INT(d->segment_num);
 			PRINT_DEBUG_MEMBER_INT(d->segments_expected);
 			PRINT_DEBUG_MEMBER_INT(d->duration_extension_frames);
@@ -639,12 +729,13 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 			PRINT_DEBUG_MEMBER_INT(d->web_delivery_allowed_flag);
 			PRINT_DEBUG_MEMBER_INT(d->no_regional_blackout_flag);
 			PRINT_DEBUG_MEMBER_INT(d->archive_allowed_flag);
-			PRINT_DEBUG_MEMBER_INT(d->device_restrictions);
+			PRINT_DEBUG(" d->device_restrictions = 0x%02x (%s)\n", d->device_restrictions,
+			       seg_device_restrictions(d->device_restrictions));
 		} else if (o->opID == MO_INSERT_TIER_DATA) {
-			struct tier_data *d = &o->tier_data;
+			struct klvanc_tier_data *d = &o->tier_data;
 			PRINT_DEBUG_MEMBER_INT(d->tier_data);
 		} else if (o->opID == MO_INSERT_TIME_DESCRIPTOR) {
-			struct time_descriptor_data *d = &o->time_data;
+			struct klvanc_time_descriptor_data *d = &o->time_data;
 			PRINT_DEBUG_MEMBER_INT64(d->TAI_seconds);
 			PRINT_DEBUG_MEMBER_INT(d->TAI_ns);
 			PRINT_DEBUG_MEMBER_INT(d->UTC_offset);
@@ -655,20 +746,20 @@ static int dump_mom(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 	return KLAPI_OK;
 }
 
-static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
+static int dump_som(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt)
 {
 #ifdef SPLICE_REQUEST_SINGLE
-        struct splice_request_data *d = &pkt->sr_data;
+        struct klvanc_splice_request_data *d = &pkt->sr_data;
 #endif
-	struct single_operation_message *m = &pkt->so_msg;
+	struct klvanc_single_operation_message *m = &pkt->so_msg;
 
-	printf("SCTE104 single_operation_message struct\n");
+	PRINT_DEBUG("SCTE104 single_operation_message struct\n");
 	PRINT_DEBUG_MEMBER_INT(pkt->payloadDescriptorByte);
 
 	PRINT_DEBUG_MEMBER_INT(m->opID);
-	printf("   opID = %s\n", som_operationName(m->opID));
+	PRINT_DEBUG("   opID = %s\n", som_operationName(m->opID));
 	PRINT_DEBUG_MEMBER_INT(m->messageSize);
-	printf("   message_size = %d bytes\n", m->messageSize);
+	PRINT_DEBUG("   message_size = %d bytes\n", m->messageSize);
 	PRINT_DEBUG_MEMBER_INT(m->result);
 	PRINT_DEBUG_MEMBER_INT(m->result_extension);
 	PRINT_DEBUG_MEMBER_INT(m->protocol_version);
@@ -679,29 +770,29 @@ static int dump_som(struct vanc_context_s *ctx, struct packet_scte_104_s *pkt)
 #ifdef SPLICE_REQUEST_SINGLE
 	if (m->opID == SO_INIT_REQUEST_DATA) {
 		PRINT_DEBUG_MEMBER_INT(d->splice_insert_type);
-		printf("   splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
+		PRINT_DEBUG("   splice_insert_type = %s\n", spliceInsertTypeName(d->splice_insert_type));
 		PRINT_DEBUG_MEMBER_INT(d->splice_event_id);
 		PRINT_DEBUG_MEMBER_INT(d->unique_program_id);
 		PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
 		PRINT_DEBUG_MEMBER_INT(d->brk_duration);
-		printf("   break_duration = %d (1/10th seconds)\n", d->brk_duration);
+		PRINT_DEBUG("   break_duration = %d (1/10th seconds)\n", d->brk_duration);
 		PRINT_DEBUG_MEMBER_INT(d->avail_num);
 		PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 		PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
 	} else
 #endif
-		printf("   unsupported m->opID = 0x%x\n", m->opID);
+		PRINT_DEBUG("   unsupported m->opID = 0x%x\n", m->opID);
 
 	for (int i = 0; i < pkt->payloadLengthBytes; i++)
-		printf("%02x ", pkt->payload[i]);
-	printf("\n");
+		PRINT_DEBUG("%02x ", pkt->payload[i]);
+	PRINT_DEBUG("\n");
 
 	return KLAPI_OK;
 }
 
-int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **outPkt)
+int klvanc_alloc_SCTE_104(uint16_t opId, struct klvanc_packet_scte_104_s **outPkt)
 {
-	struct packet_scte_104_s *pkt = (struct packet_scte_104_s *) calloc(1, sizeof(struct packet_scte_104_s));
+	struct klvanc_packet_scte_104_s *pkt = (struct klvanc_packet_scte_104_s *) calloc(1, sizeof(struct klvanc_packet_scte_104_s));
 	if (pkt == NULL)
 		return -1;
 
@@ -723,12 +814,12 @@ int alloc_SCTE_104(uint16_t opId, struct packet_scte_104_s **outPkt)
 	return 0;
 }
 
-int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
+int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p)
 {
-	struct packet_scte_104_s *pkt = p;
+	struct klvanc_packet_scte_104_s *pkt = p;
 
 	if (ctx->verbose)
-		printf("%s() %p\n", __func__, (void *)pkt);
+		PRINT_DEBUG("%s() %p\n", __func__, (void *)pkt);
 
 	if (pkt->so_msg.opID == SO_INIT_REQUEST_DATA)
 		return dump_som(ctx, pkt);
@@ -736,9 +827,9 @@ int dump_SCTE_104(struct vanc_context_s *ctx, void *p)
 	return dump_mom(ctx, pkt);
 }
 
-void free_SCTE_104(struct packet_scte_104_s *pkt)
+void klvanc_free_SCTE_104(struct klvanc_packet_scte_104_s *pkt)
 {
-	struct multiple_operation_message *m;
+	struct klvanc_multiple_operation_message *m;
 
 	if (pkt == NULL)
 		return;
@@ -752,12 +843,13 @@ void free_SCTE_104(struct packet_scte_104_s *pkt)
 	free(pkt);
 }
 
-int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void **pp)
+int parse_SCTE_104(struct klvanc_context_s *ctx,
+		   struct klvanc_packet_header_s *hdr, void **pp)
 {
 	if (ctx->verbose)
-		printf("%s()\n", __func__);
+		PRINT_DEBUG("%s()\n", __func__);
 
-	struct packet_scte_104_s *pkt = calloc(1, sizeof(*pkt));
+	struct klvanc_packet_scte_104_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 
@@ -785,8 +877,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	for (int i = 0; i < 200; i++)
 		pkt->payload[i] = hdr->payload[1 + i];
 
-	struct single_operation_message *m = &pkt->so_msg;
-	struct multiple_operation_message *mom = &pkt->mo_msg;
+	struct klvanc_single_operation_message *m = &pkt->so_msg;
+	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
 
 	/* Make sure we put the opID in the SOM reegardless of
 	 * whether the message ius single or multiple.
@@ -809,7 +901,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		m->message_number   = pkt->payload[10];
 		m->DPI_PID_index    = pkt->payload[11] << 8 | pkt->payload[12];
 
-		struct splice_request_data *d = &pkt->sr_data;
+		struct klvanc_splice_request_data *d = &pkt->sr_data;
 
 		d->splice_insert_type  = pkt->payload[13];
 		d->splice_event_id     = pkt->payload[14] << 24 |
@@ -828,7 +920,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 			break;
 		default:
 			/* We don't support this splice command */
-			fprintf(stderr, "%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
+			PRINT_ERR("%s() splice_insert_type 0x%x, error.\n", __func__, d->splice_insert_type);
 			free(pkt);
 			return -1;
 		}
@@ -844,30 +936,30 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		mom->SCTE35_protocol_version = pkt->payload[9];
 
 		unsigned char *p = &pkt->payload[10];
-		p = parse_mom_timestamp(p, &mom->timestamp);
+		p = parse_mom_timestamp(ctx, p, &mom->timestamp);
 		
 		mom->num_ops = *(p++);
-		mom->ops = calloc(mom->num_ops, sizeof(struct multiple_operation_message_operation));
+		mom->ops = calloc(mom->num_ops, sizeof(struct klvanc_multiple_operation_message_operation));
 		if (!mom->ops) {
-			fprintf(stderr, "%s() unable to allocate momo ram, error.\n", __func__);
+			PRINT_ERR("%s() unable to allocate momo ram, error.\n", __func__);
 			free(pkt);
 			return -1;
 		}
 
 		for (int i = 0; i < mom->num_ops; i++) {
-        		struct multiple_operation_message_operation *o = &mom->ops[i];
+			struct klvanc_multiple_operation_message_operation *o = &mom->ops[i];
 			o->opID = *(p + 0) << 8 | *(p + 1);
 			o->data_length = *(p + 2) << 8 | *(p + 3);
 			o->data = malloc(o->data_length);
 			if (!o->data) {
-				fprintf(stderr, "%s() Unable to allocate memory for mom op, error.\n", __func__);
+				PRINT_ERR("%s() Unable to allocate memory for mom op, error.\n", __func__);
 			} else {
 				memcpy(o->data, p + 4, o->data_length);
 			}
 			p += (4 + o->data_length);
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
-				parse_splice_request_data(o->data, &o->sr_data);
+				parse_splice_request_data(ctx, o->data, &o->sr_data);
 			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
 				parse_descriptor_request_data(o->data, &o->descriptor_data,
 					o->data_length - 1);
@@ -887,8 +979,8 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 				parse_time_descriptor(o->data, &o->time_data);
 
 #if 0
-			printf("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
-			hexdump(o->data, o->data_length, 32, "");
+			PRINT_DEBUG("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
+			hexdump(ctx, o->data, o->data_length, 32, "");
 #endif
 		}
 
@@ -898,7 +990,7 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 		 */
 	}
 	else {
-		fprintf(stderr, "%s() Unsupported opID = %x, error.\n", __func__, m->opID);
+		PRINT_ERR("%s() Unsupported opID = %x, error.\n", __func__, m->opID);
 		free(pkt);
 		return -1;
 	}
@@ -910,9 +1002,10 @@ int parse_SCTE_104(struct vanc_context_s *ctx, struct packet_header_s *hdr, void
 	return KLAPI_OK;
 }
 
-int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **bytes, uint16_t *byteCount)
+int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt,
+					   uint8_t **bytes, uint16_t *byteCount)
 {
-	struct multiple_operation_message *m;
+	struct klvanc_multiple_operation_message *m;
 
 	if (!pkt || !bytes) {
 		return -1;
@@ -921,7 +1014,7 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	if (pkt->so_msg.opID != 0xffff) {
 		/* We don't currently support anything but Multiple Operation
 		   Messages */
-		fprintf(stderr, "msg opid not 0xffff.  Provided=0x%x\n", pkt->so_msg.opID);
+		PRINT_ERR("msg opid not 0xffff.  Provided=0x%x\n", pkt->so_msg.opID);
 		return -1;
 	}
 
@@ -947,7 +1040,7 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	klbs_write_bits(bs, m->SCTE35_protocol_version, 8);
 	klbs_write_bits(bs, m->timestamp.time_type, 8);
 
-	struct multiple_operation_message_timestamp *ts = &m->timestamp;
+	struct klvanc_multiple_operation_message_timestamp *ts = &m->timestamp;
 	switch(ts->time_type) {
 	case 1:
 		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 32);
@@ -967,14 +1060,14 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 		/* No time standard defined */
 		break;
 	default:
-		fprintf(stderr, "%s() unsupported time_type 0x%x, assuming no time.\n",
+		PRINT_ERR("%s() unsupported time_type 0x%x, assuming no time.\n",
 			__func__, ts->time_type);
 		break;
 	}
 
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
-		struct multiple_operation_message_operation *o = &m->ops[i];
+		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
 			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
@@ -1007,7 +1100,7 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 			gen_time_descriptor(&o->time_data, &o->data, &o->data_length);
 			break;
 		default:
-			fprintf(stderr, "Unknown operation type 0x%04x\n", o->opID);
+			PRINT_ERR("Unknown operation type 0x%04x\n", o->opID);
 			continue;
 		}
 		/* FIXME */
@@ -1028,12 +1121,12 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	(*bytes)[4] = buffer_size & 0xff;
 
 #if 0
-	printf("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
-	printf(" ->payload  = ");
+	PRINT_DEBUG("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
+	PRINT_DEBUG(" ->payload  = ");
 	for (int i = 0; i < klbs_get_byte_count(bs); i++) {
-		printf("%02x ", (*bytes)[i]);
+		PRINT_DEBUG("%02x ", (*bytes)[i]);
 	}
-	printf("\n");
+	PRINT_DEBUG("\n");
 #endif
 
 	*byteCount = klbs_get_byte_count(bs);
@@ -1042,34 +1135,36 @@ int convert_SCTE_104_to_packetBytes(struct packet_scte_104_s *pkt, uint8_t **byt
 	return 0;
 }
 
-int convert_SCTE_104_to_words(struct packet_scte_104_s *pkt, uint16_t **words, uint16_t *wordCount)
+int klvanc_convert_SCTE_104_to_words(struct klvanc_context_s *ctx,
+				     struct klvanc_packet_scte_104_s *pkt,
+				     uint16_t **words, uint16_t *wordCount)
 {
 	uint8_t *buf;
 	uint16_t byteCount;
 	int ret;
 
-	ret = convert_SCTE_104_to_packetBytes(pkt, &buf, &byteCount);
+	ret = klvanc_convert_SCTE_104_to_packetBytes(ctx, pkt, &buf, &byteCount);
 	if (ret != 0)
 		return -1;
 
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
-	vanc_sdi_create_payload(0x07, 0x41, buf, byteCount, words, wordCount, 10);
+	klvanc_sdi_create_payload(0x07, 0x41, buf, byteCount, words, wordCount, 10);
 
 	free(buf);
 
 	return 0;
 }
 
-int klvanc_SCTE_104_Add_MOM_Op(struct packet_scte_104_s *pkt, uint16_t opId,
-			       struct multiple_operation_message_operation **op)
+int klvanc_SCTE_104_Add_MOM_Op(struct klvanc_packet_scte_104_s *pkt, uint16_t opId,
+			       struct klvanc_multiple_operation_message_operation **op)
 {
-	struct multiple_operation_message *mom = &pkt->mo_msg;
+	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
 	mom->num_ops++;
 	mom->ops = realloc(mom->ops,
-			   mom->num_ops * sizeof(struct multiple_operation_message_operation));
+			   mom->num_ops * sizeof(struct klvanc_multiple_operation_message_operation));
 	*op = &mom->ops[mom->num_ops - 1];
-	memset(*op, 0, sizeof(struct multiple_operation_message_operation));
+	memset(*op, 0, sizeof(struct klvanc_multiple_operation_message_operation));
 	(*op)->opID = opId;
 
 	return 0;

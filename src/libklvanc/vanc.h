@@ -36,6 +36,7 @@
 #define _VANC_H
 
 #include <stdint.h>
+#include <stdarg.h>
 #include <sys/errno.h>
 #include <sys/errno.h>
 #include <libklvanc/klrestricted_code_path.h>
@@ -51,69 +52,74 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_header_s;
+struct klvanc_packet_header_s;
 
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_payload_information_s;
+struct klvanc_packet_afd_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct packet_eia_708b_s;
+struct klvanc_packet_eia_708b_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct packet_eia_608_s;
+struct klvanc_packet_eia_608_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct packet_scte_104_s;
+struct klvanc_packet_scte_104_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct vanc_context_s;
+struct klvanc_context_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct packet_kl_u64le_counter_s;
+struct klvanc_packet_kl_u64le_counter_s;
 
 /**
  * @brief       TODO - Brief description goes here.
  */
-struct vanc_callbacks_s
+struct klvanc_callbacks_s
 {
-	int (*payload_information)(void *user_context, struct vanc_context_s *, struct packet_payload_information_s *);
-	int (*eia_708b)(void *user_context, struct vanc_context_s *, struct packet_eia_708b_s *);
-	int (*eia_608)(void *user_context, struct vanc_context_s *, struct packet_eia_608_s *);
-	int (*scte_104)(void *user_context, struct vanc_context_s *, struct packet_scte_104_s *);
-	int (*all)(void *user_context, struct vanc_context_s *, struct packet_header_s *);
-	int (*kl_i64le_counter)(void *user_context, struct vanc_context_s *, struct packet_kl_u64le_counter_s *);
+	int (*afd)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_afd_s *);
+	int (*eia_708b)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_eia_708b_s *);
+	int (*eia_608)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_eia_608_s *);
+	int (*scte_104)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_scte_104_s *);
+	int (*all)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_header_s *);
+	int (*kl_i64le_counter)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_kl_u64le_counter_s *);
 };
 
-struct vanc_cache_s;
+struct klvanc_cache_s;
 
 /**
  * @brief       Application specific context, the library allocates and stores user specific instance
  *		        information.
  */
-struct vanc_context_s
+struct klvanc_context_s
 {
 	int verbose;
-	struct vanc_callbacks_s *callbacks;
+	int allow_bad_checksums; /*!< defaults to false. If true, any frames with bad CRCS are not ignored, they are passed via callback to application. */
+	struct klvanc_callbacks_s *callbacks;
 	void *callback_context;
+	int warn_on_decode_failure; /*!< defaults to false. If true, framework will warn every 60 seconds when it discovered an unsupported DID. */
+
+	void (*log_cb)(void *p, int level, const char *fmt, ...);
 
 	/* Internal use by the library */
 	void *priv;
 	struct klrestricted_code_path_block_s rcp_failedToDecode;
+	unsigned int checksum_failures;
 
 	/* Optional: A cache of VANC lines we've detected in the stream.
-	 * see vanc_context_enable_monitor().
+	 * see klvanc_context_enable_monitor().
 	 * A static array of structs, for did/sdid rapid lookups.
 	 * Where DD and SD range from 00..FF.
 	 * This contains an array of structs, each containing a set of lines,
@@ -123,46 +129,51 @@ struct vanc_context_s
 	 * for every message, we cache it, and the same message (same line)
 	 * overwrites our previous cached message.
 	 */
-	struct vanc_cache_s *cacheLines;
+	struct klvanc_cache_s *cacheLines;
 };
+
+#define LIBKLVANC_LOGLEVEL_ERR 0
+#define LIBKLVANC_LOGLEVEL_WARN 1
+#define LIBKLVANC_LOGLEVEL_INFO 2
+#define LIBKLVANC_LOGLEVEL_DEBUG 3
 
 /**
  * @brief	Create or destroy some basic application/library context.\n
  *              The context is considered private and is likely to change.
- * @param[out]	struct vanc_context_s **ctx - Context.
+ * @param[out]	struct klvanc_context_s **ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_context_create(struct vanc_context_s **ctx);
+int klvanc_context_create(struct klvanc_context_s **ctx);
 
 /**
- * @brief	Deallocate and destroy a context. See vanc_context_create()
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @brief	Deallocate and destroy a context. See klvanc_context_create()
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_context_destroy(struct vanc_context_s *ctx);
+int klvanc_context_destroy(struct klvanc_context_s *ctx);
 
 /**
  * @brief	Generate user visible context details to the console.
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_context_dump(struct vanc_context_s *ctx);
+int klvanc_context_dump(struct klvanc_context_s *ctx);
 
 /**
  * @brief	Parse a line of payload, trigger callbacks as necessary. lineNr is passed around and only\n
  *		used for reporting purposes, so we can figure out which line this came from in different\n
  *		callbacks and various parts of the reporting stack.
- * @param[in]	struct vanc_context_s *ctx - Context.
+ * @param[in]	struct klvanc_context_s *ctx - Context.
  * @param[in]	unsigned int lineNr - SDI line number the array data came from. Used for information / tracking purposes only.
  * @param[in]	unsigned short *words - Array of SDI words (10bit) that the caller wants parsed.
  * @param[in]	unsigned int wordCount - Number of words in array.
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned short *words, unsigned int wordCount);
+int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *words, unsigned int wordCount);
 
 /**
  * @brief	TODO - Brief description goes here.
@@ -171,10 +182,9 @@ int vanc_packet_parse(struct vanc_context_s *ctx, unsigned int lineNr, unsigned 
  * @param[in]	unsigned int linenr - SDI line number the array data came from. Used for information / tracking purposes only.
  * @param[in]	int onlyvalid - Brief description goes here.
  */
-void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
+void klvanc_dump_words_console(struct klvanc_context_s *ctx, uint16_t *vanc, int maxlen, unsigned int linenr, int onlyvalid);
 
-#include <libklvanc/vanc-module1.h>
-#include <libklvanc/vanc-payload_information.h>
+#include <libklvanc/vanc-afd.h>
 #include <libklvanc/vanc-eia_708b.h>
 #include <libklvanc/vanc-eia_608.h>
 #include <libklvanc/vanc-scte_104.h>
@@ -199,7 +209,7 @@ void vanc_dump_words_console(uint16_t *vanc, int maxlen, unsigned int linenr, in
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
+int klvanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 	const uint8_t *src, uint16_t srcByteCount,
 	uint16_t **dst, uint16_t *dstWordCount,
 	uint32_t bitDepth);
@@ -209,14 +219,14 @@ int vanc_sdi_create_payload(uint8_t sdid, uint8_t did,
  * @param[in]	enum packet_type_e type
  * @return	TODO.
  */
-const char *vanc_lookupDescriptionByType(enum packet_type_e type);
+const char *klvanc_lookupDescriptionByType(enum klvanc_packet_type_e type);
 
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	enum packet_type_e type
  * @return	TODO.
  */
-const char *vanc_lookupSpecificationByType(enum packet_type_e type);
+const char *klvanc_lookupSpecificationByType(enum klvanc_packet_type_e type);
 
 /**
  * @brief	TODO - Brief description goes here.
@@ -224,13 +234,14 @@ const char *vanc_lookupSpecificationByType(enum packet_type_e type);
  * @param[in]	struct packet_header_s *src
  * @return	TODO.
  */
-int vanc_packet_copy(struct packet_header_s **dst, struct packet_header_s *src);
+int klvanc_packet_copy(struct klvanc_packet_header_s **dst,
+		       struct klvanc_packet_header_s *src);
 
 /**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct packet_header_s *src
  */
-void vanc_packet_free(struct packet_header_s *src);
+void klvanc_packet_free(struct klvanc_packet_header_s *src);
 
 #ifdef __cplusplus
 };

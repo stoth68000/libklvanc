@@ -27,7 +27,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-int vanc_context_dump(struct vanc_context_s *ctx)
+/* Default logging implementation just writes to stderr */
+static void vanc_default_logger(void *ctx, int level, const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+}
+
+int klvanc_context_dump(struct klvanc_context_s *ctx)
 {
 	VALIDATE(ctx);
 
@@ -36,11 +45,11 @@ int vanc_context_dump(struct vanc_context_s *ctx)
 	return KLAPI_OK;
 }
 
-int vanc_context_create(struct vanc_context_s **ctx)
+int klvanc_context_create(struct klvanc_context_s **ctx)
 {
 	int ret = KLAPI_OK;
 
-	struct vanc_context_s *p = calloc(1, sizeof(struct vanc_context_s));
+	struct klvanc_context_s *p = calloc(1, sizeof(struct klvanc_context_s));
 	if (!p)
 		return -ENOMEM;
 
@@ -50,14 +59,17 @@ int vanc_context_create(struct vanc_context_s **ctx)
 	if (ret == KLAPI_OK)
 		*ctx = p;
 
+	/* Set the default logger */
+	(*ctx)->log_cb = vanc_default_logger;
+
 	return ret;
 }
 
-int vanc_context_destroy(struct vanc_context_s *ctx)
+int klvanc_context_destroy(struct klvanc_context_s *ctx)
 {
 	VALIDATE(ctx);
 
-	vanc_cache_free(ctx);
+	klvanc_cache_free(ctx);
 
 	memset(ctx, 0, sizeof(*ctx));
 	free(ctx);
@@ -65,9 +77,9 @@ int vanc_context_destroy(struct vanc_context_s *ctx)
 	return KLAPI_OK;
 }
 
-int vanc_context_enable_cache(struct vanc_context_s *ctx)
+int klvanc_context_enable_cache(struct klvanc_context_s *ctx)
 {
-	if (vanc_cache_alloc(ctx) < 0) {
+	if (klvanc_cache_alloc(ctx) < 0) {
 		fprintf(stderr, "Unable to allocate vanc cache, enough free ram? Will continue.\n");
 		return -1;
 	}

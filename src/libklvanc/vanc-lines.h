@@ -33,8 +33,8 @@
  *              4.  Ensuring there are no illegal values in the VANC payload at a physical level
  */
 
-#ifndef _VANC_LINE_H
-#define _VANC_LINE_H
+#ifndef _KLVANC_LINE_H
+#define _KLVANC_LINE_H
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -44,10 +44,10 @@
 extern "C" {
 #endif  
 
-#define MAX_VANC_LINES   64
-#define MAX_VANC_ENTRIES 16
+#define KLVANC_MAX_VANC_LINES   64
+#define KLVANC_MAX_VANC_ENTRIES 16
 
-struct vanc_entry_s
+struct klvanc_entry_s
 {
         int h_offset;
         uint16_t *payload;
@@ -57,10 +57,10 @@ struct vanc_entry_s
 /**
  * @brief	Represents a VANC line prior to serialization
  */
-struct vanc_line_s
+struct klvanc_line_s
 {
 	int line_number;
-	struct vanc_entry_s *p_entries[MAX_VANC_ENTRIES];
+	struct klvanc_entry_s *p_entries[KLVANC_MAX_VANC_ENTRIES];
 	int num_entries;
 };
 
@@ -68,10 +68,10 @@ struct vanc_line_s
  * @brief	Represents a group of VANC lines (e.g. perhaps corresponding to a video frame)
  */
     
-struct vanc_line_set_s
+struct klvanc_line_set_s
 {
 	int num_lines;
-	struct vanc_line_s *lines[MAX_VANC_LINES];
+	struct klvanc_line_s *lines[KLVANC_MAX_VANC_LINES];
 };
 
 /**
@@ -79,21 +79,21 @@ struct vanc_line_set_s
  *
  * @param[in]	int line_number - line number corresponding to where the line
  *              placed within the field
- * @return      struct vanc_line_s containing the line or NULL on error
+ * @return      struct klvanc_line_s containing the line or NULL on error
  */
-struct vanc_line_s *vanc_line_create(int line_number);
+struct klvanc_line_s *klvanc_line_create(int line_number);
 
 /**
- * @brief	Free a previously created vanc_line_s structure
- * @param[in]	struct vanc_line_s *line - pointer to the line to be deleted.
+ * @brief	Free a previously created klvanc_line_s structure
+ * @param[in]	struct klvanc_line_s *line - pointer to the line to be deleted.
  *              This will also deallocate any VANC packets previously inserted into the line
  */
-void vanc_line_free(struct vanc_line_s *line);
+void klvanc_line_free(struct klvanc_line_s *line);
 
 /**
  * @brief	Insert a VANC packet into a VANC frame
  *
- * @param[in]	struct vanc_line_set_s *vanc_lines - pointer to set of VANC lines to insert into
+ * @param[in]	struct klvanc_line_set_s *klvanc_lines - pointer to set of VANC lines to insert into
  * @param[in]	uint16_t *pixels - Pointer to array of pixels to insert.  For 10-bit pixels, these
  *              should be 10-bit values inserted into 16-bit padded fields.
  * @param[in]	int pixel_width - width of [pixels] argument, measured in number of samples
@@ -105,16 +105,16 @@ void vanc_line_free(struct vanc_line_s *line);
  * @return      0 - Success
  * @return      -ENOMEM - insufficient memory to store the VANC packet
  */
-int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t *pixels,
-		      int pixel_width, int line_number, int horizontal_offset);
+int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *vanc_lines,
+		       uint16_t *pixels, int pixel_width, int line_number, int horizontal_offset);
 
 /**
  * @brief	Generate pixel array representing a fully formed VANC line.  This
- *              function will take in a vanc_line_s, format the VANC entries to ensure there
+ *              function will take in a klvanc_line_s, format the VANC entries to ensure there
  *              are no gaps or overlapping packets, and create a final pixel array which
  *              can be colorspace converted and output over SDI.
  *
- * @param[in]	struct vanc_line_s *line - the VANC line to operate on
+ * @param[in]	struct klvanc_line_s *line - the VANC line to operate on
  * @param[out]	uint16_t **out_buf - a pointer to the buffer the function will output into.  The
  *              memory for the buffer will be allocated by the function, and the caller will need
  *              to call free() to deallocate the resulting buffer.  For 10-bit video, the array
@@ -131,7 +131,8 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t *pixels,
  * @return      0 - Success
  * @return      -ENOMEM - insufficient memory to store the VANC packet
  */
-int generate_vanc_line(struct vanc_line_s *line, uint16_t **out_buf, int *out_len, int line_pixel_width);
+int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
+			      uint16_t **out_buf, int *out_len, int line_pixel_width);
 
 #ifdef __cplusplus
 };

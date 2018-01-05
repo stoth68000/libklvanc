@@ -19,26 +19,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <libklvanc/vanc.h>
 #include <libklvanc/vanc-lines.h>
+
+#include "core-private.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct vanc_line_s *vanc_line_create(int line_number)
+struct klvanc_line_s *klvanc_line_create(int line_number)
 {
-	struct vanc_line_s *new_line = NULL;
-	new_line = (struct vanc_line_s *)malloc(sizeof(struct vanc_line_s));
+	struct klvanc_line_s *new_line = NULL;
+	new_line = (struct klvanc_line_s *)malloc(sizeof(struct klvanc_line_s));
 	if (new_line == NULL)
 		return NULL;
-	memset(new_line, 0, sizeof(struct vanc_line_s));
+	memset(new_line, 0, sizeof(struct klvanc_line_s));
 	new_line->line_number = line_number;
 	return new_line;
 }
 
-void vanc_line_free(struct vanc_line_s *line)
+void klvanc_line_free(struct klvanc_line_s *line)
 {
-	for (int i = 0; i < MAX_VANC_ENTRIES; i++) {
+	for (int i = 0; i < KLVANC_MAX_VANC_ENTRIES; i++) {
 		if (line->p_entries[i] != NULL) {
 			free(line->p_entries[i]->payload);
 			free(line->p_entries[i]);
@@ -47,13 +50,13 @@ void vanc_line_free(struct vanc_line_s *line)
 	free(line);
 }
 
-int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
-		     int pixel_width, int line_number, int horizontal_offset)
+int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *vanc_lines,
+		       uint16_t * pixels, int pixel_width, int line_number, int horizontal_offset)
 {
 	int i;
-	struct vanc_line_s *line = vanc_lines->lines[0];
-	struct vanc_entry_s *new_entry =
-	    (struct vanc_entry_s *)malloc(sizeof(struct vanc_entry_s));
+	struct klvanc_line_s *line = vanc_lines->lines[0];
+	struct klvanc_entry_s *new_entry =
+	    (struct klvanc_entry_s *)malloc(sizeof(struct klvanc_entry_s));
 	if (new_entry == NULL)
 		return -ENOMEM;
 
@@ -68,9 +71,9 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 	new_entry->pixel_width = pixel_width;
 
 	/* See if there is already a line allocated for the target line, if not, create one */
-	for (i = 0; i < MAX_VANC_LINES; i++) {
+	for (i = 0; i < KLVANC_MAX_VANC_LINES; i++) {
 		if (vanc_lines->lines[i] == NULL) {
-			line = vanc_line_create(line_number);
+			line = klvanc_line_create(line_number);
 			vanc_lines->lines[i] = line;
 			vanc_lines->num_lines++;
 			break;
@@ -81,18 +84,18 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 		}
 	}
 
-	if (i == MAX_VANC_LINES) {
+	if (i == KLVANC_MAX_VANC_LINES) {
 		/* Array is full */
-		fprintf(stderr, "array of lines is full!\n");
+		PRINT_DEBUG("array of lines is full!\n");
 		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
 	}
 
 	/* Now insert the VANC entry into the line */
-	if (line->num_entries == MAX_VANC_ENTRIES) {
+	if (line->num_entries == KLVANC_MAX_VANC_ENTRIES) {
 		/* Array is full */
-		fprintf(stderr, "line is full!\n");
+		PRINT_DEBUG("line is full!\n");
 		free(new_entry->payload);
 		free(new_entry);
 		return -ENOMEM;
@@ -104,8 +107,8 @@ int vanc_line_insert(struct vanc_line_set_s *vanc_lines, uint16_t * pixels,
 
 static int vanc_ent_comp(const void *a, const void *b)
 {
-	const struct vanc_entry_s *vala = (struct vanc_entry_s *)a;
-	const struct vanc_entry_s *valb = (struct vanc_entry_s *)b;
+	const struct klvanc_entry_s *vala = (struct klvanc_entry_s *)a;
+	const struct klvanc_entry_s *valb = (struct klvanc_entry_s *)b;
 
 	if (vala->h_offset < valb->h_offset)
 		return -1;
@@ -115,20 +118,20 @@ static int vanc_ent_comp(const void *a, const void *b)
 	return 1;
 }
 
-int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
-		       int *out_len, int line_pixel_width)
+int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
+			      uint16_t ** outbuf, int *out_len, int line_pixel_width)
 {
 	int pixels_used = 0;
 	int i;
 
 	/* Sort the VANC entries on the line prior to processing */
-	qsort(line->p_entries, line->num_entries, sizeof(struct vanc_entry_s *),
+	qsort(line->p_entries, line->num_entries, sizeof(struct klvanc_entry_s *),
 	      vanc_ent_comp);
 
 	/* Now iterate through and adjust any offsets to prevent overlap.  Also calculate
 	   how big a buffer we need for the final array of pixels */
 	for (i = 0; i < line->num_entries; i++) {
-		struct vanc_entry_s *entry = line->p_entries[i];
+		struct klvanc_entry_s *entry = line->p_entries[i];
 		if (entry->h_offset < pixels_used) {
 			/* New entry would overwrite earlier entry, so push it out */
 			entry->h_offset = pixels_used;
@@ -143,15 +146,14 @@ int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 		for (int j = 3; j < entry->pixel_width; j++) {
 			if (entry->payload[j] <= 0x0003
 			    || entry->payload[j] >= 0x03FC) {
-				fprintf(stderr,
+				PRINT_DEBUG(
 					"VANC line %d has entry with illegal payload at offset %d. Skipping.  offset=%d len=%d",
 					line->line_number, j, entry->h_offset,
 					entry->pixel_width);
 				for (int k = 0; k < entry->pixel_width; k++) {
-					fprintf(stderr, "%04x ",
-						entry->payload[k]);
+					PRINT_DEBUG("%04x ", entry->payload[k]);
 				}
-				fprintf(stderr, "\n");
+				PRINT_DEBUG("\n");
 				entry->pixel_width = 0;
 				break;
 			}
@@ -160,7 +162,7 @@ int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 		/* Don't let sum of all VANC entries overflow end of line */
 		if ((entry->h_offset + entry->pixel_width) > line_pixel_width) {
 			/* Set the length to zero so this entry gets skipped */
-			fprintf(stderr,
+			PRINT_DEBUG(
 				"VANC line %d would overflow thus skipping.  offset=%d len=%d",
 				line->line_number, entry->h_offset,
 				entry->pixel_width);
@@ -184,7 +186,7 @@ int generate_vanc_line(struct vanc_line_s *line, uint16_t ** outbuf,
 	/* Assemble the final line ensuring there are no discontinuities between
 	   the VANC entries */
 	for (i = 0; i < line->num_entries; i++) {
-		struct vanc_entry_s *entry = line->p_entries[i];
+		struct klvanc_entry_s *entry = line->p_entries[i];
 		memcpy((*outbuf) + entry->h_offset, entry->payload,
 		       entry->pixel_width * (sizeof(uint16_t)));
 	}

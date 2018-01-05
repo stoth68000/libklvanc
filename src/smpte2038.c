@@ -38,13 +38,13 @@ static void hexdump(unsigned char *buf, unsigned int len, int bytesPerRow /* Typ
 }
 #endif
 
-void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt)
+void klvanc_smpte2038_anc_data_packet_free(struct klvanc_smpte2038_anc_data_packet_s *pkt)
 {
 	if (!pkt)
 		return;
 
 	for (int i = 0; i < pkt->lineCount; i++) {
-		struct smpte2038_anc_data_line_s *l = pkt->lines + i;
+		struct klvanc_smpte2038_anc_data_line_s *l = pkt->lines + i;
 		if (l->data_count)
 			free(l->user_data_words);
 	}
@@ -57,7 +57,7 @@ void smpte2038_anc_data_packet_free(struct smpte2038_anc_data_packet_s *pkt)
 #define SHOW_LINE_U32(indent, fn) printf("%s%s = %d (0x%x)\n", indent, #fn, fn, fn);
 #define SHOW_LINE_U64(indent, fn) printf("%s%s = %" PRIu64 " (0x%" PRIx64 ")\n", indent, #fn, fn, fn);
 
-void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h)
+void klvanc_smpte2038_anc_data_packet_dump(struct klvanc_smpte2038_anc_data_packet_s *h)
 {
 	printf("%s()\n", __func__);
 	SHOW_LINE_U32("  ", h->packet_start_code_prefix);
@@ -79,7 +79,7 @@ void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h)
 	SHOW_LINE_U64("  ", h->PTS);
 	SHOW_LINE_U32("  ", h->lineCount);
 	for (int i = 0; i < h->lineCount; i++) {
-		struct smpte2038_anc_data_line_s *l = &h->lines[i];
+		struct klvanc_smpte2038_anc_data_line_s *l = &h->lines[i];
 		printf("  LineEntry[%02d]\n", i);
 		SHOW_LINE_U32("\t\t", l->line_number);
 		SHOW_LINE_U32("\t\t", l->c_not_y_channel_flag);
@@ -99,11 +99,79 @@ void smpte2038_anc_data_packet_dump(struct smpte2038_anc_data_packet_s *h)
 }
 
 #define VALIDATE(obj, val) if ((obj) != (val)) { printf("%s is invalid\n", #obj); goto err; }
-int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct smpte2038_anc_data_packet_s **result)
+
+static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klvanc_smpte2038_anc_data_packet_s *h)
+{
+	int rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
+	while (rem > 4) {
+		h->lineCount++;
+		h->lines = realloc(h->lines, h->lineCount * sizeof(struct klvanc_smpte2038_anc_data_line_s));
+
+		struct klvanc_smpte2038_anc_data_line_s *l = h->lines + (h->lineCount - 1);
+		memset(l, 0, sizeof(*l));
+
+		l->reserved_000000 = klbs_read_bits(bs, 6);
+		VALIDATE(l->reserved_000000, 0);
+
+		l->c_not_y_channel_flag = klbs_read_bits(bs, 1);
+		VALIDATE(l->c_not_y_channel_flag, 0);
+
+		l->line_number = klbs_read_bits(bs, 11);
+		//VALIDATE(l->line_number, 9);
+
+		l->horizontal_offset = klbs_read_bits(bs, 12);
+		//VALIDATE(l->horizontal_offset, 0);
+
+		l->DID = klbs_read_bits(bs, 10);
+
+		l->SDID = klbs_read_bits(bs, 10);
+
+		l->data_count = klbs_read_bits(bs, 10);
+
+		/* Lets put the checksum at the end of the array then pull it back
+		 * into the checksum field later, it makes for easier processing.
+		 */
+		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
+		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
+			l->user_data_words[i] = klbs_read_bits(bs, 10);
+
+		l->checksum_word = klbs_read_bits(bs, 10);
+		rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
+		/* Clock in any stuffing bits */
+		klbs_read_byte_stuff(bs);
+	}
+	return 0;
+err:
+	return -1;
+}
+
+int klvanc_smpte2038_parse_pes_payload(uint8_t *payload, unsigned int byteCount, struct klvanc_smpte2038_anc_data_packet_s **result)
+{
+	int ret;
+	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL)
+		return -1;
+
+	struct klbs_context_s *bs = klbs_alloc();
+        klbs_read_set_buffer(bs, payload, byteCount);
+
+	ret = smpte2038_parse_pes_payload_int(bs, h);
+
+	*result = h;
+
+	if (bs)
+		klbs_free(bs);
+
+	return ret;
+}
+
+int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct klvanc_smpte2038_anc_data_packet_s **result)
 {
 	int ret = -1;
 
-	struct smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
 	if (h == NULL)
 		return -1;
 
@@ -159,50 +227,8 @@ int smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct 
 
 	h->PTS = a | b | c;
 
-	/* Do we have any lines remaining in the packet? */
-	int rem = (h->PES_packet_length + 6) - 15;
-	while (rem > 4) {
-		h->lineCount++;
-		h->lines = realloc(h->lines, h->lineCount * sizeof(struct smpte2038_anc_data_line_s));
-
-		struct smpte2038_anc_data_line_s *l = h->lines + (h->lineCount - 1);
-		memset(l, 0, sizeof(*l));
-
-		l->reserved_000000 = klbs_read_bits(bs, 6);
-		VALIDATE(l->reserved_000000, 0);
-
-		l->c_not_y_channel_flag = klbs_read_bits(bs, 1);
-		VALIDATE(l->c_not_y_channel_flag, 0);
-
-		l->line_number = klbs_read_bits(bs, 11);
-		//VALIDATE(l->line_number, 9);
-
-		l->horizontal_offset = klbs_read_bits(bs, 12);
-		//VALIDATE(l->horizontal_offset, 0);
-
-		l->DID = klbs_read_bits(bs, 10);
-
-		l->SDID = klbs_read_bits(bs, 10);
-
-		l->data_count = klbs_read_bits(bs, 10);
-
-		/* Lets put the checksum at the end of the array then pull it back
-		 * into the checksum field later, it makes for easier processing.
-		 */
-		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
-		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
-			l->user_data_words[i] = klbs_read_bits(bs, 10);
-
-		l->checksum_word = klbs_read_bits(bs, 10);
-	
-		rem = (h->PES_packet_length + 6) - klbs_get_byte_count(bs);
-
-		/* Clock in any stuffing bits */
-		klbs_read_byte_stuff(bs);
-	}
-
+	ret = smpte2038_parse_pes_payload_int(bs, h);
 	*result = h;
-	ret = 0;
 
 	if (bs)
 		klbs_free(bs);
@@ -216,17 +242,17 @@ err:
 	return ret;
 }
 
-#define SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET 14
-#define SMPTE2038_PACKETIZER_DEBUG 0
+#define KLVANC_SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET 14
+#define KLVANC_SMPTE2038_PACKETIZER_DEBUG 0
 
-int smpte2038_packetizer_alloc(struct smpte2038_packetizer_s **ctx)
+int klvanc_smpte2038_packetizer_alloc(struct klvanc_smpte2038_packetizer_s **ctx)
 {
-	struct smpte2038_packetizer_s *p = calloc(1, sizeof(*p));
+	struct klvanc_smpte2038_packetizer_s *p = calloc(1, sizeof(*p));
 	if (!p)
 		return -1;
 
 	/* Leave enough space for us to prefix the PES header */
-	p->bufused = SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
+	p->bufused = KLVANC_SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
 	p->buflen = 16384;
 	p->buffree = p->buflen - p->bufused;
 	p->buf = calloc(1, p->buflen);
@@ -240,14 +266,14 @@ int smpte2038_packetizer_alloc(struct smpte2038_packetizer_s **ctx)
 	return 0;
 }
 
-static __inline void smpte2038_buffer_recalc(struct smpte2038_packetizer_s *ctx)
+static __inline void klvanc_smpte2038_buffer_recalc(struct klvanc_smpte2038_packetizer_s *ctx)
 {
 	ctx->buffree = ctx->buflen - ctx->bufused;
 }
 
-static void smpte2038_buffer_adjust(struct smpte2038_packetizer_s *ctx, uint32_t newsizeBytes)
+static void klvanc_smpte2038_buffer_adjust(struct klvanc_smpte2038_packetizer_s *ctx, uint32_t newsizeBytes)
 {
-#if SMPTE2038_PACKETIZER_DEBUG
+#if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("%s(%d)\n", __func__, newsizeBytes);
 #endif
 	if (newsizeBytes > (128 * 1024)) {
@@ -259,43 +285,43 @@ static void smpte2038_buffer_adjust(struct smpte2038_packetizer_s *ctx, uint32_t
 	if (ctx->bufused > ctx->buflen)
 		ctx->bufused = ctx->buflen;
 
-	smpte2038_buffer_recalc(ctx);
+	klvanc_smpte2038_buffer_recalc(ctx);
 }
 
-void smpte2038_packetizer_free(struct smpte2038_packetizer_s **ctx)
+void klvanc_smpte2038_packetizer_free(struct klvanc_smpte2038_packetizer_s **ctx)
 {
 	if (!ctx)
 		return;
 	if (*ctx == 0)
 		return;
 
-	struct smpte2038_packetizer_s *p = *ctx;
+	struct klvanc_smpte2038_packetizer_s *p = *ctx;
 	if (p->buf)
 		free(p->buf);
 	klbs_free(p->bs);
-	memset(p, 0, sizeof(struct smpte2038_packetizer_s));
+	memset(p, 0, sizeof(struct klvanc_smpte2038_packetizer_s));
 	free(p);
 }
 
-int smpte2038_packetizer_begin(struct smpte2038_packetizer_s *ctx)
+int klvanc_smpte2038_packetizer_begin(struct klvanc_smpte2038_packetizer_s *ctx)
 {
-	ctx->bufused = SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
-	smpte2038_buffer_recalc(ctx);
+	ctx->bufused = KLVANC_SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET;
+	klvanc_smpte2038_buffer_recalc(ctx);
 	memset(ctx->buf, 0xff, ctx->buflen);
 
 	return 0;
 }
 
-int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packet_header_s *pkt)
+int klvanc_smpte2038_packetizer_append(struct klvanc_smpte2038_packetizer_s *ctx, struct klvanc_packet_header_s *pkt)
 {
-#if SMPTE2038_PACKETIZER_DEBUG
+#if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("%s()\n", __func__);
 #endif
 	uint16_t offset = 0; /* TODO: Horizontal offset */
 	uint32_t reqd = pkt->payloadLengthWords * sizeof(uint16_t);
 
 	if ((reqd + 64 /* PES fields - headroom */) > ctx->buffree)
-		smpte2038_buffer_adjust(ctx, ctx->buflen + 16384);
+		klvanc_smpte2038_buffer_adjust(ctx, ctx->buflen + 16384);
 
 	/* Prepare a new 2038 line and add it to the existing buffer */
 
@@ -323,19 +349,19 @@ int smpte2038_packetizer_append(struct smpte2038_packetizer_s *ctx, struct packe
 
 	/* Finally, update our original buffer indexes to accomodate any writing by the bitstream. */
 	ctx->bufused += klbs_get_byte_count(ctx->bs);
-	smpte2038_buffer_recalc(ctx);
-#if SMPTE2038_PACKETIZER_DEBUG
+	klvanc_smpte2038_buffer_recalc(ctx);
+#if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("bufused = %d buffree = %d\n", ctx->bufused, ctx->buffree);
 #endif
 	return 0;
 }
 
 /* return the size in bytes of the newly created buffer */
-int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx, uint64_t pts)
+int klvanc_smpte2038_packetizer_end(struct klvanc_smpte2038_packetizer_s *ctx, uint64_t pts)
 {
-	if (ctx->bufused == SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET)
+	if (ctx->bufused == KLVANC_SMPTE2038_PACKETIZER_BUFFER_RESET_OFFSET)
 		return -1;
-#if SMPTE2038_PACKETIZER_DEBUG
+#if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("%s() used = %d\n", __func__, ctx->bufused);
 #endif
 	/* Now generate a correct looking PES frame and output it */
@@ -380,7 +406,7 @@ int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx, uint64_t pts)
 	ctx->buf[4] = (len >> 8) & 0xff;
 	ctx->buf[5] = len & 0xff;
 
-#if SMPTE2038_PACKETIZER_DEBUG
+#if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	hexdump(ctx->buf, ctx->bufused, 32);
 	printf("%d buffer length\n", ctx->bufused);
 	printf("%d bs used\n", ctx->bs->reg_used);
@@ -389,7 +415,7 @@ int smpte2038_packetizer_end(struct smpte2038_packetizer_s *ctx, uint64_t pts)
 	return 0;
 }
 
-int smpte2038_convert_line_to_words(struct smpte2038_anc_data_line_s *l, uint16_t **words, uint16_t *wordCount)
+int klvanc_smpte2038_convert_line_to_words(struct klvanc_smpte2038_anc_data_line_s *l, uint16_t **words, uint16_t *wordCount)
 {
 	if (!l || !words || !wordCount)
 		return -1;

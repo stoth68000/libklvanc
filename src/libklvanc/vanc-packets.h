@@ -23,7 +23,7 @@
  * @file	vanc-packets.h
  * @author	Steven Toth <stoth@kernellabs.com>
  * @copyright	Copyright (c) 2016-2017 Kernel Labs Inc. All Rights Reserved.
- * @brief	TODO - Brief description goes here.
+ * @brief	VANC Headers and packet structure
  */
 
 #ifndef _VANC_PACKETS_H
@@ -39,10 +39,10 @@ extern "C" {
 /**
  * @brief	TODO - Brief description goes here.
  */
-enum packet_type_e
+enum klvanc_packet_type_e
 {
 	VANC_TYPE_UNDEFINED = 0,
-	VANC_TYPE_PAYLOAD_INFORMATION,
+	VANC_TYPE_AFD,
 	VANC_TYPE_EIA_708B,
 	VANC_TYPE_EIA_608,
 	VANC_TYPE_SCTE_104,
@@ -52,9 +52,9 @@ enum packet_type_e
 /**
  * @brief	TODO - Brief description goes here.
  */
-struct packet_header_s
+struct klvanc_packet_header_s
 {
-	enum packet_type_e	type;
+	enum klvanc_packet_type_e	type;
 	unsigned short		adf[3];
 	unsigned short		did;
 	unsigned short		dbnsdid;
@@ -76,7 +76,7 @@ struct packet_header_s
  * Note: Designers of equipment are advised that, in 8-bit systems, ancillary data packets with
  * DID words in the range of 80h – 83h all are considered to be marked for deletion."
  */
-#define vanc_packetType1(pkt) (((pkt)->did >= 0x80) && ((pkt)->did <= 0x83))
+#define klvanc_packetType1(pkt) (((pkt)->did >= 0x80) && ((pkt)->did <= 0x83))
 
 #ifdef __cplusplus
 };
