@@ -216,6 +216,8 @@ int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t *
 	klbs_write_bits(bs, 0x00, 8); /* Reserved */
 	klbs_write_bits(bs, 0x00, 8); /* Bar Data Flags */
 	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 1 */
+	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 1 */
+	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 2 */
 	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 2 */
 
 	klbs_write_buffer_complete(bs);
