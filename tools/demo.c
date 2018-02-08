@@ -107,6 +107,50 @@ static struct klvanc_callbacks_s callbacks =
 };
 /* END - CALLBACKS for message notification */
 
+static int test_package_of_umid_data(struct klvanc_context_s *ctx)
+{
+/*
+AD - A private descriptor tagged with Sencores letters. We don't know its format.
+>> hdr->type   = 0
+>>  ->adf      = 0x0000/0x03ff/0x03ff
+>>  ->did/sdid = 0x44 / 0x44 [Undefined Undefined] via SDI line 17
+>>  ->h_offset = 0
+>>  ->checksum = 0x0214 (VALID)
+>>  ->payloadLengthWords = 64
+>>  ->payload  = 06 0a 2b 34 01 01 01 05 01 01 0d 43 33 00 00 00 e6 8a 1e 00 43 62 05 80 08 00 46 02 01 20 08 a4 87 20 a3 07 43 62 05 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+*/
+	unsigned short arr[] = {
+		0x000,
+		0x3ff,
+		0x3ff,
+		0x244,
+		0x144,
+
+		/* This is an extended UMID, its 64 bytes.
+		 * basic UMIDs are 32 bytes. See RP223-2003 page 4.
+		 */
+		0x140, /* DC */
+
+		0x06, 0x0a, 0x2b, 0x34, 0x01, 0x01, 0x01, 0x05,
+		0x01, 0x01, 0x0d, 0x43, 0x33, 0x00, 0x00, 0x00,
+		0xe6, 0x8a, 0x1e, 0x00, 0x43, 0x62, 0x05, 0x80,
+		0x08, 0x00, 0x46, 0x02, 0x01, 0x20, 0x08, 0xa4,
+		0x87, 0x20, 0xa3, 0x07, 0x43, 0x62, 0x05, 0x80,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+		0x214, /* Checksum is valid */
+	};
+
+	/* report that this was from line 17, informational only. */
+	int ret = klvanc_packet_parse(ctx, 17, arr, sizeof(arr) / (sizeof(unsigned short)));
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int test_program_description_data(struct klvanc_context_s *ctx)
 {
 	/* This carries various ATSC descriptors and we'll likely add sort for
@@ -366,6 +410,10 @@ int demo_main(int argc, char *argv[])
 	ret = test_program_description_data(ctx);
 	if (ret < 0)
 		fprintf(stderr, "Program Description Data failed\n");
+
+	ret = test_package_of_umid_data(ctx);
+	if (ret < 0)
+		fprintf(stderr, "Package of UMID Data failed\n");
 
 	klvanc_context_destroy(ctx);
 	printf("Library destroyed.\n");
