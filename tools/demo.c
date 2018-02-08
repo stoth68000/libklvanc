@@ -107,6 +107,107 @@ static struct klvanc_callbacks_s callbacks =
 };
 /* END - CALLBACKS for message notification */
 
+static int test_program_description_data(struct klvanc_context_s *ctx)
+{
+	/* This carries various ATSC descriptors and we'll likely add sort for
+	 * various descriptors over time. FOr now, we don't support ANY
+	 * 0x61/0x61 messages, but we'll collect them here for reference.
+	 */
+
+	/* as per RP0207-2005:
+	 * "Descriptors are uniquely identified by their descriptor tag. Any of the descriptors
+	 *  listed in table 6-25 of ATSC A/65, as well as ATSC A/53 and ISO/IEC 13818-1, may be
+	 *  transported as described in this practice. Equipment that is intended to comply with
+	 *  this practice shall support those shown in the following table."
+	 */
+/*
+AD - A private descriptor tagged with Sencores letters. We don't know its format.
+>> hdr->type   = 0
+>>  ->adf      = 0x0000/0x03ff/0x03ff
+>>  ->did/sdid = 0x62 / 0x01 [Undefined Undefined] via SDI line 10
+>>  ->h_offset = 0
+>>  ->checksum = 0x024e (VALID)
+>>  ->payloadLengthWords = 26
+>>  ->payload  = ad 18 53 45 4e 31 01 57 53 45 45 20 54 56 00 00 00 00 00
+>> 00 00 00 01 f0 04 01
+*/
+
+	unsigned short arr[] = {
+		0x000,
+		0x3ff,
+		0x3ff,
+		0x162,
+		0x101,
+		0x11A, /* DC */
+		0x0ad, /* Payload Field = "ATSC private information descriptor" */
+		0x018, /* Payload length */
+		0x053,
+		0x045,
+		0x04e,
+		0x031,
+		0x001,
+		0x057,
+		0x053,
+		0x045,
+		0x045,
+		0x020,
+		0x054,
+		0x056,
+		0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000, 0x000,
+		0x001,
+		0x0f0,
+		0x004,
+		0x001,
+		0x24e, /* Checksum is valid */
+	};
+
+	/* report that this was from line 13, informational only. */
+	int ret = klvanc_packet_parse(ctx, 13, arr, sizeof(arr) / (sizeof(unsigned short)));
+	if (ret < 0)
+		return ret;
+
+/*
+AD - A private descriptor tagged with Sencores letters. We don't know its format.
+hdr->type   = 0
+ ->adf      = 0x0000/0x03ff/0x03ff
+ ->did/sdid = 0x62 / 0x01 [Undefined Undefined] via SDI line 10
+ ->h_offset = 0
+ ->checksum = 0x018c (VALID)
+ ->payloadLengthWords = 23
+ ->payload  = ad 15 53 45 4e 31 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 34 
+*/
+
+	unsigned short arr2[] = {
+		0x000,
+		0x3ff,
+		0x3ff,
+		0x162,
+		0x101,
+		0x117, /* DC */
+		0x0ad, /* Payload Field = "ATSC private information descriptor" */
+		0x015, /* Payload length */
+		0x053,
+		0x045,
+		0x04e,
+		0x031,
+		0x004,
+		0x000, 0x000, 0x000, 0x000,
+		0x000, 0x000, 0x000, 0x000,
+		0x000, 0x000, 0x000, 0x000,
+		0x000, 0x000,
+		0x001,
+		0x034,
+		0x18c, /* Checksum is valid */
+	};
+
+	/* report that this was from line 13, informational only. */
+	ret = klvanc_packet_parse(ctx, 13, arr2, sizeof(arr2) / (sizeof(unsigned short)));
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int test_AFD(struct klvanc_context_s *ctx)
 {
 	unsigned short arr[] = {
@@ -261,6 +362,10 @@ int demo_main(int argc, char *argv[])
 	ret = test_checksum();
 	if (ret < 0)
 		fprintf(stderr, "Checksum calculation failed\n");
+
+	ret = test_program_description_data(ctx);
+	if (ret < 0)
+		fprintf(stderr, "Program Description Data failed\n");
 
 	klvanc_context_destroy(ctx);
 	printf("Library destroyed.\n");
