@@ -149,5 +149,7 @@ int eia708_main(int argc, char *argv[])
 
 	printf("Final result: PASS: %d/%d, Failures: %d\n",
 	       passCount, passCount + failCount, failCount);
+	if (failCount != 0)
+		return 1;
 	return 0;
 }
