@@ -199,12 +199,17 @@ int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t *
 		return -1;
 	}
 
-	*bytes = malloc(255);
-	if (*bytes == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -ENOMEM;
 
+	*bytes = malloc(255);
+	if (*bytes == NULL) {
+		klbs_free(bs);
+		return -ENOMEM;
+	}
+
 	/* Serialize the AFD struct into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, *bytes, 255);
 
 	afd = afd_enum_to_raw(pkt->afd) << 3;
