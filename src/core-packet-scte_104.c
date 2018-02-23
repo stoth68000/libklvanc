@@ -243,7 +243,7 @@ static unsigned char *parse_splice_request_data(struct klvanc_context_s *ctx, un
 }
 
 #define MAX_DESC_SIZE 255
-static int gen_splice_request_data(struct klvanc_splice_request_data *d,
+static int gen_splice_request_data(const struct klvanc_splice_request_data *d,
 				   unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -291,7 +291,7 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 	return 0;
 }
 
-static int gen_time_signal_request_data(struct klvanc_time_signal_request_data *d,
+static int gen_time_signal_request_data(const struct klvanc_time_signal_request_data *d,
 					unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -331,7 +331,7 @@ static unsigned char *parse_descriptor_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_descriptor_request_data(struct klvanc_insert_descriptor_request_data *d,
+static int gen_descriptor_request_data(const struct klvanc_insert_descriptor_request_data *d,
 				       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -372,7 +372,7 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_dtmf_request_data(struct klvanc_dtmf_descriptor_request_data *d,
+static int gen_dtmf_request_data(const struct klvanc_dtmf_descriptor_request_data *d,
 				 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -412,7 +412,7 @@ static unsigned char *parse_avail_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_avail_request_data(struct klvanc_avail_descriptor_request_data *d,
+static int gen_avail_request_data(const struct klvanc_avail_descriptor_request_data *d,
 				  unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -464,7 +464,7 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_segmentation_request_data(struct klvanc_segmentation_descriptor_request_data *d,
+static int gen_segmentation_request_data(const struct klvanc_segmentation_descriptor_request_data *d,
 					 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -521,7 +521,7 @@ static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_proprietary_command_request_data(struct klvanc_proprietary_command_request_data *d,
+static int gen_proprietary_command_request_data(const struct klvanc_proprietary_command_request_data *d,
 						unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -556,7 +556,7 @@ static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data 
 	return p;
 }
 
-static int gen_tier_data(struct klvanc_tier_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_tier_data(const struct klvanc_tier_data *d, unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
 
@@ -593,7 +593,7 @@ static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time
 	return p;
 }
 
-static int gen_time_descriptor(struct klvanc_time_descriptor_data *d,
+static int gen_time_descriptor(const struct klvanc_time_descriptor_data *d,
 			       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
@@ -1003,10 +1003,11 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	return KLAPI_OK;
 }
 
-int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt,
+int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
+					   const struct klvanc_packet_scte_104_s *pkt,
 					   uint8_t **bytes, uint16_t *byteCount)
 {
-	struct klvanc_multiple_operation_message *m;
+	const struct klvanc_multiple_operation_message *m;
 
 	if (!pkt || !bytes) {
 		return -1;
@@ -1041,7 +1042,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 	klbs_write_bits(bs, m->SCTE35_protocol_version, 8);
 	klbs_write_bits(bs, m->timestamp.time_type, 8);
 
-	struct klvanc_multiple_operation_message_timestamp *ts = &m->timestamp;
+	const struct klvanc_multiple_operation_message_timestamp *ts = &m->timestamp;
 	switch(ts->time_type) {
 	case 1:
 		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 32);
@@ -1070,7 +1071,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 	for (int i = 0; i < m->num_ops; i++) {
 		unsigned char *outBuf = NULL;
 		uint16_t outSize;
-		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
+		const struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
 			gen_splice_request_data(&o->sr_data, &outBuf, &outSize);

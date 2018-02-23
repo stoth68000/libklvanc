@@ -349,7 +349,7 @@ int klvanc_convert_SCTE_104_to_words(struct klvanc_context_s *ctx,
  * @return      -ENOMEM - Not enough memory to satisfy request
  */
 int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
-					   struct klvanc_packet_scte_104_s *pkt,
+					   const struct klvanc_packet_scte_104_s *pkt,
 					   uint8_t **bytes, uint16_t *byteCount);
 
 int klvanc_SCTE_104_Add_MOM_Op(struct klvanc_packet_scte_104_s *pkt, uint16_t opId,
