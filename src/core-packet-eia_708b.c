@@ -182,6 +182,8 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
+		return -ENOMEM;
 
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
@@ -303,12 +305,17 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 		return -1;
 	}
 
-	*bytes = malloc(255);
-	if (*bytes == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -ENOMEM;
 
+	*bytes = malloc(255);
+	if (*bytes == NULL) {
+		klbs_free(bs);
+		return -ENOMEM;
+	}
+
 	/* Serialize the EIA-708 struct into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, *bytes, 255);
 
 	/* CDP Header (Sec 11.2.2) */
