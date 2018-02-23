@@ -50,14 +50,14 @@ static struct type_s
 	int (*dump)(struct klvanc_context_s *, void *);
 	void (*free)(void *);
 } types[] = {
-	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, NULL, },
-	{ 0x41, 0x05, VANC_TYPE_AFD, "SMPTE 2016-3 AFD", "Active Format Description", parse_AFD, klvanc_dump_AFD, NULL, },
+	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, "KLABS", "UINT64 LE Frame Counter", parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, free, },
+	{ 0x41, 0x05, VANC_TYPE_AFD, "SMPTE 2016-3 AFD", "Active Format Description", parse_AFD, klvanc_dump_AFD, free, },
 	{ 0x41, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 2", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, klvanc_free_SCTE_104, },
 #ifdef SCTE_104_PACKET_TYPE_1
-	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, NULL, },
+	{ 0x80, 0x07, VANC_TYPE_SCTE_104, "SMPTE Packet Type 1 (Deprecated)", "SCTE 104", parse_SCTE_104, klvanc_dump_SCTE_104, free, },
 #endif
-	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, klvanc_dump_EIA_708B, NULL, },
-	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, klvanc_dump_EIA_608, NULL, },
+	{ 0x61, 0x01, VANC_TYPE_EIA_708B, "SMPTE", "EIA_708B", parse_EIA_708B, klvanc_dump_EIA_708B, free, },
+	{ 0x61, 0x02, VANC_TYPE_EIA_608, "SMPTE", "EIA_608", parse_EIA_608, klvanc_dump_EIA_608, free, },
 };
 
 static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
