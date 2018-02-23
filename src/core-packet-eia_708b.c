@@ -187,8 +187,10 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_eia_708b_s *pkt = calloc(1, sizeof(*pkt));
-	if (!pkt)
+	if (!pkt) {
+		klbs_free(bs);
 		return -ENOMEM;
+	}
 
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 	/* Extract the 8-bit bitstream from the 10-bit payload */
