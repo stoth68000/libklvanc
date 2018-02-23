@@ -318,9 +318,9 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p);
 
 /**
  * @brief       TODO - Brief description goes here.
- * @param[in]	struct packet_scte_104_s *pkt
+ * @param[in]	void *p - Pointer to struct (klvanc_packet_scte_104_s *)
  */
-void klvanc_free_SCTE_104(struct klvanc_packet_scte_104_s *pkt);
+void klvanc_free_SCTE_104(void *p);
 
 /**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n

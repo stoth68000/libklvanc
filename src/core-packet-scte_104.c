@@ -827,8 +827,9 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p)
 	return dump_mom(ctx, pkt);
 }
 
-void klvanc_free_SCTE_104(struct klvanc_packet_scte_104_s *pkt)
+void klvanc_free_SCTE_104(void *p)
 {
+	struct klvanc_packet_scte_104_s *pkt = p;
 	struct klvanc_multiple_operation_message *m;
 
 	if (pkt == NULL)
