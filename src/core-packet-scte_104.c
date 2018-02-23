@@ -1070,7 +1070,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
 		unsigned char *outBuf = NULL;
-		uint16_t outSize;
+		uint16_t outSize = 0;
 		const struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
