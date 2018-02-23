@@ -1068,37 +1068,39 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
+		unsigned char *outBuf = NULL;
+		uint16_t outSize;
 		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
-			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
+			gen_splice_request_data(&o->sr_data, &outBuf, &outSize);
 			break;
 		case MO_SPLICE_NULL_REQUEST_DATA:
-			gen_splice_null_request_data(&o->data, &o->data_length);
+			gen_splice_null_request_data(&outBuf, &outSize);
 			break;
 		case MO_TIME_SIGNAL_REQUEST_DATA:
-			gen_time_signal_request_data(&o->timesignal_data, &o->data, &o->data_length);
+			gen_time_signal_request_data(&o->timesignal_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_DESCRIPTOR_REQUEST_DATA:
-			gen_descriptor_request_data(&o->descriptor_data, &o->data, &o->data_length);
+			gen_descriptor_request_data(&o->descriptor_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_DTMF_REQUEST_DATA:
-			gen_dtmf_request_data(&o->dtmf_data, &o->data, &o->data_length);
+			gen_dtmf_request_data(&o->dtmf_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA:
-			gen_avail_request_data(&o->avail_descriptor_data, &o->data, &o->data_length);
+			gen_avail_request_data(&o->avail_descriptor_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
-			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);
+			gen_segmentation_request_data(&o->segmentation_data, &outBuf, &outSize);
 			break;
 		case MO_PROPRIETARY_COMMAND_REQUEST_DATA:
-			gen_proprietary_command_request_data(&o->proprietary_data, &o->data, &o->data_length);
+			gen_proprietary_command_request_data(&o->proprietary_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_TIER_DATA:
-			gen_tier_data(&o->tier_data, &o->data, &o->data_length);
+			gen_tier_data(&o->tier_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_TIME_DESCRIPTOR:
-			gen_time_descriptor(&o->time_data, &o->data, &o->data_length);
+			gen_time_descriptor(&o->time_data, &outBuf, &outSize);
 			break;
 		default:
 			PRINT_ERR("Unknown operation type 0x%04x\n", o->opID);
@@ -1107,10 +1109,11 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 		/* FIXME */
 
 		klbs_write_bits(bs, o->opID, 16);
-		klbs_write_bits(bs, o->data_length, 16);
-		for (int j = 0; j < o->data_length; j++) {
-			klbs_write_bits(bs, o->data[j], 8);
+		klbs_write_bits(bs, outSize, 16);
+		for (int j = 0; j < outSize; j++) {
+			klbs_write_bits(bs, outBuf[j], 8);
 		}
+		free(outBuf);
 	}
 	klbs_write_buffer_complete(bs);
 
