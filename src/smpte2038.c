@@ -150,11 +150,16 @@ err:
 int klvanc_smpte2038_parse_pes_payload(uint8_t *payload, unsigned int byteCount, struct klvanc_smpte2038_anc_data_packet_s **result)
 {
 	int ret;
-	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
-	if (h == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
-	struct klbs_context_s *bs = klbs_alloc();
+	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
         klbs_read_set_buffer(bs, payload, byteCount);
 
 	ret = smpte2038_parse_pes_payload_int(bs, h);
@@ -170,13 +175,17 @@ int klvanc_smpte2038_parse_pes_payload(uint8_t *payload, unsigned int byteCount,
 int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, struct klvanc_smpte2038_anc_data_packet_s **result)
 {
 	int ret = -1;
-
-	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
-	if (h == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	struct klvanc_smpte2038_anc_data_packet_s *h = calloc(sizeof(*h), 1);
+	if (h == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 // MMM
-	struct klbs_context_s *bs = klbs_alloc();
         klbs_read_set_buffer(bs, section, byteCount);
 
 	h->packet_start_code_prefix = klbs_read_bits(bs, 24);

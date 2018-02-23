@@ -243,17 +243,21 @@ static unsigned char *parse_splice_request_data(struct klvanc_context_s *ctx, un
 }
 
 #define MAX_DESC_SIZE 255
-static int gen_splice_request_data(struct klvanc_splice_request_data *d,
+static int gen_splice_request_data(const struct klvanc_splice_request_data *d,
 				   unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->splice_insert_type, 8);
@@ -291,17 +295,21 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 	return 0;
 }
 
-static int gen_time_signal_request_data(struct klvanc_time_signal_request_data *d,
+static int gen_time_signal_request_data(const struct klvanc_time_signal_request_data *d,
 					unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->pre_roll_time, 16);
@@ -331,17 +339,21 @@ static unsigned char *parse_descriptor_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_descriptor_request_data(struct klvanc_insert_descriptor_request_data *d,
+static int gen_descriptor_request_data(const struct klvanc_insert_descriptor_request_data *d,
 				       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->descriptor_count, 8);
@@ -372,17 +384,21 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_dtmf_request_data(struct klvanc_dtmf_descriptor_request_data *d,
+static int gen_dtmf_request_data(const struct klvanc_dtmf_descriptor_request_data *d,
 				 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->pre_roll_time, 8);
@@ -412,19 +428,22 @@ static unsigned char *parse_avail_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_avail_request_data(struct klvanc_avail_descriptor_request_data *d,
+static int gen_avail_request_data(const struct klvanc_avail_descriptor_request_data *d,
 				  unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
-	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
-	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
 
+	/* Serialize the SCTE 104 request into a binary blob */
+	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 	klbs_write_bits(bs, d->num_provider_avails, 8);
 	for (int i = 0; i < d->num_provider_avails; i++)
 		klbs_write_bits(bs, d->provider_avail_id[i], 32);
@@ -464,17 +483,21 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_segmentation_request_data(struct klvanc_segmentation_descriptor_request_data *d,
+static int gen_segmentation_request_data(const struct klvanc_segmentation_descriptor_request_data *d,
 					 unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->event_id, 32);
@@ -521,17 +544,21 @@ static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
 	return p;
 }
 
-static int gen_proprietary_command_request_data(struct klvanc_proprietary_command_request_data *d,
+static int gen_proprietary_command_request_data(const struct klvanc_proprietary_command_request_data *d,
 						unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->proprietary_id, 32);
@@ -556,16 +583,20 @@ static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data 
 	return p;
 }
 
-static int gen_tier_data(struct klvanc_tier_data *d, unsigned char **outBuf, uint16_t *outSize)
+static int gen_tier_data(const struct klvanc_tier_data *d, unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->tier_data, 16);
@@ -582,6 +613,9 @@ static int gen_tier_data(struct klvanc_tier_data *d, unsigned char **outBuf, uin
 static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time_descriptor_data *d)
 {
 	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
+		return NULL;
+
 	klbs_read_set_buffer(bs, p, 12);
 
 	d->TAI_seconds = klbs_read_bits(bs, 48);
@@ -593,17 +627,21 @@ static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time
 	return p;
 }
 
-static int gen_time_descriptor(struct klvanc_time_descriptor_data *d,
+static int gen_time_descriptor(const struct klvanc_time_descriptor_data *d,
 			       unsigned char **outBuf, uint16_t *outSize)
 {
 	unsigned char *buf;
-
-	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
-	if (buf == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
 
+	buf = (unsigned char *) malloc(MAX_DESC_SIZE);
+	if (buf == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
+
 	/* Serialize the SCTE 104 request into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
 	klbs_write_bits(bs, d->TAI_seconds, 48);
@@ -827,8 +865,9 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p)
 	return dump_mom(ctx, pkt);
 }
 
-void klvanc_free_SCTE_104(struct klvanc_packet_scte_104_s *pkt)
+void klvanc_free_SCTE_104(void *p)
 {
+	struct klvanc_packet_scte_104_s *pkt = p;
 	struct klvanc_multiple_operation_message *m;
 
 	if (pkt == NULL)
@@ -1002,10 +1041,11 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	return KLAPI_OK;
 }
 
-int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt,
+int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
+					   const struct klvanc_packet_scte_104_s *pkt,
 					   uint8_t **bytes, uint16_t *byteCount)
 {
-	struct klvanc_multiple_operation_message *m;
+	const struct klvanc_multiple_operation_message *m;
 
 	if (!pkt || !bytes) {
 		return -1;
@@ -1018,14 +1058,19 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 		return -1;
 	}
 
-	*bytes = malloc(255);
-	if (*bytes == NULL)
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
 		return -1;
+
+	*bytes = malloc(255);
+	if (*bytes == NULL) {
+		klbs_free(bs);
+		return -1;
+	}
 
 	m = &pkt->mo_msg;
 
 	/* Serialize the SCTE 104 into a binary blob */
-	struct klbs_context_s *bs = klbs_alloc();
 	klbs_write_set_buffer(bs, *bytes, 255);
 
 	klbs_write_bits(bs, 0x08, 8); /* SMPTE 2010 Payload Descriptor */
@@ -1040,7 +1085,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 	klbs_write_bits(bs, m->SCTE35_protocol_version, 8);
 	klbs_write_bits(bs, m->timestamp.time_type, 8);
 
-	struct klvanc_multiple_operation_message_timestamp *ts = &m->timestamp;
+	const struct klvanc_multiple_operation_message_timestamp *ts = &m->timestamp;
 	switch(ts->time_type) {
 	case 1:
 		klbs_write_bits(bs, ts->time_type_1.UTC_seconds, 32);
@@ -1067,37 +1112,39 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 
 	klbs_write_bits(bs, m->num_ops, 8);
 	for (int i = 0; i < m->num_ops; i++) {
-		struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
+		unsigned char *outBuf = NULL;
+		uint16_t outSize = 0;
+		const struct klvanc_multiple_operation_message_operation *o = &m->ops[i];
 		switch (o->opID) {
 		case MO_SPLICE_REQUEST_DATA:
-			gen_splice_request_data(&o->sr_data, &o->data, &o->data_length);
+			gen_splice_request_data(&o->sr_data, &outBuf, &outSize);
 			break;
 		case MO_SPLICE_NULL_REQUEST_DATA:
-			gen_splice_null_request_data(&o->data, &o->data_length);
+			gen_splice_null_request_data(&outBuf, &outSize);
 			break;
 		case MO_TIME_SIGNAL_REQUEST_DATA:
-			gen_time_signal_request_data(&o->timesignal_data, &o->data, &o->data_length);
+			gen_time_signal_request_data(&o->timesignal_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_DESCRIPTOR_REQUEST_DATA:
-			gen_descriptor_request_data(&o->descriptor_data, &o->data, &o->data_length);
+			gen_descriptor_request_data(&o->descriptor_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_DTMF_REQUEST_DATA:
-			gen_dtmf_request_data(&o->dtmf_data, &o->data, &o->data_length);
+			gen_dtmf_request_data(&o->dtmf_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA:
-			gen_avail_request_data(&o->avail_descriptor_data, &o->data, &o->data_length);
+			gen_avail_request_data(&o->avail_descriptor_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_SEGMENTATION_REQUEST_DATA:
-			gen_segmentation_request_data(&o->segmentation_data, &o->data, &o->data_length);
+			gen_segmentation_request_data(&o->segmentation_data, &outBuf, &outSize);
 			break;
 		case MO_PROPRIETARY_COMMAND_REQUEST_DATA:
-			gen_proprietary_command_request_data(&o->proprietary_data, &o->data, &o->data_length);
+			gen_proprietary_command_request_data(&o->proprietary_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_TIER_DATA:
-			gen_tier_data(&o->tier_data, &o->data, &o->data_length);
+			gen_tier_data(&o->tier_data, &outBuf, &outSize);
 			break;
 		case MO_INSERT_TIME_DESCRIPTOR:
-			gen_time_descriptor(&o->time_data, &o->data, &o->data_length);
+			gen_time_descriptor(&o->time_data, &outBuf, &outSize);
 			break;
 		default:
 			PRINT_ERR("Unknown operation type 0x%04x\n", o->opID);
@@ -1106,10 +1153,11 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx, struct 
 		/* FIXME */
 
 		klbs_write_bits(bs, o->opID, 16);
-		klbs_write_bits(bs, o->data_length, 16);
-		for (int j = 0; j < o->data_length; j++) {
-			klbs_write_bits(bs, o->data[j], 8);
+		klbs_write_bits(bs, outSize, 16);
+		for (int j = 0; j < outSize; j++) {
+			klbs_write_bits(bs, outBuf[j], 8);
 		}
+		free(outBuf);
 	}
 	klbs_write_buffer_complete(bs);
 

@@ -318,9 +318,9 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p);
 
 /**
  * @brief       TODO - Brief description goes here.
- * @param[in]	struct packet_scte_104_s *pkt
+ * @param[in]	void *p - Pointer to struct (klvanc_packet_scte_104_s *)
  */
-void klvanc_free_SCTE_104(struct klvanc_packet_scte_104_s *pkt);
+void klvanc_free_SCTE_104(void *p);
 
 /**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
@@ -349,7 +349,7 @@ int klvanc_convert_SCTE_104_to_words(struct klvanc_context_s *ctx,
  * @return      -ENOMEM - Not enough memory to satisfy request
  */
 int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
-					   struct klvanc_packet_scte_104_s *pkt,
+					   const struct klvanc_packet_scte_104_s *pkt,
 					   uint8_t **bytes, uint16_t *byteCount);
 
 int klvanc_SCTE_104_Add_MOM_Op(struct klvanc_packet_scte_104_s *pkt, uint16_t opId,

@@ -52,3 +52,8 @@ noinst_HEADERS += ts_packetizer.h
 noinst_HEADERS += udp.h
 noinst_HEADERS += url.h
 noinst_HEADERS += version.h
+
+test: klvanc_eia708 klvanc_genscte104 klvanc_scte104
+	./klvanc_eia708
+	./klvanc_genscte104
+	./klvanc_scte104

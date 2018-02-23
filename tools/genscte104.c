@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <libklvanc/vanc.h>
 
+static int passCount = 0;
+static int failCount = 0;
+
 static int testcase_1(struct klvanc_context_s *ctx, uint16_t **words, uint16_t *wordCount)
 {
 
@@ -687,8 +690,12 @@ int genscte104_main(int argc, char *argv[])
 	for (int i = 0; i < NUM_TESTCASES; i++) {
 		printf("Running test case %d: %s\n", i, testcases[i].name);
 		ret = testcases[i].test(ctx, &words, &wordCount);
-		if (ret != 0)
-			exit(1);
+		if (ret != 0) {
+			failCount++;
+			fprintf(stderr, "SCTE-104 failed to generate\n");
+		} else {
+			passCount++;
+		}
 
 		printf("Final Output\n");
 		for (int i = 0; i < wordCount; i++) {
@@ -699,5 +706,10 @@ int genscte104_main(int argc, char *argv[])
 	}
 
 	klvanc_context_destroy(ctx);
+
+	printf("Final result: PASS: %d/%d, Failures: %d\n",
+	       passCount, passCount + failCount, failCount);
+	if (failCount != 0)
+		return 1;
 	return 0;
 }
