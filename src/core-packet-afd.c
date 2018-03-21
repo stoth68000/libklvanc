@@ -38,6 +38,8 @@ const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd)
 		return "AFD_16x9_CENTER";
 	case AFD_FULL_FRAME:
 		return "AFD_FULL_FRAME";
+	case AFD_FULL_FRAME_ALT:
+		return "AFD_FULL_FRAME_ALT";
 	case AFD_16x9_CENTER:
 		return "AFD_16x9_CENTER";
 	case AFD_14x9_CENTER:
@@ -64,6 +66,8 @@ static enum klvanc_payload_afd_e afd_raw_to_enum(unsigned char afd)
 		return AFD_BOX_16x9_CENTER;
 	case 0x08:
 		return AFD_FULL_FRAME;
+	case 0x09:
+		return AFD_FULL_FRAME_ALT;
 	case 0x0a:
 		return AFD_16x9_CENTER;
 	case 0x0b:
@@ -90,6 +94,8 @@ static unsigned char afd_enum_to_raw(enum klvanc_payload_afd_e afd)
 		return 0x04;
 	case AFD_FULL_FRAME:
 		return 0x08;
+	case AFD_FULL_FRAME_ALT:
+		return 0x09;
 	case AFD_16x9_CENTER:
 		return 0x0a;
 	case AFD_14x9_CENTER:
