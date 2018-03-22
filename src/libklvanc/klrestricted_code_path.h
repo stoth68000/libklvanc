@@ -62,7 +62,7 @@ struct klrestricted_code_path_block_s
 	uint64_t countBlockAvoided;
 };
 
-__inline__ int klrcp_timeval_subtract(struct timeval *result, struct timeval *x, struct timeval *y)
+static __inline__ int klrcp_timeval_subtract(struct timeval *result, struct timeval *x, struct timeval *y)
 {
      /* Perform the carry for the later subtraction by updating y. */
      if (x->tv_usec < y->tv_usec)
@@ -86,12 +86,12 @@ __inline__ int klrcp_timeval_subtract(struct timeval *result, struct timeval *x,
      return x->tv_sec < y->tv_sec;
 }
 
-__inline uint64_t klrcp_timediff_to_msecs(struct timeval *tv)
+static __inline uint64_t klrcp_timediff_to_msecs(struct timeval *tv)
 {
         return (tv->tv_sec * 1000) + (tv->tv_usec / 1000);
 }
 
-__inline__ void klrestricted_code_path_block_initialize(struct klrestricted_code_path_block_s *blk, int id,
+static __inline__ void klrestricted_code_path_block_initialize(struct klrestricted_code_path_block_s *blk, int id,
 	int enableChecking, uint64_t minimumIntervalMs)
 {
 	memset(blk, 0, sizeof(*blk));
@@ -100,7 +100,7 @@ __inline__ void klrestricted_code_path_block_initialize(struct klrestricted_code
 	blk->minimumIntervalMs = minimumIntervalMs;
 };
 
-__inline__ int klrestricted_code_path_block_execute(struct klrestricted_code_path_block_s *blk)
+static __inline__ int klrestricted_code_path_block_execute(struct klrestricted_code_path_block_s *blk)
 {
 	if (blk->enableChecking == 0) {
 		blk->countBlockEntered++;
