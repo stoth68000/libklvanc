@@ -323,6 +323,25 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p);
 void klvanc_free_SCTE_104(void *p);
 
 /**
+ * @brief       Encapsulate a SCTE-104 packet into a SMPTE 2010 packet (suitable for embedding
+ *              in a VANC packet).  Currently only creation of unfragmented 2010 packets is supported.\n\n
+ *              On success, caller MUST free the resulting *bytes array.\n\n
+ *              See SMPTE Standard ST2010:2008 "Vertical Ancillary Data Mapping of ANSI/SCTE 104 Messages"
+ *              for details of the output packet format.
+ * @param[in]	struct vanc_context_s *ctx, pointer to an existing libklvanc context structure
+ * @param[in]	uint8_t *inBytes - Pointer to SCTE-104 packet bytes
+ * @param[in]	uint16_t *inCount - Number of bytes in SCTE-104 packet
+ * @param[out]	uint8_t **bytes - Pointer to resulting SMPTE 2010 packet
+ * @param[out]	uint16_t *byteCount - Number of bytes in resulting SMPTE 2010 packet
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(struct klvanc_context_s *ctx,
+                                                      uint8_t *inBytes, uint16_t inCount,
+                                                      uint8_t **bytes, uint16_t *byteCount);
+
+/**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
  *              vanc words, so that we may push out as VANC data.
  *              On success, caller MUST free the resulting *words array.

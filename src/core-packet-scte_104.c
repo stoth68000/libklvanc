@@ -1073,8 +1073,6 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	/* Serialize the SCTE 104 into a binary blob */
 	klbs_write_set_buffer(bs, *bytes, 255);
 
-	klbs_write_bits(bs, 0x08, 8); /* SMPTE 2010 Payload Descriptor */
-
 	klbs_write_bits(bs, 0xffff, 16); /* reserved */
 
 	klbs_write_bits(bs, m->messageSize, 16);
@@ -1162,11 +1160,10 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	klbs_write_buffer_complete(bs);
 
 	/* Recompute the total message size now that everything has been serialized to
-	   a single buffer.  Note we subtract 1 from the total because this buffer
-	   represents the SMPTE 2010 packet, not the multiple operation message payload */
-	uint16_t buffer_size = klbs_get_byte_count(bs) - 1;
-	(*bytes)[3] = buffer_size >> 8;
-	(*bytes)[4] = buffer_size & 0xff;
+	   a single buffer. */
+	uint16_t buffer_size = klbs_get_byte_count(bs);
+	(*bytes)[2] = buffer_size >> 8;
+	(*bytes)[3] = buffer_size & 0xff;
 
 #if 0
 	PRINT_DEBUG("Resulting buffer size=%d\n", klbs_get_byte_count(bs));
@@ -1183,23 +1180,60 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	return 0;
 }
 
+int klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(struct klvanc_context_s *ctx,
+                                                      uint8_t *inBytes, uint16_t inCount,
+                                                      uint8_t **bytes, uint16_t *byteCount)
+{
+	uint8_t *out;
+	uint16_t len;
+
+	/* For now we just support standalone 2010 packets (i.e. type 0x08), which is
+	   all that is needed for SCTE-104 simple profile.  We don't support fragmenting
+	   a SCTE-104 packet across multiple 2010 packets */
+
+	/* Maximum permitted size for a Multiple Operation Message within a single
+	   SMPTE 2010 packet is 254 (ST 2010:2008 Sec 5.4). */
+	if (inCount > 254)
+		return -1;
+
+	len = inCount + 1;
+	out = malloc(len);
+	if (out == NULL)
+		return -1;
+
+	out[0] = 0x08; /* SMPTE 2010 Payload Descriptor */
+	memcpy(&out[1], inBytes, inCount);
+
+	*bytes = out;
+	*byteCount = len;
+	return 0;
+}
+
 int klvanc_convert_SCTE_104_to_words(struct klvanc_context_s *ctx,
 				     struct klvanc_packet_scte_104_s *pkt,
 				     uint16_t **words, uint16_t *wordCount)
 {
 	uint8_t *buf;
 	uint16_t byteCount;
+	uint8_t *s2010Packet;
+	uint16_t s2010Count;
 	int ret;
 
 	ret = klvanc_convert_SCTE_104_to_packetBytes(ctx, pkt, &buf, &byteCount);
 	if (ret != 0)
 		return -1;
 
+	ret = klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(ctx, buf, byteCount,
+								&s2010Packet, &s2010Count);
+	free(buf);
+	if (ret != 0) {
+		return -1;
+	}
+
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
-	klvanc_sdi_create_payload(0x07, 0x41, buf, byteCount, words, wordCount, 10);
-
-	free(buf);
+	klvanc_sdi_create_payload(0x07, 0x41, s2010Packet, s2010Count, words, wordCount, 10);
+	free(s2010Packet);
 
 	return 0;
 }
