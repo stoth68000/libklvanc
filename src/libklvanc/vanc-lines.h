@@ -134,6 +134,31 @@ int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *v
 int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
 			      uint16_t **out_buf, int *out_len, int line_pixel_width);
 
+/**
+ * @brief	Generate pixel array representing a fully formed VANC line.  This
+ *              function will take in a klvanc_line_s, format the VANC entries to ensure there
+ *              are no gaps or overlapping packets, and create a final pixel array which
+ *              can be colorspace converted and output over SDI.
+ *
+ * @param[in]	struct klvanc_line_s *line - the VANC line to operate on
+ * @param[out]	uint8_t *out_buf - a pointer to the buffer the function will output into.  The
+ *              memory for the output buffer should be allocated by the caller (or in the case
+ *              of working with Blackmagic cards, pass the buffer returned from
+ *              vanc->GetBufferForVerticalBlankingLine().  Note that this buffer will determine
+ *              whether to do HD interleaving (inserting into the Y region only) or SD
+ *              interleaving (using both Y and UV regions) based on the value provided via the
+ *              line_pixel_width argument.
+ * @param[in]	int line_pixel_width - Size of the output buffer, measured in number of samples.
+ *              When working with Blackmagic cards, this value will typically be the line width
+ *              (e.g. 1920 for 1080i video), but there are special exceptions for certain 4K
+ *              cards so review the Blackmagic SDK documentation for details.  This function
+ *              will it insert VANC packets which exceed the line width specified.
+ * @return      0 - Success
+ * @return      -ENOMEM - insufficient memory to store the VANC packet
+ */
+int klvanc_generate_vanc_line_v210(struct klvanc_context_s *ctx, struct klvanc_line_s *line,
+				   uint8_t *out_buf, int line_pixel_width);
+
 #ifdef __cplusplus
 };
 #endif  

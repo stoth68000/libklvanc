@@ -192,3 +192,28 @@ int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s
 	}
 	return 0;
 }
+
+int klvanc_generate_vanc_line_v210(struct klvanc_context_s *ctx,
+                                   struct klvanc_line_s *line,
+                                   uint8_t *out_buf, int line_pixel_width)
+{
+	uint16_t *out_line;
+	int out_len;
+	int result;
+
+	/* Generate the full line taking into account all VANC packets on that line */
+	result = klvanc_generate_vanc_line(ctx, line, &out_line, &out_len,
+					   line_pixel_width);
+	if (result != 0) {
+		return -ENOMEM;
+	}
+
+	/* Repack the 16-bit ints into 10-bit, and push into final buffer */
+	if (line_pixel_width > 720)
+		klvanc_y10_to_v210(out_line, out_buf, out_len);
+	else
+		klvanc_uyvy_to_v210(out_line, out_buf, out_len);
+
+	free(out_line);
+	return 0;
+}
