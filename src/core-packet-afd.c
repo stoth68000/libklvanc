@@ -130,12 +130,43 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 
 	struct klvanc_packet_afd_s *pkt = p;
 
-	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
+	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%04x Value2: 0x%04x\n", __func__,
 		    klvanc_afd_to_string(pkt->afd),
 		    klvanc_aspectRatio_to_string(pkt->aspectRatio),
 		    pkt->barDataFlags,
 		    pkt->barDataValue[0],
 		    pkt->barDataValue[1]);
+	if (pkt->barDataFlags) {
+		PRINT_DEBUG(" Top bar flag = %x\n", (pkt->barDataFlags & 0x08) == 0x08);
+		PRINT_DEBUG(" Bottom bar flag = %x\n", (pkt->barDataFlags & 0x04) == 0x04);
+		PRINT_DEBUG(" Left bar flag = %x\n", (pkt->barDataFlags & 0x02) == 0x02);
+		PRINT_DEBUG(" Right bar flag = %x\n", (pkt->barDataFlags & 0x01) == 0x01);
+
+		/* Sec 6.1 - For the two pairs of top/bottom and left/right, either both have
+		   to be set or neither */
+		if ((pkt->barDataFlags & 0x0c) == 0x08 || (pkt->barDataFlags & 0x0c) == 0x04)
+			PRINT_DEBUG(" INVALID top/bottom pairing");
+
+		if ((pkt->barDataFlags & 0x03) == 0x02 || (pkt->barDataFlags & 0x03) == 0x01)
+			PRINT_DEBUG(" INVALID left right pairing");
+
+		/* Make sure there isn't some illegal combination of horizontal/vertical
+		   bits enabled (either top/bottom have to be enabled or left/right, but
+		   it can't be both) */
+		if ((pkt->barDataFlags & 0x0c) && (pkt->barDataFlags & 0x03))
+			PRINT_DEBUG(" INVALID both horizontal/vertical bar flags set");
+
+		/* Depending on which flags are set dictate which of the two values
+		   contains a given value */
+		if (pkt->barDataFlags & 0x08) {
+			PRINT_DEBUG(" Top bar = %d\n", pkt->barDataValue[0] & 0x3fff);
+			PRINT_DEBUG(" Bottom bar = %d\n", pkt->barDataValue[1] & 0x3fff);
+		}
+		if (pkt->barDataFlags & 0x02) {
+			PRINT_DEBUG(" Left bar = %d\n", pkt->barDataValue[0] & 0x3fff);
+			PRINT_DEBUG(" Right bar = %d\n", pkt->barDataValue[1] & 0x3fff);
+		}
+	}
 
 	return KLAPI_OK;
 }
