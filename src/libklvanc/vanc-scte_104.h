@@ -299,18 +299,20 @@ struct klvanc_packet_scte_104_s
 };
 
 
-
 /**
- * @brief       TODO - Brief description goes here.
- * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @brief       Create a SCTE-104 structure
+ * @param[in]	uint16_t opId - SCTE-104 Operation to be created.  Note that at present only
+ *              Multiple Operation Messages (type 0xffff) are supported.
+ * @param[out]	struct klvanc_packet_scte_104_s **pkt - The resulting SCTE-104 VANC entry
  * @return	0 - Success
  * @return	< 0 - Error
  */
 int klvanc_alloc_SCTE_104(uint16_t opId, struct klvanc_packet_scte_104_s **pkt);
 
 /**
- * @brief       TODO - Brief description goes here.
- * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @brief       Print out the properties of a SCTE-104 structure
+ * @param[in]	struct vanc_context_s *ctx, pointer to an existing libklvanc context structure
+ * @param[in]	void *p - pointer to klvanc_packet_scte_104_s packet to be processed
  * @return	0 - Success
  * @return	< 0 - Error
  */
@@ -323,11 +325,31 @@ int klvanc_dump_SCTE_104(struct klvanc_context_s *ctx, void *p);
 void klvanc_free_SCTE_104(void *p);
 
 /**
+ * @brief       Encapsulate a SCTE-104 packet into a SMPTE 2010 packet (suitable for embedding
+ *              in a VANC packet).  Currently only creation of unfragmented 2010 packets is supported.\n\n
+ *              On success, caller MUST free the resulting *bytes array.\n\n
+ *              See SMPTE Standard ST2010:2008 "Vertical Ancillary Data Mapping of ANSI/SCTE 104 Messages"
+ *              for details of the output packet format.
+ * @param[in]	struct vanc_context_s *ctx, pointer to an existing libklvanc context structure
+ * @param[in]	uint8_t *inBytes - Pointer to SCTE-104 packet bytes
+ * @param[in]	uint16_t *inCount - Number of bytes in SCTE-104 packet
+ * @param[out]	uint8_t **bytes - Pointer to resulting SMPTE 2010 packet
+ * @param[out]	uint16_t *byteCount - Number of bytes in resulting SMPTE 2010 packet
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(struct klvanc_context_s *ctx,
+                                                      uint8_t *inBytes, uint16_t inCount,
+                                                      uint8_t **bytes, uint16_t *byteCount);
+
+/**
  * @brief	Convert type struct packet_scte_104_s into a more traditional line of\n
  *              vanc words, so that we may push out as VANC data.
  *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct vanc_context_s *ctx, pointer to an existing libklvanc context structure
  * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
- * @param[out]	uint16_t **words - An array of words reppresenting a fully formed vanc line.
+ * @param[out]	uint16_t **words - An array of words representing a fully formed vanc line.
  * @param[out]	uint16_t *wordCount - Number of words in the array.
  * @return        0 - Success
  * @return      < 0 - Error
@@ -338,12 +360,13 @@ int klvanc_convert_SCTE_104_to_words(struct klvanc_context_s *ctx,
 				     uint16_t **words, uint16_t *wordCount);
 
 /**
- * @brief	Convert type struct packet_scte_104_s into a block of bytes which can be\n
- *              embedded into a VANC line
+ * @brief	Convert type struct packet_scte_104_s into a block of bytes which can be
+ *              serialized over TCP or embedded in an SMPTE 2010 packet to be sent over SDI VANC.
  *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct vanc_context_s *ctx, pointer to an existing libklvanc context structure
  * @param[in]	struct packet_scte_104_s *pkt - A SCTE-104 VANC entry, received from the SCTE-104 parser
- * @param[out]	uint8_t **bytes - An array of words reppresenting a fully formed vanc line.
- * @param[out]	uint16_t *byteCount - Number of byes in the array.
+ * @param[out]	uint8_t **bytes - An array of words representing a fully formed SCTE-104 packet.
+ * @param[out]	uint16_t *byteCount - Number of bytes in the array.
  * @return        0 - Success
  * @return      < 0 - Error
  * @return      -ENOMEM - Not enough memory to satisfy request
