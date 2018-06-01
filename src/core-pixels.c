@@ -111,7 +111,7 @@ cb0-2 = U
 cr0-2 = V
 XXnn nnnn  nnnn bbbb  bbbb bbaa  aaaa aaaa
 */
-void klvanc_v210_line_to_uyvy_c(uint32_t * src, uint16_t * dst, int width)
+void klvanc_v210_line_to_uyvy_c(const uint32_t * src, uint16_t * dst, int width)
 {
 	uint32_t val;
 	for (int i = 0; i < width; i += 6) {
