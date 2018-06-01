@@ -66,11 +66,11 @@ void klvanc_v210_downscale_line_c(uint16_t * src, uint8_t * dst, int lines);
 
 /**
  * @brief	TODO - Brief description goes here.
- * @param[in]	uint32_t * src - Brief description goes here.
+ * @param[in]	const uint32_t * src - Brief description goes here.
  * @param[in]	uint16_t * dst - Brief description goes here.
  * @param[in]	int width - Brief description goes here.
  */
-void klvanc_v210_line_to_uyvy_c(uint32_t * src, uint16_t * dst, int width);
+void klvanc_v210_line_to_uyvy_c(const uint32_t * src, uint16_t * dst, int width);
 
 /**
  * @brief	Convert Y10 buffer to V210
@@ -79,6 +79,14 @@ void klvanc_v210_line_to_uyvy_c(uint32_t * src, uint16_t * dst, int width);
  * @param[in]	int width - Number of Y pixels in src
  */
 void klvanc_y10_to_v210(uint16_t *src, uint8_t *dst, int width);
+
+/**
+ * @brief	Convert UYVY buffer to V210
+ * @param[in]	uint16_t * src - Array of 16-bit fields containing 10-bit YUV values
+ * @param[out]	uint8_t * dst - Destination containing resulting V210 video
+ * @param[in]	int width - Number of Y pixels in src
+ */
+void klvanc_uyvy_to_v210(uint16_t *src, uint8_t *dst, int width);
 
 #ifdef __cplusplus
 };

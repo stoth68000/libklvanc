@@ -111,7 +111,7 @@ cb0-2 = U
 cr0-2 = V
 XXnn nnnn  nnnn bbbb  bbbb bbaa  aaaa aaaa
 */
-void klvanc_v210_line_to_uyvy_c(uint32_t * src, uint16_t * dst, int width)
+void klvanc_v210_line_to_uyvy_c(const uint32_t * src, uint16_t * dst, int width)
 {
 	uint32_t val;
 	for (int i = 0; i < width; i += 6) {
@@ -152,4 +152,75 @@ void klvanc_y10_to_v210(uint16_t *src, uint8_t *dst, int width)
 		put_le32(&dst, src[w * 6 + 3] << 10);
 	if (width % 6 > 4)
 		put_le32(&dst, src[w * 6 + 4]);
+}
+
+void klvanc_uyvy_to_v210(uint16_t *src, uint8_t *dst, int width)
+{
+	size_t len = width / 12;
+	size_t w;
+
+	for (w = 0; w < len; w++) {
+		put_le32(&dst, (src[w * 12 + 0]) |
+			 (src[w * 12 + 1] << 10) |
+			 (src[w * 12 + 2] << 20));
+		put_le32(&dst, (src[w * 12 + 3]) |
+			 (src[w * 12 + 4] << 10) |
+			 (src[w * 12 + 5] << 20));
+		put_le32(&dst, (src[w * 12 + 6]) |
+			 (src[w * 12 + 7] << 10) |
+			 (src[w * 12 + 8] << 20));
+		put_le32(&dst, (src[w * 12 + 9]) |
+			 (src[w * 12 + 10] << 10) |
+			 (src[w * 12 + 11] << 20));
+	}
+
+	/* Handle remaining 0-11 bytes if any */
+	if (width % 12 > 2)
+		put_le32(&dst, (src[w * 12 + 0]) |
+			 (src[w * 12 + 1] << 10) |
+			 (src[w * 12 + 2] << 20));
+	else if (width % 12 > 1)
+		put_le32(&dst, (src[w * 12 + 0]) |
+			 (src[w * 12 + 1] << 10) |
+			 (0x200 << 20));
+	else if (width % 12 > 0)
+		put_le32(&dst, (src[w * 12 + 0]) |
+			 (0x040 << 10) |
+			 (0x200 << 20));
+
+	if (width % 12 > 5)
+		put_le32(&dst, (src[w * 12 + 3]) |
+			 (src[w * 12 + 4] << 10) |
+			 (src[w * 12 + 5] << 20));
+	else if (width % 12 > 4)
+		put_le32(&dst, (src[w * 12 + 3]) |
+			 (src[w * 12 + 4] << 10) |
+			 (0x040 << 20));
+	else if (width % 12 > 3)
+		put_le32(&dst, (src[w * 12 + 3]) |
+			 (0x200 << 10) |
+			 (0x040 << 20));
+
+
+	if (width % 12 > 8)
+		put_le32(&dst, (src[w * 12 + 6]) |
+			 (src[w * 12 + 7] << 10) |
+			 (src[w * 12 + 8] << 20));
+	else if (width % 12 > 7)
+		put_le32(&dst, (src[w * 12 + 6]) |
+			 (src[w * 12 + 7] << 10) |
+			 (0x200 << 20));
+	else if (width % 12 > 6)
+		put_le32(&dst, (src[w * 12 + 6]) |
+			 (0x040 << 10) |
+			 (0x200 << 20));
+
+	if (width % 12 > 10)
+		put_le32(&dst, (src[w * 12 + 9]) |
+			 (src[w * 12 + 10] << 10) |
+			 (0x040 << 20));
+	else if (width % 12 > 9)
+		put_le32(&dst, (src[w * 12 + 9]) |
+			 (0x200 << 10) |
+			 (0x040 << 20));
 }
