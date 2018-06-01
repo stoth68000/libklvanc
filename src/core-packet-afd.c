@@ -130,7 +130,7 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 
 	struct klvanc_packet_afd_s *pkt = p;
 
-	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%x Value2: 0x%x\n", __func__,
+	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%04x Value2: 0x%04x\n", __func__,
 		    klvanc_afd_to_string(pkt->afd),
 		    klvanc_aspectRatio_to_string(pkt->aspectRatio),
 		    pkt->barDataFlags,
