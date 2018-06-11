@@ -150,6 +150,20 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 		    klvanc_barFlags_to_string(pkt->barDataFlags),
 		    pkt->barDataFlags);
 
+	/* Sec 6.1 - For the two pairs of top/bottom and left/right, either both have
+	   -   to be set or neither */
+	if ((pkt->barDataFlags & 0x0c) == 0x08 || (pkt->barDataFlags & 0x0c) == 0x04)
+		PRINT_DEBUG(" INVALID top/bottom pairing");
+
+	if ((pkt->barDataFlags & 0x03) == 0x02 || (pkt->barDataFlags & 0x03) == 0x01)
+		PRINT_DEBUG(" INVALID left right pairing");
+
+	/* Make sure there isn't some illegal combination of horizontal/vertical
+	   bits enabled (either top/bottom have to be enabled or left/right, but
+	   it can't be both) */
+	if ((pkt->barDataFlags & 0x0c) && (pkt->barDataFlags & 0x03))
+		PRINT_DEBUG(" INVALID both horizontal/vertical bar flags set");
+
 	/* Depending on which flags are set dictate which of the two values
 	   contains a given value */
 	if (pkt->barDataFlags == BARS_TOPBOTTOM) {
