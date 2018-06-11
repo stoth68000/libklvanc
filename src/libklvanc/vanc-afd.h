@@ -63,6 +63,12 @@ enum klvanc_payload_afd_e
 	AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER,
 };
 
+enum klvanc_payload_afd_barflags {
+	BARS_NONE = 0x00,
+	BARS_TOPBOTTOM = 0x03,
+	BARS_LEFTRIGHT = 0x0f,
+};
+
 /**
  * @brief	TODO - Brief description goes here.
  */
@@ -71,8 +77,11 @@ struct klvanc_packet_afd_s
 	struct klvanc_packet_header_s hdr;
 	enum klvanc_payload_aspect_ratio_e aspectRatio;
 	enum klvanc_payload_afd_e afd;
-	unsigned short barDataValue[2];
-	unsigned char barDataFlags;
+	enum klvanc_payload_afd_barflags barDataFlags;
+	unsigned short top;
+	unsigned short bottom;
+	unsigned short left;
+	unsigned short right;
 };
 
 /**
