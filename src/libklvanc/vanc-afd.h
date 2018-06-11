@@ -65,8 +65,8 @@ enum klvanc_payload_afd_e
 
 enum klvanc_payload_afd_barflags {
 	BARS_NONE = 0x00,
-	BARS_TOPBOTTOM = 0x03,
-	BARS_LEFTRIGHT = 0x0f,
+	BARS_LEFTRIGHT = 0x03,
+	BARS_TOPBOTTOM = 0x0c,
 };
 
 /**
