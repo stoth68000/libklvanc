@@ -123,6 +123,20 @@ const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar)
 	}
 }
 
+const char *klvanc_barFlags_to_string(enum klvanc_payload_afd_barflags flags)
+{
+	switch(flags) {
+	case BARS_NONE:
+		return "NONE";
+	case BARS_TOPBOTTOM:
+		return "Top/Bottom";
+	case BARS_LEFTRIGHT:
+		return "Left/Right";
+	default:
+		return "INVALID";
+	}
+}
+
 int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
@@ -130,42 +144,35 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 
 	struct klvanc_packet_afd_s *pkt = p;
 
-	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Flags: 0x%x Value1: 0x%04x Value2: 0x%04x\n", __func__,
+	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Bar Flags: %s (0x%x)\n", __func__,
 		    klvanc_afd_to_string(pkt->afd),
 		    klvanc_aspectRatio_to_string(pkt->aspectRatio),
-		    pkt->barDataFlags,
-		    pkt->barDataValue[0],
-		    pkt->barDataValue[1]);
-	if (pkt->barDataFlags) {
-		PRINT_DEBUG(" Top bar flag = %x\n", (pkt->barDataFlags & 0x08) == 0x08);
-		PRINT_DEBUG(" Bottom bar flag = %x\n", (pkt->barDataFlags & 0x04) == 0x04);
-		PRINT_DEBUG(" Left bar flag = %x\n", (pkt->barDataFlags & 0x02) == 0x02);
-		PRINT_DEBUG(" Right bar flag = %x\n", (pkt->barDataFlags & 0x01) == 0x01);
+		    klvanc_barFlags_to_string(pkt->barDataFlags),
+		    pkt->barDataFlags);
 
-		/* Sec 6.1 - For the two pairs of top/bottom and left/right, either both have
-		   to be set or neither */
-		if ((pkt->barDataFlags & 0x0c) == 0x08 || (pkt->barDataFlags & 0x0c) == 0x04)
-			PRINT_DEBUG(" INVALID top/bottom pairing");
+	/* Sec 6.1 - For the two pairs of top/bottom and left/right, either both have
+	   -   to be set or neither */
+	if ((pkt->barDataFlags & 0x0c) == 0x08 || (pkt->barDataFlags & 0x0c) == 0x04)
+		PRINT_DEBUG(" INVALID top/bottom pairing");
 
-		if ((pkt->barDataFlags & 0x03) == 0x02 || (pkt->barDataFlags & 0x03) == 0x01)
-			PRINT_DEBUG(" INVALID left right pairing");
+	if ((pkt->barDataFlags & 0x03) == 0x02 || (pkt->barDataFlags & 0x03) == 0x01)
+		PRINT_DEBUG(" INVALID left right pairing");
 
-		/* Make sure there isn't some illegal combination of horizontal/vertical
-		   bits enabled (either top/bottom have to be enabled or left/right, but
-		   it can't be both) */
-		if ((pkt->barDataFlags & 0x0c) && (pkt->barDataFlags & 0x03))
-			PRINT_DEBUG(" INVALID both horizontal/vertical bar flags set");
+	/* Make sure there isn't some illegal combination of horizontal/vertical
+	   bits enabled (either top/bottom have to be enabled or left/right, but
+	   it can't be both) */
+	if ((pkt->barDataFlags & 0x0c) && (pkt->barDataFlags & 0x03))
+		PRINT_DEBUG(" INVALID both horizontal/vertical bar flags set");
 
-		/* Depending on which flags are set dictate which of the two values
-		   contains a given value */
-		if (pkt->barDataFlags & 0x08) {
-			PRINT_DEBUG(" Top bar = %d\n", pkt->barDataValue[0] & 0x3fff);
-			PRINT_DEBUG(" Bottom bar = %d\n", pkt->barDataValue[1] & 0x3fff);
-		}
-		if (pkt->barDataFlags & 0x02) {
-			PRINT_DEBUG(" Left bar = %d\n", pkt->barDataValue[0] & 0x3fff);
-			PRINT_DEBUG(" Right bar = %d\n", pkt->barDataValue[1] & 0x3fff);
-		}
+	/* Depending on which flags are set dictate which of the two values
+	   contains a given value */
+	if (pkt->barDataFlags == BARS_TOPBOTTOM) {
+		PRINT_DEBUG(" Top bar = %d\n", pkt->top);
+		PRINT_DEBUG(" Bottom bar = %d\n", pkt->bottom);
+	}
+	if (pkt->barDataFlags == BARS_LEFTRIGHT) {
+		PRINT_DEBUG(" Left bar = %d\n", pkt->left);
+		PRINT_DEBUG(" Right bar = %d\n", pkt->right);
 	}
 
 	return KLAPI_OK;
@@ -192,10 +199,17 @@ int parse_AFD(struct klvanc_context_s *ctx,
 		pkt->aspectRatio = ASPECT_4x3;
 
 	pkt->barDataFlags = sanitizeWord(hdr->payload[3]) >> 4;
-	pkt->barDataValue[0]  = sanitizeWord(hdr->payload[4]) << 8;
-	pkt->barDataValue[0] |= sanitizeWord(hdr->payload[5]);
-	pkt->barDataValue[1]  = sanitizeWord(hdr->payload[6]) << 8;
-	pkt->barDataValue[1] |= sanitizeWord(hdr->payload[7]);
+	if (pkt->barDataFlags == BARS_TOPBOTTOM) {
+		pkt->top = sanitizeWord(hdr->payload[4]) << 8;
+		pkt->top |= sanitizeWord(hdr->payload[5]);
+		pkt->bottom = sanitizeWord(hdr->payload[6]) << 8;
+		pkt->bottom |= sanitizeWord(hdr->payload[7]);
+	} else if (pkt->barDataFlags == BARS_LEFTRIGHT) {
+		pkt->left = sanitizeWord(hdr->payload[4]) << 8;
+		pkt->left |= sanitizeWord(hdr->payload[5]);
+		pkt->right = sanitizeWord(hdr->payload[6]) << 8;
+		pkt->right |= sanitizeWord(hdr->payload[7]);
+	}
 
 	if (ctx->callbacks && ctx->callbacks->afd)
 		ctx->callbacks->afd(ctx->callback_context, ctx, pkt);
@@ -256,11 +270,16 @@ int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t *
 	klbs_write_bits(bs, afd, 8);
 	klbs_write_bits(bs, 0x00, 8); /* Reserved */
 	klbs_write_bits(bs, 0x00, 8); /* Reserved */
-	klbs_write_bits(bs, 0x00, 8); /* Bar Data Flags */
-	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 1 */
-	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 1 */
-	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 2 */
-	klbs_write_bits(bs, 0x00, 8); /* Bar Data Value 2 */
+	klbs_write_bits(bs, pkt->barDataFlags << 4, 8);
+	if (pkt->barDataFlags == BARS_TOPBOTTOM) {
+		klbs_write_bits(bs, pkt->top, 16);
+		klbs_write_bits(bs, pkt->bottom, 16);
+	} else if (pkt->barDataFlags == BARS_LEFTRIGHT) {
+		klbs_write_bits(bs, pkt->left, 16);
+		klbs_write_bits(bs, pkt->right, 16);
+	} else {
+		klbs_write_bits(bs, 0x00, 32);
+	}
 
 	klbs_write_buffer_complete(bs);
 
