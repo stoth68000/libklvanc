@@ -101,6 +101,14 @@ const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd);
 const char *klvanc_aspectRatio_to_string(enum klvanc_payload_aspect_ratio_e ar);
 
 /**
+ * @brief	Return a string representing the bar flags field
+ * @param[in]	enum klvanc_payload_afd_barflags flags - Value of flags field
+ * @return	Success - User facing printable string.
+ * @return	Error - NULL
+ */
+const char *klvanc_barFlags_to_string(enum klvanc_payload_afd_barflags flags);
+
+/**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
  * @return	0 - Success
