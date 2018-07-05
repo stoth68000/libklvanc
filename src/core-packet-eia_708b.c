@@ -77,8 +77,22 @@ void klvanc_destroy_eia708_cdp(struct klvanc_packet_eia_708b_s *pkt)
 	free(pkt);
 }
 
+static int gcd (int a, int b)
+{
+	int r;
+	while (b > 0) {
+		r = a % b;
+		a = b;
+		b = r;
+	}
+	return a;
+}
+
 int klvanc_set_framerate_EIA_708B(struct klvanc_packet_eia_708b_s *pkt, int num, int den)
 {
+	int gcd_val = gcd(num, den);
+	num /= gcd_val;
+	den /= gcd_val;
 	if (num == 1001 && den == 24000)
 		pkt->header.cdp_frame_rate = 0x01;
 	else if (num == 1 && den == 24)
