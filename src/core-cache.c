@@ -108,6 +108,9 @@ void klvanc_cache_reset(struct klvanc_context_s *ctx)
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
 			struct klvanc_cache_s *e = klvanc_cache_lookup(ctx, d, s);
+
+			if (e->activeCount == 0)
+				continue;
 			e->activeCount = 0;
 
 			for (int l = 0; l < 2048; l++) {
