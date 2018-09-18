@@ -194,9 +194,8 @@ void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 	if (ctx->skt != -1) {
 		if (IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 			modifyMulticastInterfaces(ctx->skt, &ctx->sin, ctx->ip_addr, ctx->ip_port, IP_DROP_MEMBERSHIP, 0);
+		close(ctx->skt);
 	}
-
-	close(ctx->skt);
 
 	free(ctx->rxbuffer);
 	free(ctx);
