@@ -41,8 +41,11 @@ static int url_argsplit(char *arg, char **tag, char **value)
 		free(tmp);
 		return -2;
 	}
-	*tag = calloc(1, strlen(p) + 1);
-	strcpy(*tag, p);
+	*tag = strdup(p);
+	if (*tag == NULL) {
+		free(tmp);
+		return -1;
+	}
 
 	p = strsep(&str, "=");
 	/* Strip any trailing args */
@@ -52,8 +55,11 @@ static int url_argsplit(char *arg, char **tag, char **value)
 			break;
 		}
 	}
-	*value = calloc(1, strlen(p) + 1);
-	strcpy(*value, p);
+	*value = strdup(p);
+	if (*value == NULL) {
+		free(tmp);
+		return -1;
+	}
 
 	free(tmp);
 	return 0;
@@ -162,7 +168,7 @@ int url_parse(const char *url, struct url_opts_s **result)
         /* Clone the string into a tmp buffer as strsep will want to modify it */
         char tmp[256];
         memset(tmp, 0, sizeof(tmp));
-        strcpy(tmp, url);
+        strncpy(tmp, url, sizeof(tmp) - 1);
 
         char *str = &tmp[0];
         char *p = strsep(&str, ":");
@@ -171,7 +177,7 @@ int url_parse(const char *url, struct url_opts_s **result)
                 return -1;
 	}
 
-        strcpy(opts->protocol, p);
+        strncpy(opts->protocol, p, sizeof(opts->protocol) - 1);
 	if (strcasecmp(opts->protocol, "udp") == 0)
 		opts->protocol_type = P_UDP;
 	else
@@ -193,7 +199,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 	if (regex_match(p, "^\[0-9].*.$") == 0)
 		opts->has_ipaddress = 1;
 
-        strncpy(opts->hostname, p, strlen(p));
+        strncpy(opts->hostname, p, sizeof(opts->hostname));
 
         /* ip port */
         p = strsep(&str, ":");
@@ -209,7 +215,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 
 	char tmp2[256];
 	memset(tmp2, 0, sizeof(tmp));
-	strcpy(tmp2, url);
+	strncpy(tmp2, url, sizeof(tmp2) - 1);
 	char *str2 = &tmp2[0];
 
 	char *q = strsep(&str2, "?&");
@@ -226,7 +232,7 @@ int url_parse(const char *url, struct url_opts_s **result)
                 //printf("tag = [%s] = [%s]\n", tag, value);
 		if (tag) {
 			if (strcasecmp(tag, "ifname") == 0)
-				strcpy(opts->ifname, value);
+				strncpy(opts->ifname, value, sizeof(opts->ifname) - 1);
 			else
 #if 0
 			if (strcasecmp(tag, "buffersize") == 0)
