@@ -199,7 +199,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 	if (regex_match(p, "^\[0-9].*.$") == 0)
 		opts->has_ipaddress = 1;
 
-        strncpy(opts->hostname, p, sizeof(opts->hostname));
+        strncpy(opts->hostname, p, sizeof(opts->hostname) - 1);
 
         /* ip port */
         p = strsep(&str, ":");
