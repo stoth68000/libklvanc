@@ -112,6 +112,11 @@ static int AnalyzeVANC(const char *fn)
 		}
 
 		memset(buf, 0, maxbuflen);
+		if (uiStride > maxbuflen) {
+			fprintf(stderr, "Invalid stride specified: %d\n", uiStride);
+			break;
+		}
+
 		ret = fread(buf, 1, uiStride, fh);
 		if (ret < uiStride) {
 			fprintf(stderr, "Premature end of file\n");
