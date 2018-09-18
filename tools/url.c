@@ -130,7 +130,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 	int ret;
 	int has_args = 0;
 	struct url_opts_s *opts = calloc(1, sizeof(*opts));
-	strcpy(opts->url, url);
+	strncpy(opts->url, url, sizeof(opts->url) - 1);
 
 	/* Check the protocol */
 	if (regex_match(url, "^(udp|rtp)://") < 0) {
