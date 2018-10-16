@@ -68,6 +68,10 @@ int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx,
 void klvanc_dump_packet_console(struct klvanc_context_s *ctx,
 				struct klvanc_packet_header_s *hdr);
 
+/* core-packet-sdp.c */
+int dump_SDP(struct klvanc_context_s *ctx, void *p);
+int parse_SDP(struct klvanc_context_s *ctx,
+            struct klvanc_packet_header_s *hdr, void **pp);
 /* We don't expect anything outside of the VANC framework to need toascii
  * call these, so we'll keep them private / internal calls.
  */
