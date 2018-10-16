@@ -112,6 +112,11 @@ static int AnalyzeVANC(const char *fn)
 		}
 
 		memset(buf, 0, maxbuflen);
+		if (uiStride > maxbuflen) {
+			fprintf(stderr, "Invalid stride specified: %d\n", uiStride);
+			break;
+		}
+
 		ret = fread(buf, 1, uiStride, fh);
 		if (ret < uiStride) {
 			fprintf(stderr, "Premature end of file\n");
@@ -208,7 +213,8 @@ static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx,
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		klvanc_dump_AFD(ctx, pkt);
+		if (klvanc_dump_AFD(ctx, pkt) < 0)
+			fprintf(stderr, "Failed to dump AFD packet");
 	}
 
 	return 0;
@@ -219,7 +225,8 @@ static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx,
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		klvanc_dump_EIA_708B(ctx, pkt);
+		if (klvanc_dump_EIA_708B(ctx, pkt) < 0)
+			fprintf(stderr, "Failed to dump CEA-708 packet");
 	}
 
 	return 0;
@@ -230,7 +237,8 @@ static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx,
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		klvanc_dump_EIA_608(ctx, pkt);
+		if (klvanc_dump_EIA_608(ctx, pkt) < 0)
+			fprintf(stderr, "Failed to dump EIA-608 packet");
 	}
 
 	return 0;
@@ -241,7 +249,8 @@ static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx,
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
-		klvanc_dump_SCTE_104(ctx, pkt);
+		if (klvanc_dump_SCTE_104(ctx, pkt) < 0)
+			fprintf(stderr, "Failed to dump SCTE-104 packet");
 	}
 	return 0;
 }

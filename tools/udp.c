@@ -124,7 +124,7 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	ctx->rxbuffer_size = 2048;
 	ctx->threadId = 0;
 	ctx->thread_running = ctx->thread_terminate = ctx->thread_complete = 0;
-	strcpy(ctx->ip_addr, ip_addr);
+	strncpy(ctx->ip_addr, ip_addr, sizeof(ctx->ip_addr) - 1);
 	ctx->cb = cb;
 	ctx->userContext = userContext;
 	ctx->stripRTPHeader = stripRTPHeader;
@@ -194,9 +194,8 @@ void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 	if (ctx->skt != -1) {
 		if (IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 			modifyMulticastInterfaces(ctx->skt, &ctx->sin, ctx->ip_addr, ctx->ip_port, IP_DROP_MEMBERSHIP, 0);
+		close(ctx->skt);
 	}
-
-	close(ctx->skt);
 
 	free(ctx->rxbuffer);
 	free(ctx);

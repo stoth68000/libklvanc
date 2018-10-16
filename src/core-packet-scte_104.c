@@ -468,6 +468,9 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 	d->upid_length = *(p++);
 
 	memset(d->upid, 0, sizeof(d->upid));
+
+	if (d->upid_length > sizeof(d->upid))
+		return NULL;
 	memcpy(d->upid, p, d->upid_length);
 	p += d->upid_length;
 	d->type_id = *(p++);
@@ -992,6 +995,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 			o->data = malloc(o->data_length);
 			if (!o->data) {
 				PRINT_ERR("%s() Unable to allocate memory for mom op, error.\n", __func__);
+				free(pkt);
+				return -1;
 			} else {
 				memcpy(o->data, p + 4, o->data_length);
 			}
