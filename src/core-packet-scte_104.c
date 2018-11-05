@@ -373,7 +373,7 @@ static int gen_descriptor_request_data(const struct klvanc_insert_descriptor_req
 static unsigned char *parse_dtmf_request_data(unsigned char *p,
 					      struct klvanc_dtmf_descriptor_request_data *d)
 {
-	d->pre_roll_time  = *(p++);
+	d->pre_roll_time = *(p++);
 	d->dtmf_length = *(p++);
 	memset(d->dtmf_char, 0, sizeof(d->dtmf_char));
 	if (d->dtmf_length <= sizeof(d->dtmf_char)) {
@@ -460,7 +460,7 @@ static int gen_avail_request_data(const struct klvanc_avail_descriptor_request_d
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
 						      struct klvanc_segmentation_descriptor_request_data *d)
 {
-	d->event_id  = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
+	d->event_id = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->event_cancel_indicator = *(p++);
 	d->duration = (p[0] << 8) | p[1];
 	p += 2;
