@@ -376,7 +376,7 @@ static unsigned char *parse_dtmf_request_data(unsigned char *p,
 	d->pre_roll_time  = *(p++);
 	d->dtmf_length = *(p++);
 	memset(d->dtmf_char, 0, sizeof(d->dtmf_char));
-	if (d->dtmf_length < sizeof(d->dtmf_char)) {
+	if (d->dtmf_length <= sizeof(d->dtmf_char)) {
 		memcpy(d->dtmf_char, p, d->dtmf_length);
 	}
 	p += d->dtmf_length;
