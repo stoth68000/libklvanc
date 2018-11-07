@@ -56,6 +56,7 @@ static struct type_s
 #endif
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
+    { 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
 };
 
 static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
@@ -141,12 +142,12 @@ static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int
 	p->adf[2] = *(arr + 2);
 	p->did = sanitizeWord(*(arr + 3));
 	p->dbnsdid = sanitizeWord(*(arr + 4));
+
+	p->payloadLengthWords = sanitizeWord(*(arr + 5));
 	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short))) {
 		free(p);
 		return -ENOMEM;
 	}
-
-	p->payloadLengthWords = sanitizeWord(*(arr + 5));
 
 	int i;
 	for (i = 0; i < p->payloadLengthWords; i++) {

@@ -30,6 +30,8 @@
 const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd)
 {
 	switch(afd) {
+	case AFD_UNDEFINED:
+		return "AFD_UNDEFINED";
 	case AFD_BOX_16x9_TOP:
 		return "AFD_BOX_16x9_TOP";
 	case AFD_BOX_14x9_TOP:
@@ -51,63 +53,7 @@ const char *klvanc_afd_to_string(enum klvanc_payload_afd_e afd)
 	case AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER:
 		return "AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER";
 	default:
-        	return "AFD_UNDEFINED";
-	}
-}
-
-static enum klvanc_payload_afd_e afd_raw_to_enum(unsigned char afd)
-{
-	switch(afd) {
-	case 0x02:
-		return AFD_BOX_16x9_TOP;
-	case 0x03:
-		return AFD_BOX_14x9_TOP;
-	case 0x04:
-		return AFD_BOX_16x9_CENTER;
-	case 0x08:
-		return AFD_FULL_FRAME;
-	case 0x09:
-		return AFD_FULL_FRAME_ALT;
-	case 0x0a:
-		return AFD_16x9_CENTER;
-	case 0x0b:
-		return AFD_14x9_CENTER;
-	case 0x0d:
-		return AFD_4x3_WITH_ALTERNATIVE_14x9_CENTER;
-	case 0x0e:
-		return AFD_16x9_WITH_ALTERNATIVE_14x9_CENTER;
-	case 0x0f:
-		return AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER;
-	default:
-		return AFD_UNDEFINED;
-	}
-}
-
-static unsigned char afd_enum_to_raw(enum klvanc_payload_afd_e afd)
-{
-	switch(afd) {
-	case AFD_BOX_16x9_TOP:
-		return 0x02;
-	case AFD_BOX_14x9_TOP:
-		return 0x03;
-	case AFD_BOX_16x9_CENTER:
-		return 0x04;
-	case AFD_FULL_FRAME:
-		return 0x08;
-	case AFD_FULL_FRAME_ALT:
-		return 0x09;
-	case AFD_16x9_CENTER:
-		return 0x0a;
-	case AFD_14x9_CENTER:
-		return 0x0b;
-	case AFD_4x3_WITH_ALTERNATIVE_14x9_CENTER:
-		return 0x0d;
-	case AFD_16x9_WITH_ALTERNATIVE_14x9_CENTER:
-		return 0x0e;
-	case AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER:
-		return 0x0f;
-	default:
-		return 0x00;
+		return "AFD_UNKNOWN";
 	}
 }
 
@@ -144,8 +90,9 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 
 	struct klvanc_packet_afd_s *pkt = p;
 
-	PRINT_DEBUG("%s() AFD: %s Aspect Ratio: %s Bar Flags: %s (0x%x)\n", __func__,
+	PRINT_DEBUG("%s() AFD: %s (%d) Aspect Ratio: %s Bar Flags: %s (0x%x)\n", __func__,
 		    klvanc_afd_to_string(pkt->afd),
+		    pkt->afd,
 		    klvanc_aspectRatio_to_string(pkt->aspectRatio),
 		    klvanc_barFlags_to_string(pkt->barDataFlags),
 		    pkt->barDataFlags);
@@ -191,7 +138,7 @@ int parse_AFD(struct klvanc_context_s *ctx,
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 	unsigned char afd = (sanitizeWord(hdr->payload[0]) >> 3) & 0x0f;
 
-	pkt->afd = afd_raw_to_enum(afd);
+	pkt->afd = afd;
 
 	if (sanitizeWord(hdr->payload[0]) & 0x04)
 		pkt->aspectRatio = ASPECT_16x9;
@@ -233,13 +180,33 @@ void klvanc_destroy_AFD(struct klvanc_packet_afd_s *pkt)
 	free(pkt);
 }
 
+static int klvanc_verify_afd_value(enum klvanc_payload_afd_e afd)
+{
+	switch(afd) {
+	case AFD_UNDEFINED:
+	case AFD_BOX_16x9_TOP:
+	case AFD_BOX_14x9_TOP:
+	case AFD_BOX_16x9_CENTER:
+	case AFD_FULL_FRAME:
+	case AFD_FULL_FRAME_ALT:
+	case AFD_16x9_CENTER:
+	case AFD_14x9_CENTER:
+	case AFD_4x3_WITH_ALTERNATIVE_14x9_CENTER:
+	case AFD_16x9_WITH_ALTERNATIVE_14x9_CENTER:
+	case AFD_16x9_WITH_ALTERNATIVE_4x3_CENTER:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 int klvanc_set_AFD_val(struct klvanc_packet_afd_s *pkt, unsigned char val)
 {
-	pkt->afd = afd_raw_to_enum(val);
-	if (pkt->afd == AFD_UNDEFINED)
-		return 1;
-	else
-		return 0;
+	if (!klvanc_verify_afd_value(val))
+		return -1;
+
+	pkt->afd = val;
+	return 0;
 }
 
 int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t **bytes, uint16_t *byteCount)
@@ -263,7 +230,7 @@ int klvanc_convert_AFD_to_packetBytes(struct klvanc_packet_afd_s *pkt, uint8_t *
 	/* Serialize the AFD struct into a binary blob */
 	klbs_write_set_buffer(bs, *bytes, 255);
 
-	afd = afd_enum_to_raw(pkt->afd) << 3;
+	afd = pkt->afd << 3;
 	if (pkt->aspectRatio == ASPECT_16x9)
 		afd |= 0x04;
 

@@ -30,7 +30,8 @@ static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx, struct k
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	klvanc_dump_AFD(ctx, pkt);
+	if (klvanc_dump_AFD(ctx, pkt) < 0)
+		fprintf(stderr, "Failed to dump AFD packet");
 
 	return 0;
 }
@@ -41,7 +42,8 @@ static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx, str
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	klvanc_dump_EIA_708B(ctx, pkt);
+	if (klvanc_dump_EIA_708B(ctx, pkt) < 0)
+		fprintf(stderr, "Failed to dump CEA-708 packet");
 
 	return 0;
 }
@@ -52,7 +54,8 @@ static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx, stru
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	klvanc_dump_EIA_608(ctx, pkt);
+	if (klvanc_dump_EIA_608(ctx, pkt) < 0)
+		fprintf(stderr, "Failed to dump EIA-608 packet");
 
 	return 0;
 }
@@ -64,7 +67,8 @@ static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx, str
 
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	klvanc_dump_SCTE_104(ctx, pkt);
+	if (klvanc_dump_SCTE_104(ctx, pkt) < 0)
+		fprintf(stderr, "Failed to dump SCTE-104 packet");
 
 	uint16_t *words;
 	uint16_t wordCount;
