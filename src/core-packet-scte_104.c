@@ -730,6 +730,9 @@ static int dump_mom(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_
 			PRINT_DEBUG_MEMBER_INT(d->avail_num);
 			PRINT_DEBUG_MEMBER_INT(d->avails_expected);
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
+		} else if (o->opID == MO_TIME_SIGNAL_REQUEST_DATA) {
+                    struct klvanc_time_signal_request_data *d = &o->timesignal_data;
+                    PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
 		} else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA) {
 			struct klvanc_insert_descriptor_request_data *d = &o->descriptor_data;
 			PRINT_DEBUG_MEMBER_INT(d->descriptor_count);
