@@ -94,4 +94,6 @@ int klvanc_convert_KL_U64LE_COUNTER_to_words(struct klvanc_packet_kl_u64le_count
 	/* Create the final array of VANC bytes (with correct DID/SDID,
 	   checksum, etc) */
 	klvanc_sdi_create_payload(0xfe, 0x40, buf, sizeof(buf), words, wordCount, 10);
+
+	return 0;
 }
