@@ -45,12 +45,34 @@ struct klvanc_packet_kl_u64le_counter_s
 };
 
 /**
+ * @brief	Create a KL counter packet
+ * @param[out]	struct klvanc_packet_kl_u64le_counter_s **pkt - Pointer to newly created packet
+ * @return	0 - Success
+ * @return	< 0 - Error
+ */
+int klvanc_create_KL_U64LE_COUNTER(struct klvanc_packet_kl_u64le_counter_s **pkt);
+
+/**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
  * @return	0 - Success
  * @return	< 0 - Error
  */
 int klvanc_dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p);
+
+/**
+ * @brief	Convert type struct klvanc_packet_kl_u64le_counter_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct klvanc_packet_kl_u64le_counter_s *pkt - A KL counter VANC entry
+ * @param[out]	uint16_t **words - An array of words representing a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_KL_U64LE_COUNTER_to_words(struct klvanc_packet_kl_u64le_counter_s *pkt,
+					     uint16_t **words, uint16_t *wordCount);
 
 #ifdef __cplusplus
 };

@@ -28,6 +28,16 @@
 #include <string.h>
 #include <inttypes.h>
 
+int klvanc_create_KL_U64LE_COUNTER(struct klvanc_packet_kl_u64le_counter_s **pkt)
+{
+	struct klvanc_packet_kl_u64le_counter_s *p = calloc(1, sizeof(*p));
+	if (p == NULL)
+		return -ENOMEM;
+
+	*pkt = p;
+	return 0;
+}
+
 int klvanc_dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
@@ -68,3 +78,22 @@ int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, struct klvanc_packet_he
 	return KLAPI_OK;
 }
 
+int klvanc_convert_KL_U64LE_COUNTER_to_words(struct klvanc_packet_kl_u64le_counter_s *pkt,
+					     uint16_t **words, uint16_t *wordCount)
+{
+	uint8_t buf[8];
+	buf[0] = pkt->counter >> 56;
+	buf[1] = pkt->counter >> 48;
+	buf[2] = pkt->counter >> 40;
+	buf[3] = pkt->counter >> 32;
+	buf[4] = pkt->counter >> 24;
+	buf[5] = pkt->counter >> 16;
+	buf[6] = pkt->counter >> 8;
+	buf[7] = pkt->counter;
+
+	/* Create the final array of VANC bytes (with correct DID/SDID,
+	   checksum, etc) */
+	klvanc_sdi_create_payload(0xfe, 0x40, buf, sizeof(buf), words, wordCount, 10);
+
+	return 0;
+}
