@@ -152,6 +152,12 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x19: return "Program Start - In Progress";
 	case 0x20: return "Chapter Start";
 	case 0x21: return "Chapter End";
+	case 0x22: return "Break Start";
+        case 0x23: return "Break End";
+        case 0x24: return "Opening Credit Start";
+        case 0x25: return "Opening Credit End";
+        case 0x26: return "Closing Credit Start";
+        case 0x27: return "Closing Credit End";
 	case 0x30: return "Provider Advertisement Start";
 	case 0x31: return "Provider Advertisement End";
 	case 0x32: return "Distributor Advertisement Start";
@@ -159,7 +165,11 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x34: return "Provider Placement Opportunity Start";
 	case 0x35: return "Provider Placement Opportunity End";
 	case 0x36: return "Distributor Placement Opportunity Start";
-	case 0x37: return "Distributor Placement Opportunity End";
+	case 0x37: return "Distributor Placement Opportunity End";        
+	case 0x38: return "Provider Overlay Placement Start";
+        case 0x38: return "Provider Overlay Placement End";        
+	case 0x3A: return "Distributor Overlay Placement Start";
+        case 0x3B: return "Distributor Overlay Placement End";
 	case 0x40: return "Unscheduled Event Start";
 	case 0x41: return "Unscheduled Event End";
 	case 0x50: return "Network Start";
