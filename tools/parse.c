@@ -210,7 +210,7 @@ static int pkt_filtered(struct klvanc_packet_header_s *pkt)
 
 /* CALLBACKS for message notification */
 static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx,
-				  struct klvanc_packet_afd_s *pkt)
+		struct klvanc_packet_afd_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
@@ -222,7 +222,7 @@ static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx,
 }
 
 static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx,
-		       struct klvanc_packet_eia_708b_s *pkt)
+		struct klvanc_packet_eia_708b_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
@@ -234,7 +234,7 @@ static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx,
 }
 
 static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx,
-		      struct klvanc_packet_eia_608_s *pkt)
+		struct klvanc_packet_eia_608_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
@@ -246,7 +246,7 @@ static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx,
 }
 
 static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx,
-		       struct klvanc_packet_scte_104_s *pkt)
+		struct klvanc_packet_scte_104_s *pkt)
 {
 	/* Have the library display some debug */
 	if (pkt_filtered(&pkt->hdr)) {
@@ -267,7 +267,7 @@ static int cb_SMPTE_12_2(void *callback_context, struct klvanc_context_s *ctx,
 }
 
 static int cb_all(void *callback_context, struct klvanc_context_s *ctx,
-		  struct klvanc_packet_header_s *pkt)
+		struct klvanc_packet_header_s *pkt)
 {
 	if (pkt_filtered(pkt)) {
 		g_filterMatch = 1;
@@ -292,13 +292,13 @@ static int cb_all(void *callback_context, struct klvanc_context_s *ctx,
 }
 
 static int cb_SDP(void *callback_context, struct klvanc_context_s *ctx,
-            struct klvanc_packet_sdp_s *pkt)
+		struct klvanc_packet_sdp_s *pkt)
 {
 	/* Have the library display some debug */
-    if (pkt_filtered(&pkt->hdr)) {
-        klvanc_dump_SDP(ctx, pkt);
-    }
-    return 0;
+	if (pkt_filtered(&pkt->hdr)) {
+		klvanc_dump_SDP(ctx, pkt);
+	}
+	return 0;
 }
 
 static struct klvanc_callbacks_s callbacks =
@@ -375,10 +375,10 @@ int parse_main(int argc, char *argv[])
 		goto bail;
 	}
 
-        if (klvanc_context_create(&vanchdl) < 0) {
-                fprintf(stderr, "Error initializing library context\n");
-                exit(1);
-        }
+	if (klvanc_context_create(&vanchdl) < 0) {
+		fprintf(stderr, "Error initializing library context\n");
+		exit(1);
+	}
 
 	vanchdl->verbose = g_verbose;
 	vanchdl->callbacks = &callbacks;
@@ -396,7 +396,7 @@ int parse_main(int argc, char *argv[])
 		return AnalyzeVANC(g_vancInputFilename);
 	}
 
-        klvanc_context_destroy(vanchdl);
+	klvanc_context_destroy(vanchdl);
 
 bail:
 
