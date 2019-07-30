@@ -12,6 +12,7 @@
 #include <zlib.h>
 #include <libgen.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <libklvanc/vanc.h>
 
 #include "hexdump.h"
@@ -186,7 +187,7 @@ static int AnalyzeVANC(const char *fn)
 	return 0;
 }
 
-static int pkt_filtered(klvanc_packet_header_s *pkt)
+static int pkt_filtered(struct klvanc_packet_header_s *pkt)
 {
 	if (g_filter_did > 0) {
 		if (g_filter_sdid > 0) {
@@ -338,7 +339,7 @@ static int usage(const char *progname, int status)
 	exit(status);
 }
 
-static int _main(int argc, char *argv[])
+int parse_main(int argc, char *argv[])
 {
 	int ch;
 	bool wantHelp = false;
@@ -404,9 +405,3 @@ bail:
 
 	return 0;
 }
-
-extern "C" int parse_main(int argc, char *argv[])
-{
-	return _main(argc, argv);
-}
-
