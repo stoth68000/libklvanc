@@ -11,7 +11,6 @@ AM_SILENT_RULES([yes])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
-AC_PROG_CXX
 if test `uname -s` = "Darwin"
 then
 CFLAGS+=" -I/usr/local/include "
