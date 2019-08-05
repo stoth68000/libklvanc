@@ -180,8 +180,8 @@ int parse_SMPTE_12_2(struct klvanc_context_s *ctx,
 	if (pkt->dbb2 & 0x80)
 		pkt->user_bits_process_flag = 1;
 
-	if (pkt->dbb1 == 0x01 || pkt->dbb1 == 0x02) {
-		/* ATC_VITC */
+	/* Payload for ATC_LTC, ATC_VITC1 or ATC_VITC2 (SMPTE 12-2:2008 Sec 6.3) */
+	if (pkt->dbb1 == 0 || pkt->dbb1 == 0x01 || pkt->dbb1 == 0x02) {
 		pkt->frames = (hdr->payload[0] >> 4) & 0x0f;
 		if (hdr->payload[2] & 0x10)
 			pkt->frames += 10;
@@ -277,7 +277,7 @@ int klvanc_convert_SMPTE_12_2_to_packetBytes(struct klvanc_context_s *ctx,
         /* FIXME: Assumes VITC code */
 
 	/* See SMPTE 12-2:2014 Table 6 */
-	if (pkt->dbb1 == 0x01 || pkt->dbb1 == 0x02) {
+	if (pkt->dbb1 == 0 || pkt->dbb1 == 0x01 || pkt->dbb1 == 0x02) {
 		/* UDW 1 */
 		klbs_write_bits(bs, pkt->frames % 10, 4); /* Units of frames 1-8 */
 		klbs_write_bits(bs, 0x00, 4); /* b0-b3 */
