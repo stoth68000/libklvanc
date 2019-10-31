@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved
+ * Copyright (c) 2016-2019 Kernel Labs Inc. All Rights Reserved
  *
  * Address: Kernel Labs Inc., PO Box 745, St James, NY. 11780
  * Contact: sales@kernellabs.com
