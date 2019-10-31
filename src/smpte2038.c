@@ -185,7 +185,6 @@ int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, 
 		return -1;
 	}
 
-// MMM
         klbs_read_set_buffer(bs, section, byteCount);
 
 	h->packet_start_code_prefix = klbs_read_bits(bs, 24);
