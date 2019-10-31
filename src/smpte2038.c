@@ -200,7 +200,6 @@ int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, 
 
 	h->PES_priority = klbs_read_bits(bs, 1);
 	h->data_alignment_indicator = klbs_read_bits(bs, 1);
-	VALIDATE(h->data_alignment_indicator, 1);
 	h->copyright = klbs_read_bits(bs, 1);
 	h->original_or_copy = klbs_read_bits(bs, 1);
 
