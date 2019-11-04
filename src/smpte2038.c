@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Kernel Labs Inc. All Rights Reserved
+ * Copyright (c) 2016-2019 Kernel Labs Inc. All Rights Reserved
  *
  * Address: Kernel Labs Inc., PO Box 745, St James, NY. 11780
  * Contact: sales@kernellabs.com
@@ -103,12 +103,13 @@ void klvanc_smpte2038_anc_data_packet_dump(struct klvanc_smpte2038_anc_data_pack
 static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klvanc_smpte2038_anc_data_packet_s *h)
 {
 	int rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+	int udwByteCount;
+	int byteAligned = 0;
 
 	while (rem > 4) {
-		h->lineCount++;
-		h->lines = realloc(h->lines, h->lineCount * sizeof(struct klvanc_smpte2038_anc_data_line_s));
+		h->lines = realloc(h->lines, (h->lineCount + 1) * sizeof(struct klvanc_smpte2038_anc_data_line_s));
 
-		struct klvanc_smpte2038_anc_data_line_s *l = h->lines + (h->lineCount - 1);
+		struct klvanc_smpte2038_anc_data_line_s *l = h->lines + h->lineCount;
 		memset(l, 0, sizeof(*l));
 
 		l->reserved_000000 = klbs_read_bits(bs, 6);
@@ -133,14 +134,46 @@ static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klv
 		 * into the checksum field later, it makes for easier processing.
 		 */
 		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
+
+		udwByteCount = (((l->data_count + 1) * 10) / 8);
+
+		/* Ensure we not overrunning because of bad data. */
+		if (udwByteCount > (klbs_get_buffer_size(bs) - klbs_get_byte_count(bs))) {
+			goto err;
+		}
 		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
 			l->user_data_words[i] = klbs_read_bits(bs, 10);
 
 		l->checksum_word = klbs_read_bits(bs, 10);
+		h->lineCount++;
+
 		rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
+		/* Bug in some third party SMPTE2038 processors. They place
+		 * byte alignment bits inbetween multiple lines, when no
+		 * stuffing is required as per the spec.
+		 * See st2038-2008.pdf page 5 of 17.
+		 * We have to detect and remove these alignment bits, else
+		 * attempts to parse the following line result in illegal data.
+		 */
+
+		/*
+		 * Start by checking if the bitstreamreader reader thinks its already
+		 * byte aligned.
+		 */
+		byteAligned = bs->reg_used == 0;
 
 		/* Clock in any stuffing bits */
 		klbs_read_byte_stuff(bs);
+
+		/* If we were already aligned BEFORE we call klbs_read_byte_stuff(),
+		 * to enture the reader was byte aligned, and we have remaining data then
+		 * Flush stuffing bits if they exist.
+		 */
+		if (byteAligned && rem) {
+			while (klbs_peek_bits(bs, 1) == 1)
+				klbs_read_bit(bs);
+		}
 	}
 	return 0;
 err:
@@ -185,7 +218,6 @@ int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, 
 		return -1;
 	}
 
-// MMM
         klbs_read_set_buffer(bs, section, byteCount);
 
 	h->packet_start_code_prefix = klbs_read_bits(bs, 24);
@@ -201,7 +233,6 @@ int klvanc_smpte2038_parse_pes_packet(uint8_t *section, unsigned int byteCount, 
 
 	h->PES_priority = klbs_read_bits(bs, 1);
 	h->data_alignment_indicator = klbs_read_bits(bs, 1);
-	VALIDATE(h->data_alignment_indicator, 1);
 	h->copyright = klbs_read_bits(bs, 1);
 	h->original_or_copy = klbs_read_bits(bs, 1);
 

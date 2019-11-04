@@ -39,10 +39,23 @@ AC_CHECK_HEADERS([zlib.h],
                  [break],
                  [AC_MSG_ERROR([zlib-dev headers not found or not usable])])
 
+AC_ARG_ENABLE(dep-curses,
+  AS_HELP_STRING(
+    [--enable-dep-curses],
+    [enable curses usage regardless, default: yes]),
+    [case "${enableval}" in
+      yes) enablecurses=true ;;
+      no)  enablecurses=false ;;
+      *)   AC_MSG_ERROR([bad value ${enableval} for --enable-dep-curses]) ;;
+    esac],
+    [enablecurses=true])
+
 # Check for curses (optional)
 AC_CHECK_HEADERS([curses.h], HEADER_LIBCURSES="yes")
 if test "x$HEADER_LIBCURSES" == "xyes" ; then
-    LDFLAGS+=" -lcurses "
+    if test "x$enablecurses" == "xtrue" ; then
+        LDFLAGS+=" -lcurses "
+    fi
 fi
 AM_CONDITIONAL(LIBCURSES, test x"$HEADER_LIBCURSES" == x"yes")
 
@@ -60,9 +73,6 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_CHECK_FUNCS([memset strrchr])
 
-AC_CONFIG_FILES([Makefile src/Makefile tools/Makefile])
-AC_OUTPUT
-
 # Add debug support
 AC_ARG_ENABLE(debug,
   AS_HELP_STRING(
@@ -78,3 +88,7 @@ AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 AM_COND_IF(DEBUG,
     AC_DEFINE(DEBUG, 1, [Define to 0 if this is a release build]),
     AC_DEFINE(DEBUG, 0, [Define to 1 or higher if this is a debug build]))
+
+AC_CONFIG_FILES([Makefile src/Makefile tools/Makefile])
+AC_OUTPUT
+
