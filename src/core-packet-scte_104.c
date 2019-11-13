@@ -167,7 +167,7 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x36: return "Distributor Placement Opportunity Start";
 	case 0x37: return "Distributor Placement Opportunity End";        
 	case 0x38: return "Provider Overlay Placement Start";
-        case 0x38: return "Provider Overlay Placement End";        
+	case 0x39: return "Provider Overlay Placement End";
 	case 0x3A: return "Distributor Overlay Placement Start";
 	case 0x3B: return "Distributor Overlay Placement End";
 	case 0x40: return "Unscheduled Event Start";
