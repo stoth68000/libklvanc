@@ -54,6 +54,7 @@ static struct type_s
 #ifdef SCTE_104_PACKET_TYPE_1
 	{ 0x80, 0x07, VANC_TYPE_SCTE_104, parse_SCTE_104, klvanc_dump_SCTE_104, free, },
 #endif
+	{ 0x60, 0x60, VANC_TYPE_SMPTE_S12_2, parse_SMPTE_12_2, klvanc_dump_SMPTE_12_2, free, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
     { 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
