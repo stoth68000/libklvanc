@@ -10,6 +10,7 @@ commonly found in SDI, including:
 - SMPTE 2016 Active Format Descriptor (AFD)
 - SCTE-104 Ad triggers
 - SMPTE 2038 arbitrary VANC encapsulation
+- SMPTE 12-2 Timecodes
 
 By providing both encoders and decoders, the library can be used for common
 use cases involving both capture of SDI (and subsequent decoding) as well as
