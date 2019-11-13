@@ -136,7 +136,7 @@ static const char *mom_operationName(unsigned short opID)
 
 static const char *seg_type_id(unsigned char type_id)
 {
-	/* Values come from SCTE 35 2016, Sec 10.3.3.1 */
+	/* Values come from SCTE 35 2019, Sec 10.3.3.1 (Table 22) */
 	switch (type_id) {
 	case 0x00: return "Not Indicated";
 	case 0x01: return "Content Identification";
