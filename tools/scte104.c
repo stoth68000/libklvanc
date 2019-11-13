@@ -249,6 +249,7 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 		printf("%04x ", vancResult[i]);
 	}
 	printf("\n");
+	fflush(stdout);
 
 	for (int i = 0; i < vancResultCount; i++) {
 		if (arr[i] != vancResult[i]) {
@@ -267,7 +268,7 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 	free(arr);
 
 	if (mismatch) {
-		printf("Printing mismatched structure:\n");
+		fprintf(stderr, "Printing mismatched structure:\n");
 		failCount++;
 		ret = klvanc_packet_parse(ctx, 13, vancResult, vancResultCount);
 	} else {
