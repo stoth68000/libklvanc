@@ -593,6 +593,9 @@ static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data 
 {
 	d->tier_data = *(p + 0) << 8 | *(p + 1); p += 2;
 
+	/* SCTE 104:2015 Sec 9.8.9.1 says the top four bits must be zero */
+	d->tier_data &= 0x0fff;
+
 	return p;
 }
 
@@ -612,7 +615,8 @@ static int gen_tier_data(const struct klvanc_tier_data *d, unsigned char **outBu
 	/* Serialize the SCTE 104 request into a binary blob */
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
-	klbs_write_bits(bs, d->tier_data, 16);
+	/* SCTE 104:2015 Sec 9.8.9.1 says the top four bits must be zero */
+	klbs_write_bits(bs, d->tier_data & 0x0fff, 16);
 
 	klbs_write_buffer_complete(bs);
 
