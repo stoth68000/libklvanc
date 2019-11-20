@@ -4,11 +4,11 @@ AUTOMAKE_OPTIONS = foreign
 AM_CPPFLAGS = -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 \
 	-D_BSD_SOURCE \
 	-I$(top_srcdir)/src \
-	-DKL_USERSPACE -D__STDC_FORMAT_MACROS
+	-D__STDC_FORMAT_MACROS
 
 AM_CFLAGS = -Wall -O3
 
-LDADD = ../src/libklvanc.la -lpthread -lz -ldl
+LDADD = ../src/libklvanc.la -lpthread -ldl
 
 if DEBUG
 	CFLAGS += -g
