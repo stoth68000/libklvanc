@@ -305,6 +305,14 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 	return 0;
 }
 
+static unsigned char *parse_time_signal_request_data(unsigned char *p,
+						     struct klvanc_time_signal_request_data *d)
+{
+	d->pre_roll_time = *(p + 0) << 8 | *(p + 1);
+	p += 2;
+	return p;
+}
+
 static int gen_time_signal_request_data(const struct klvanc_time_signal_request_data *d,
 					unsigned char **outBuf, uint16_t *outSize)
 {
@@ -1021,6 +1029,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
 				parse_splice_request_data(ctx, o->data, &o->sr_data);
+			else if (o->opID == MO_TIME_SIGNAL_REQUEST_DATA)
+				parse_time_signal_request_data(o->data, &o->timesignal_data);
 			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
 				parse_descriptor_request_data(o->data, &o->descriptor_data,
 					o->data_length - 1);
