@@ -4,21 +4,19 @@ AUTOMAKE_OPTIONS = foreign
 AM_CPPFLAGS = -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BITS=64 \
 	-D_BSD_SOURCE \
 	-I$(top_srcdir)/src \
-	-DKL_USERSPACE -D__STDC_FORMAT_MACROS
+	-D__STDC_FORMAT_MACROS
 
 AM_CFLAGS = -Wall -O3
 
-LDADD = ../src/libklvanc.la -lpthread -lz -ldl
+LDADD = ../src/libklvanc.la -lpthread -ldl
 
 if DEBUG
 	CFLAGS += -g
 endif
 
-CXXFLAGS = $(CFLAGS)
-
 SRC  = klvanc_util.c
 SRC += demo.c
-SRC += parse.cpp
+SRC += parse.c
 SRC += smpte2038.c
 SRC += scte104.c
 SRC += genscte104.c

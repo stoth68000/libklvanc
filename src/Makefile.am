@@ -22,8 +22,7 @@ libklvanc_la_SOURCES += core-private.h xorg-list.h
 libklvanc_la_SOURCES += klbitstream_readwriter.h
 
 libklvanc_la_CFLAGS = -Wall -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" \
-	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include \
-	-DKL_USERSPACE
+	-D_FILE_OFFSET_BITS=64 -O3 -D_BSD_SOURCE -I$(top_srcdir)/include
 
 if DEBUG
   libklvanc_la_CFLAGS += -g

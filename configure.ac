@@ -11,13 +11,11 @@ AM_SILENT_RULES([yes])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CC_C99
-AC_PROG_CXX
 if test `uname -s` = "Darwin"
 then
 CFLAGS+=" -I/usr/local/include "
 LDFLAGS+=" -L/usr/local/lib "
 fi
-CFLAGS+=" -DKL_USERSPACE "
 
 # We always build with -fPIC in case our static libraries end up
 # being linked into a consumer's shared library
@@ -35,36 +33,6 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
-AC_CHECK_HEADERS([zlib.h],
-                 [break],
-                 [AC_MSG_ERROR([zlib-dev headers not found or not usable])])
-
-AC_ARG_ENABLE(dep-curses,
-  AS_HELP_STRING(
-    [--enable-dep-curses],
-    [enable curses usage regardless, default: yes]),
-    [case "${enableval}" in
-      yes) enablecurses=true ;;
-      no)  enablecurses=false ;;
-      *)   AC_MSG_ERROR([bad value ${enableval} for --enable-dep-curses]) ;;
-    esac],
-    [enablecurses=true])
-
-# Check for curses (optional)
-AC_CHECK_HEADERS([curses.h], HEADER_LIBCURSES="yes")
-if test "x$HEADER_LIBCURSES" == "xyes" ; then
-    if test "x$enablecurses" == "xtrue" ; then
-        LDFLAGS+=" -lcurses "
-    fi
-fi
-AM_CONDITIONAL(LIBCURSES, test x"$HEADER_LIBCURSES" == x"yes")
-
-AC_CHECK_HEADERS([libklmonitoring/klmonitoring.h], HEADER_LIBKLMONITORING="yes")
-if test "x$HEADER_LIBKLMONITORING" == "xyes" ; then
-    LDFLAGS+=" -lklmonitoring "
-fi
-AM_CONDITIONAL(LIBKLMONITORING, test x"$HEADER_LIBKLMONITORING" == x"yes")
-
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_UINT16_T

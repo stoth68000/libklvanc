@@ -38,8 +38,6 @@ https://github.com/stoth68000/klvanc-tools
 	See the included lgpl-2.1.txt for the complete license agreement.
 
 ## Dependencies
-* ncurses (optional)
-* zlib-dev
 * Doxygen (if generation of API documentation is desired)
 
 ## Compilation
