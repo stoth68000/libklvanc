@@ -136,7 +136,7 @@ static const char *mom_operationName(unsigned short opID)
 
 static const char *seg_type_id(unsigned char type_id)
 {
-	/* Values come from SCTE 35 2016, Sec 10.3.3.1 */
+	/* Values come from SCTE 35 2019, Sec 10.3.3.1 (Table 22) */
 	switch (type_id) {
 	case 0x00: return "Not Indicated";
 	case 0x01: return "Content Identification";
@@ -152,6 +152,12 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x19: return "Program Start - In Progress";
 	case 0x20: return "Chapter Start";
 	case 0x21: return "Chapter End";
+	case 0x22: return "Break Start";
+	case 0x23: return "Break End";
+	case 0x24: return "Opening Credit Start";
+	case 0x25: return "Opening Credit End";
+	case 0x26: return "Closing Credit Start";
+	case 0x27: return "Closing Credit End";
 	case 0x30: return "Provider Advertisement Start";
 	case 0x31: return "Provider Advertisement End";
 	case 0x32: return "Distributor Advertisement Start";
@@ -159,7 +165,11 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x34: return "Provider Placement Opportunity Start";
 	case 0x35: return "Provider Placement Opportunity End";
 	case 0x36: return "Distributor Placement Opportunity Start";
-	case 0x37: return "Distributor Placement Opportunity End";
+	case 0x37: return "Distributor Placement Opportunity End";        
+	case 0x38: return "Provider Overlay Placement Start";
+	case 0x39: return "Provider Overlay Placement End";
+	case 0x3A: return "Distributor Overlay Placement Start";
+	case 0x3B: return "Distributor Overlay Placement End";
 	case 0x40: return "Unscheduled Event Start";
 	case 0x41: return "Unscheduled Event End";
 	case 0x50: return "Network Start";
@@ -293,6 +303,14 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 	*outSize = 0;
 
 	return 0;
+}
+
+static unsigned char *parse_time_signal_request_data(unsigned char *p,
+						     struct klvanc_time_signal_request_data *d)
+{
+	d->pre_roll_time = *(p + 0) << 8 | *(p + 1);
+	p += 2;
+	return p;
 }
 
 static int gen_time_signal_request_data(const struct klvanc_time_signal_request_data *d,
@@ -583,6 +601,9 @@ static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data 
 {
 	d->tier_data = *(p + 0) << 8 | *(p + 1); p += 2;
 
+	/* SCTE 104:2015 Sec 9.8.9.1 says the top four bits must be zero */
+	d->tier_data &= 0x0fff;
+
 	return p;
 }
 
@@ -602,7 +623,8 @@ static int gen_tier_data(const struct klvanc_tier_data *d, unsigned char **outBu
 	/* Serialize the SCTE 104 request into a binary blob */
 	klbs_write_set_buffer(bs, buf, MAX_DESC_SIZE);
 
-	klbs_write_bits(bs, d->tier_data, 16);
+	/* SCTE 104:2015 Sec 9.8.9.1 says the top four bits must be zero */
+	klbs_write_bits(bs, d->tier_data & 0x0fff, 16);
 
 	klbs_write_buffer_complete(bs);
 
@@ -732,7 +754,7 @@ static int dump_mom(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_
 			PRINT_DEBUG_MEMBER_INT(d->auto_return_flag);
 		} else if (o->opID == MO_TIME_SIGNAL_REQUEST_DATA) {
 			struct klvanc_time_signal_request_data *d = &o->timesignal_data;
-			PRINT_DEBUG_MEMBER_INT(d->pre_roll_time);
+			PRINT_DEBUG("    pre_roll_time = %d (milliseconds)\n", d->pre_roll_time);
 		} else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA) {
 			struct klvanc_insert_descriptor_request_data *d = &o->descriptor_data;
 			PRINT_DEBUG_MEMBER_INT(d->descriptor_count);
@@ -1007,6 +1029,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
 				parse_splice_request_data(ctx, o->data, &o->sr_data);
+			else if (o->opID == MO_TIME_SIGNAL_REQUEST_DATA)
+				parse_time_signal_request_data(o->data, &o->timesignal_data);
 			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
 				parse_descriptor_request_data(o->data, &o->descriptor_data,
 					o->data_length - 1);

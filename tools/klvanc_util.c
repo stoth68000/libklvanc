@@ -30,6 +30,7 @@ extern int smpte2038_main(int argc, char *argv[]);
 extern int scte104_main(int argc, char *argv[]);
 extern int genscte104_main(int argc, char *argv[]);
 extern int eia708_main(int argc, char *argv[]);
+extern int smpte12_2_main(int argc, char *argv[]);
 
 typedef int (*func_ptr)(int, char *argv[]);
 
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
 		{ "klvanc_scte104",		scte104_main, },
 		{ "klvanc_eia708",		eia708_main, },
 		{ "klvanc_genscte104",		genscte104_main, },
+		{ "klvanc_smpte12_2",		smpte12_2_main, },
 		{ 0, 0 },
 	};
 	char *appname = basename(argv[0]);
