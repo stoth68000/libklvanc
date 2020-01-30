@@ -218,6 +218,11 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	klbs_read_set_buffer(bs, pkt->payload, pkt->payloadLengthBytes);
 
 	/* CDP Header (Sec 11.2.2) */
+	if (klbs_get_byte_count_free(bs) < 7) {
+		free(pkt);
+		klbs_free(bs);
+		return -ENOMEM;
+	}
 	pkt->header.cdp_identifier = klbs_read_bits(bs, 16);
 	pkt->header.cdp_length = klbs_read_bits(bs, 8);
 	pkt->header.cdp_frame_rate = klbs_read_bits(bs, 4);
@@ -233,6 +238,11 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	pkt->header.cdp_hdr_sequence_cntr = klbs_read_bits(bs, 16);
 
 	if (pkt->header.time_code_present) {
+		if (klbs_get_byte_count_free(bs) < 5) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
 		/* timecode_section (Sec 11.2.3) */
 		pkt->tc.time_code_section_id = klbs_read_bits(bs, 8);
 		klbs_read_bits(bs, 2); /* Reserved */
@@ -251,10 +261,21 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	}
 
 	if (pkt->header.ccdata_present) {
+		if (klbs_get_byte_count_free(bs) < 2) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
 		/* cc_data_section (Sec 11.2.4) */
 		pkt->ccdata.ccdata_id = klbs_read_bits(bs, 8);
 		klbs_read_bits(bs, 3); /* Marker Bits */
 		pkt->ccdata.cc_count = klbs_read_bits(bs, 5);
+
+		if (klbs_get_byte_count_free(bs) < (pkt->ccdata.cc_count * 3)) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
 		for (int i = 0; i < pkt->ccdata.cc_count; i++) {
 			klbs_read_bits(bs, 5); /* Marker Bits */
 			pkt->ccdata.cc[i].cc_valid = klbs_read_bits(bs, 1);
@@ -265,6 +286,11 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	}
 
 	if (pkt->header.svcinfo_present) {
+		if (klbs_get_byte_count_free(bs) < 3) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
 		/* ccsvcinfo_section (Sec 11.2.5) */
 		pkt->ccsvc.ccsvcinfo_id = klbs_read_bits(bs, 8);
 		klbs_read_bits(bs, 1); /* Marker Bits */
@@ -275,6 +301,14 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
 			klbs_read_bits(bs, 3); /* Marker Bits */
 			pkt->ccsvc.svc[i].caption_service_number = klbs_read_bits(bs, 5);
+
+			/* Abort the parse if we don't have enough data in the bitstream. */
+			if (klbs_get_byte_count_free(bs) < 6) {
+				free(pkt);
+				klbs_free(bs);
+				return -ENOMEM;
+			}
+
 			for (int n = 0; n < 6; n++) {
 				pkt->ccsvc.svc[i].svc_data_byte[n] = klbs_read_bits(bs, 8);
 			}
@@ -282,6 +316,12 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	}
 
 	/* FIXME: add support for "future_section" (Sec 11.2.7) */
+
+	if (klbs_get_byte_count_free(bs) < 4) {
+		free(pkt);
+		klbs_free(bs);
+		return -ENOMEM;
+	}
 
 	/* cdp_footer section (Sec 11.2.6) */
 	pkt->footer.cdp_footer_id = klbs_read_bits(bs, 8);
