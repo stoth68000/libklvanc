@@ -130,32 +130,17 @@ static unsigned short test_data_708_4[] = {
 
 static int test_eia_708_u16(struct klvanc_context_s *ctx, const unsigned short *arr, int items)
 {
-	printf("\n%s(?,%d items)\n", __func__, items);
-	int ret = klvanc_packet_parse(ctx, 9, (unsigned short *)arr, items);
-	return ret;
-}
-
-static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
-{
-	int numWords = bufSize / 2;
 	int mismatch = 0;
 
-	printf("\nParsing a new EIA-708 VANC packet......\n");
-	uint16_t *arr = malloc(bufSize);
-	if (arr == NULL)
-		return -1;
-
-	for (int i = 0; i < numWords; i++) {
-		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
-	}
+	printf("\nParsing a new EIA-708 VANC packet (%d words)......\n", items);
 
 	printf("Original Input\n");
-	for (int i = 0; i < numWords; i++) {
+	for (int i = 0; i < items; i++) {
 		printf("%04x ", arr[i]);
 	}
 	printf("\n");
 
-	int ret = klvanc_packet_parse(ctx, 13, arr, numWords);
+	int ret = klvanc_packet_parse(ctx, 9, (unsigned short *)arr, items);
 
 	printf("Final output\n");
 	for (int i = 0; i < vancResultCount; i++) {
@@ -171,8 +156,6 @@ static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t
 		}
 	}
 
-	free(arr);
-
 	if (mismatch) {
 		printf("Printing mismatched structure:\n");
 		failCount++;
@@ -181,6 +164,27 @@ static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t
 		printf("Original and generated versions match!\n");
 		passCount++;
 	}
+
+	return ret;
+}
+
+static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+{
+	int numWords = bufSize / 2;
+	int ret;
+
+
+	uint16_t *arr = malloc(bufSize);
+	if (arr == NULL)
+		return -1;
+
+	for (int i = 0; i < numWords; i++) {
+		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
+	}
+
+	ret = test_eia_708_u16(ctx, arr, numWords);
+
+	free(arr);
 
 	return ret;
 }
