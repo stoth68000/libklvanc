@@ -214,7 +214,7 @@ int eia708_main(int argc, char *argv[])
 
 	ret = test_eia_708_u16(ctx, test_data_708_3, sizeof(test_data_708_3) / sizeof(unsigned short));
 	if (ret < 0)
-		fprintf(stderr, "EIA-708B-2 failed to parse\n");
+		fprintf(stderr, "EIA-708B-3 failed to parse\n");
 
 	ret = test_eia_708_u16(ctx, test_data_708_4, sizeof(test_data_708_4) / sizeof(unsigned short));
 	if (ret < 0)
