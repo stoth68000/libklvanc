@@ -138,7 +138,24 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 	PRINT_DEBUG_MEMBER_INTI(pkt->header.caption_service_active, 1);
 	PRINT_DEBUG_MEMBER_INTI(pkt->header.cdp_hdr_sequence_cntr, 1);
 	if (pkt->header.time_code_present) {
-
+		PRINT_DEBUG("  pkt->tcdata.time_code_section_id = 0x%02x (%s)\n",
+			    pkt->tc.time_code_section_id,
+			    pkt->tc.time_code_section_id == 0x71 ? "VALID" : "INVALID");
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10hrs, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1hrs, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10min, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1min, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_field_flag, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10sec, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1sec, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.drop_frame_flag, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10fr, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1fr, 2);
+		PRINT_DEBUG("  timecode = %02d:%02d:%02d:%02d\n",
+			    pkt->tc.tc_10hrs * 10 + pkt->tc.tc_1hrs,
+			    pkt->tc.tc_10min * 10 + pkt->tc.tc_1min,
+			    pkt->tc.tc_10sec * 10 + pkt->tc.tc_1sec,
+			    pkt->tc.tc_10fr * 10 + pkt->tc.tc_1fr);
 	}
 
 	if (pkt->header.ccdata_present) {
