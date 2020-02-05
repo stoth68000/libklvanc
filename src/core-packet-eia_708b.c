@@ -337,17 +337,17 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		pkt->ccsvc.svc_info_change = klbs_read_bits(bs, 1);
 		pkt->ccsvc.svc_info_complete = klbs_read_bits(bs, 1);
 		pkt->ccsvc.svc_count = klbs_read_bits(bs, 4);
+
+		/* Abort the parse if we don't have enough data in the bitstream. */
+		if (klbs_get_byte_count_free(bs) < pkt->ccsvc.svc_count * 7) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
+
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
 			klbs_read_bits(bs, 3); /* Marker Bits */
 			pkt->ccsvc.svc[i].caption_service_number = klbs_read_bits(bs, 5);
-
-			/* Abort the parse if we don't have enough data in the bitstream. */
-			if (klbs_get_byte_count_free(bs) < 6) {
-				free(pkt);
-				klbs_free(bs);
-				return -ENOMEM;
-			}
-
 			for (int n = 0; n < 6; n++) {
 				pkt->ccsvc.svc[i].svc_data_byte[n] = klbs_read_bits(bs, 8);
 			}
