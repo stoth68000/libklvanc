@@ -442,7 +442,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 	klbs_write_bits(bs, 0x01, 1); /* Reserved */
 	klbs_write_bits(bs, pkt->header.cdp_hdr_sequence_cntr, 16);
 
-        if (pkt->header.time_code_present) {
+        if (pkt->header.time_code_present && pkt->tc.time_code_section_id == 0x71) {
 		/* timecode_section (Sec 11.2.3) */
 		klbs_write_bits(bs, pkt->tc.time_code_section_id, 8);
 		klbs_write_bits(bs, 0x03, 2); /* Reserved */
@@ -459,7 +459,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 		klbs_write_bits(bs, pkt->tc.tc_1fr, 4);
         }
 
-	if (pkt->header.ccdata_present) {
+	if (pkt->header.ccdata_present && pkt->ccdata.ccdata_id == 0x72) {
 		/* cc_data_section (Sec 11.2.4) */
 		klbs_write_bits(bs, pkt->ccdata.ccdata_id, 8);
 		klbs_write_bits(bs, 0x07, 3); /* Marker bits */
@@ -473,7 +473,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 		}
 	}
 
-	if (pkt->header.svcinfo_present) {
+	if (pkt->header.svcinfo_present && pkt->ccsvc.ccsvcinfo_id == 0x73) {
 		/* ccsvcinfo_section (Sec 11.2.5) */
 		klbs_write_bits(bs, pkt->ccsvc.ccsvcinfo_id, 8);
 		klbs_write_bits(bs, 0x01, 1); /* Marker bits */
