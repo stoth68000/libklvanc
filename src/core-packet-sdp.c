@@ -35,6 +35,10 @@ int parse_SDP(struct klvanc_context_s *ctx,
 {
 	int i;
 	int payloadBIndex = 0;
+
+	if (ctx->callbacks == NULL || ctx->callbacks->sdp == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -67,8 +71,7 @@ int parse_SDP(struct klvanc_context_s *ctx,
 	}
 	pkt->sequence_counter = ((uint16_t)(hdr->payload[9+(45*payloadBIndex)+1]&0xff)<<8) | (hdr->payload[9+(45*payloadBIndex)+2]&0xff);
 	
-	if (ctx->callbacks && ctx->callbacks->sdp)
-		ctx->callbacks->sdp(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->sdp(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

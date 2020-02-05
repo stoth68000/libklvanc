@@ -52,6 +52,9 @@ int klvanc_dump_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, void *p)
 
 int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
+	if (ctx->callbacks == NULL || ctx->callbacks->kl_i64le_counter == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -71,8 +74,7 @@ int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, struct klvanc_packet_he
 	pkt->counter |= (uint64_t)sanitizeWord(hdr->payload[6]) <<  8;
 	pkt->counter |= (uint64_t)sanitizeWord(hdr->payload[7]);
 
-	if (ctx->callbacks && ctx->callbacks->kl_i64le_counter)
-		ctx->callbacks->kl_i64le_counter(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->kl_i64le_counter(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

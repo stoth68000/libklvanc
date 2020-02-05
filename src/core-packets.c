@@ -247,7 +247,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const
 				ctx->callbacks->all(ctx->callback_context, ctx, hdr);
 
 			/* formally decode the entire packet */
-			void *decodedPacket;
+			void *decodedPacket = NULL;
 			ret = parseByType(ctx, hdr, &decodedPacket);
 			if (ret == KLAPI_OK) {
 				if (ctx->verbose == 2) {

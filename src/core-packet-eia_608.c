@@ -50,6 +50,10 @@ int klvanc_dump_EIA_608(struct klvanc_context_s *ctx, void *p)
 
 int parse_EIA_608(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
+
+	if (ctx->callbacks == NULL || ctx->callbacks->eia_608 == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -70,8 +74,7 @@ int parse_EIA_608(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *h
 	pkt->cc_data_1 = pkt->payload[1];
 	pkt->cc_data_2 = pkt->payload[2];
 
-	if (ctx->callbacks && ctx->callbacks->eia_608)
-		ctx->callbacks->eia_608(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->eia_608(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

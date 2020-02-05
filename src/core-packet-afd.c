@@ -128,6 +128,9 @@ int klvanc_dump_AFD(struct klvanc_context_s *ctx, void *p)
 int parse_AFD(struct klvanc_context_s *ctx,
 			      struct klvanc_packet_header_s *hdr, void **pp)
 {
+	if (ctx->callbacks == NULL || ctx->callbacks->afd == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -158,8 +161,7 @@ int parse_AFD(struct klvanc_context_s *ctx,
 		pkt->right |= sanitizeWord(hdr->payload[7]);
 	}
 
-	if (ctx->callbacks && ctx->callbacks->afd)
-		ctx->callbacks->afd(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->afd(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

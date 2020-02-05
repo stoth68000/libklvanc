@@ -222,8 +222,13 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 
 int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
-	struct klbs_context_s *bs = klbs_alloc();
+	struct klbs_context_s *bs;
 	uint8_t next_section_id;
+
+	if (ctx->callbacks == NULL || ctx->callbacks->eia_708b == NULL)
+		return KLAPI_OK;
+
+	bs = klbs_alloc();
 	if (bs == NULL)
 		return -ENOMEM;
 
@@ -393,8 +398,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	else
 		pkt->checksum_valid = 0;
 
-	if (ctx->callbacks && ctx->callbacks->eia_708b)
-		ctx->callbacks->eia_708b(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->eia_708b(ctx->callback_context, ctx, pkt);
 
 	klbs_free(bs);
 
