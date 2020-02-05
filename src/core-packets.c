@@ -54,7 +54,7 @@ static struct type_s
 	{ 0x60, 0x60, VANC_TYPE_SMPTE_S12_2, parse_SMPTE_12_2, klvanc_dump_SMPTE_12_2, free, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
-    { 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
+	{ 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
 };
 
 static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
