@@ -281,9 +281,11 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		pkt->tc.tc_field_flag = klbs_read_bits(bs, 1);
 		pkt->tc.tc_10sec = klbs_read_bits(bs, 3);
 		pkt->tc.tc_1sec = klbs_read_bits(bs, 4);
-		klbs_read_bits(bs, 1); /* Reserved */
 		pkt->tc.drop_frame_flag = klbs_read_bits(bs, 1);
-		pkt->tc.tc_10fr = klbs_read_bits(bs, 3);
+		/* Note: differs between 708-B and subsequent
+		   revisions of spec */
+		klbs_read_bits(bs, 1); /* zero */
+		pkt->tc.tc_10fr = klbs_read_bits(bs, 2);
 		pkt->tc.tc_1fr = klbs_read_bits(bs, 4);
 	}
 
