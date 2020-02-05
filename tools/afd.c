@@ -82,6 +82,9 @@ static int test_afd_u16(struct klvanc_context_s *ctx, const unsigned short *arr,
 
 	printf("\nParsing a new AFD VANC packet (%d words)......\n", items);
 
+	/* Clear out any previous results in case the callback never fires */
+	vancResultCount = 0;
+
 	printf("Original Input\n");
 	for (int i = 0; i < items; i++) {
 		printf("%04x ", arr[i]);
@@ -102,6 +105,12 @@ static int test_afd_u16(struct klvanc_context_s *ctx, const unsigned short *arr,
 			mismatch = 1;
 			break;
 		}
+	}
+	if (vancResultCount == 0) {
+		/* No output at all.  This is usually because the VANC parser choked
+		   on the VANC checksum and thus the parser never ran */
+		fprintf(stderr, "No output generated\n");
+		mismatch = 1;
 	}
 
 	if (mismatch) {

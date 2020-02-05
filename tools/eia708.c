@@ -132,6 +132,9 @@ static int test_eia_708_u16(struct klvanc_context_s *ctx, const unsigned short *
 
 	printf("\nParsing a new EIA-708 VANC packet (%d words)......\n", items);
 
+	/* Clear out any previous results in case the callback never fires */
+	vancResultCount = 0;
+
 	printf("Original Input\n");
 	for (int i = 0; i < items; i++) {
 		printf("%04x ", arr[i]);
@@ -146,12 +149,19 @@ static int test_eia_708_u16(struct klvanc_context_s *ctx, const unsigned short *
 	}
 	printf("\n");
 
+
 	for (int i = 0; i < vancResultCount; i++) {
 		if (arr[i] != vancResult[i]) {
 			fprintf(stderr, "Mismatch starting at offset 0x%02x\n", i);
 			mismatch = 1;
 			break;
 		}
+	}
+	if (vancResultCount == 0) {
+		/* No output at all.  This is usually because the VANC parser choked
+		   on the VANC checksum and thus the parser never ran */
+		fprintf(stderr, "No output generated\n");
+		mismatch = 1;
 	}
 
 	if (mismatch) {

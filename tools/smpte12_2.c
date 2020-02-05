@@ -82,6 +82,7 @@ static int test_smpte_12_2(struct klvanc_context_s *ctx, const uint8_t *buf, siz
 	int numWords = bufSize / 2;
 	int mismatch = 0;
 
+	/* Clear out any previous results in case the callback never fires */
 	vancResultCount = 0;
 
 	printf("\nParsing a new SMPTE 12-2 VANC packet......\n");
