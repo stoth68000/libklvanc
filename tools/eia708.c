@@ -138,7 +138,7 @@ static int test_eia_708_u16(struct klvanc_context_s *ctx, const unsigned short *
 	}
 	printf("\n");
 
-	int ret = klvanc_packet_parse(ctx, 9, (unsigned short *)arr, items);
+	int ret = klvanc_packet_parse(ctx, 9, arr, items);
 
 	printf("Final output\n");
 	for (int i = 0; i < vancResultCount; i++) {

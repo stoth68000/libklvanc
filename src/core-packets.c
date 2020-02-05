@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int isValidHeader(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len)
+static int isValidHeader(struct klvanc_context_s *ctx, const unsigned short *arr, unsigned int len)
 {
 	int ret = 0;
 	if (len > 7) {
@@ -122,7 +122,7 @@ static int dumpByType(struct klvanc_context_s *ctx, struct klvanc_packet_header_
 	return -EINVAL;
 }
 
-static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len,
+static int parse(struct klvanc_context_s *ctx, const unsigned short *arr, unsigned int len,
 	struct klvanc_packet_header_s **hdr)
 {
 	if (!isValidHeader(ctx, arr, len)) {
@@ -205,7 +205,7 @@ void klvanc_dump_packet_console(struct klvanc_context_s *ctx, struct klvanc_pack
 	PRINT_DEBUG("\n");
 }
 
-int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len)
+int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const unsigned short *arr, unsigned int len)
 {
 	int attempts = 0;
 	VALIDATE(ctx);
