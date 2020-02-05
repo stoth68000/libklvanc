@@ -77,7 +77,7 @@ int klvanc_cache_update(struct klvanc_context_s *ctx, struct klvanc_packet_heade
 		s->did = pkt->did;
 		s->sdid = pkt->dbnsdid;
 		s->desc = klvanc_didLookupDescription(pkt->did, pkt->dbnsdid);
-		s->spec = klvanc_didLookupDescription(pkt->did, pkt->dbnsdid);
+		s->spec = klvanc_didLookupSpecification(pkt->did, pkt->dbnsdid);
 	}
 	gettimeofday(&s->lastUpdated, NULL);
 
