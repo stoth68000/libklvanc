@@ -166,7 +166,8 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_info_complete, 2);
 		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_count, 2);
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
-			PRINT_DEBUG("  pkt->ccssvc.entry[%d]\n", i);
+			/* Format defined in ATSC A/65:2013 Sec 6.9.2 */
+			PRINT_DEBUG("  pkt->ccsvc.svc[%d]\n", i);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].caption_service_number, 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[0], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[1], 3);
@@ -174,6 +175,15 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[3], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[4], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[5], 3);
+			PRINT_DEBUG("   pkt->ccsvc.svc[i].language = %s\n", pkt->ccsvc.svc[i].language);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].digital_cc, 3);
+			if (pkt->ccsvc.svc[i].digital_cc) {
+				PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].csn, 3);
+			} else {
+				PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].line21_field, 3);
+			}
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].easy_reader, 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].wide_aspect_ratio, 3);
 		}
 	}
 
@@ -312,6 +322,20 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 			for (int n = 0; n < 6; n++) {
 				pkt->ccsvc.svc[i].svc_data_byte[n] = klbs_read_bits(bs, 8);
 			}
+
+			pkt->ccsvc.svc[i].language[0] = pkt->ccsvc.svc[i].svc_data_byte[0];
+			pkt->ccsvc.svc[i].language[1] = pkt->ccsvc.svc[i].svc_data_byte[1];
+			pkt->ccsvc.svc[i].language[2] = pkt->ccsvc.svc[i].svc_data_byte[2];
+			if (pkt->ccsvc.svc[i].svc_data_byte[3] & 0x80) {
+				pkt->ccsvc.svc[i].digital_cc = 1;
+				pkt->ccsvc.svc[i].csn = pkt->ccsvc.svc[i].svc_data_byte[3] & 0x3f;
+			} else {
+				pkt->ccsvc.svc[i].line21_field = pkt->ccsvc.svc[i].svc_data_byte[3] & 0x01;
+			}
+			if (pkt->ccsvc.svc[i].svc_data_byte[4] & 0x80)
+				pkt->ccsvc.svc[i].easy_reader = 1;
+			if (pkt->ccsvc.svc[i].svc_data_byte[4] & 0x40)
+				pkt->ccsvc.svc[i].wide_aspect_ratio = 1;
 		}
 	}
 
