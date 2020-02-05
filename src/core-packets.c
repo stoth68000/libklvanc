@@ -51,9 +51,6 @@ static struct type_s
 	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, free, },
 	{ 0x41, 0x05, VANC_TYPE_AFD, parse_AFD, klvanc_dump_AFD, free, },
 	{ 0x41, 0x07, VANC_TYPE_SCTE_104, parse_SCTE_104, klvanc_dump_SCTE_104, klvanc_free_SCTE_104, },
-#ifdef SCTE_104_PACKET_TYPE_1
-	{ 0x80, 0x07, VANC_TYPE_SCTE_104, parse_SCTE_104, klvanc_dump_SCTE_104, free, },
-#endif
 	{ 0x60, 0x60, VANC_TYPE_SMPTE_S12_2, parse_SMPTE_12_2, klvanc_dump_SMPTE_12_2, free, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
