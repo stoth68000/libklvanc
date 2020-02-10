@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Kernel Labs Inc. All Rights Reserved
+ * Copyright (c) 2020 Kernel Labs Inc. All Rights Reserved
  *
  * Address: Kernel Labs Inc., PO Box 745, St James, NY. 11780
  * Contact: sales@kernellabs.com
@@ -34,26 +34,26 @@ static int failCount = 0;
 #define SHOW_DETAIL 1
 
 /* CALLBACKS for message notification */
-static int cb_SMPTE_12_2(void *callback_context, struct klvanc_context_s *ctx,
-			 struct klvanc_packet_smpte_12_2_s *pkt)
+static int cb_afd(void *callback_context, struct klvanc_context_s *ctx,
+		      struct klvanc_packet_afd_s *pkt)
 {
 	int ret = -1;
 
 #ifdef SHOW_DETAIL
 	/* Have the library display some debug */
 	printf("Asking libklvanc to dump a struct\n");
-	ret = klvanc_dump_SMPTE_12_2(ctx, pkt);
+	ret = klvanc_dump_AFD(ctx, pkt);
 	if (ret != 0) {
-		fprintf(stderr, "Error dumping SMPTE 12-2 packet!\n");
+		fprintf(stderr, "Error dumping AFD packet!\n");
 		return -1;
 	}
 #endif
 
 	uint16_t *words;
 	uint16_t wordCount;
-	ret = klvanc_convert_SMPTE_12_2_to_words(ctx, pkt, &words, &wordCount);
+	ret = klvanc_convert_AFD_to_words(pkt, &words, &wordCount);
 	if (ret != 0) {
-		fprintf(stderr, "Failed to convert SMPTE 12-2 to words: %d\n", ret);
+		fprintf(stderr, "Failed to convert 104 to words: %d\n", ret);
 		return -1;
 	}
 
@@ -66,41 +66,32 @@ static int cb_SMPTE_12_2(void *callback_context, struct klvanc_context_s *ctx,
 
 static struct klvanc_callbacks_s callbacks =
 {
-	.smpte_12_2	= cb_SMPTE_12_2,
+	.afd		= cb_afd,
 };
 /* END - CALLBACKS for message notification */
 
-static unsigned char test1[] = {
-	0x00, 0x00, 0x03, 0xff, 0x03, 0xff, 0x02, 0x60, 0x02, 0x60, 0x01, 0x10,
-	0x02, 0x28, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00,
-	0x01, 0x40, 0x02, 0x00, 0x01, 0x20, 0x02, 0x00, 0x02, 0x50, 0x02, 0x00,
-	0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0xa8
+/* svcinfo_present flag set but section missing */
+unsigned short test_data_afd_1[] = {
+	0x0000, 0x03ff, 0x03ff, 0x0241, 0x0205, 0x0108, 0x0200, 0x0200,
+	0x0200, 0x0200, 0x0200, 0x0200, 0x0200, 0x0200, 0x014e
 };
 
-static int test_smpte_12_2(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+static int test_afd_u16(struct klvanc_context_s *ctx, const unsigned short *arr, int items)
 {
-	int numWords = bufSize / 2;
 	int mismatch = 0;
+
+	printf("\nParsing a new AFD VANC packet (%d words)......\n", items);
 
 	/* Clear out any previous results in case the callback never fires */
 	vancResultCount = 0;
 
-	printf("\nParsing a new SMPTE 12-2 VANC packet......\n");
-	uint16_t *arr = malloc(bufSize);
-	if (arr == NULL)
-		return -1;
-
-	for (int i = 0; i < numWords; i++) {
-		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
-	}
-
 	printf("Original Input\n");
-	for (int i = 0; i < numWords; i++) {
+	for (int i = 0; i < items; i++) {
 		printf("%04x ", arr[i]);
 	}
 	printf("\n");
 
-	int ret = klvanc_packet_parse(ctx, 13, arr, numWords);
+	int ret = klvanc_packet_parse(ctx, 9, arr, items);
 
 	printf("Final output\n");
 	for (int i = 0; i < vancResultCount; i++) {
@@ -122,8 +113,6 @@ static int test_smpte_12_2(struct klvanc_context_s *ctx, const uint8_t *buf, siz
 		mismatch = 1;
 	}
 
-	free(arr);
-
 	if (mismatch) {
 		printf("Printing mismatched structure:\n");
 		failCount++;
@@ -136,7 +125,30 @@ static int test_smpte_12_2(struct klvanc_context_s *ctx, const uint8_t *buf, siz
 	return ret;
 }
 
-int smpte12_2_main(int argc, char *argv[])
+#ifdef UNUSED
+static int test_afd(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+{
+	int numWords = bufSize / 2;
+	int ret;
+
+
+	uint16_t *arr = malloc(bufSize);
+	if (arr == NULL)
+		return -1;
+
+	for (int i = 0; i < numWords; i++) {
+		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
+	}
+
+	ret = test_afd_u16(ctx, arr, numWords);
+
+	free(arr);
+
+	return ret;
+}
+#endif
+
+int afd_main(int argc, char *argv[])
 {
 	struct klvanc_context_s *ctx;
 	int ret;
@@ -151,10 +163,9 @@ int smpte12_2_main(int argc, char *argv[])
 	ctx->callbacks = &callbacks;
 	printf("Library initialized.\n");
 
-	ret = test_smpte_12_2(ctx, test1, sizeof(test1));
+	ret = test_afd_u16(ctx, test_data_afd_1, sizeof(test_data_afd_1) / sizeof(unsigned short));
 	if (ret < 0)
-		fprintf(stderr, "SMPTE 12-2 failed to parse\n");
-
+		fprintf(stderr, "AFD-1 failed to parse\n");
 
 	klvanc_context_destroy(ctx);
 	printf("Library destroyed.\n");

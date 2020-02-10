@@ -185,7 +185,7 @@ int klvanc_context_dump(struct klvanc_context_s *ctx);
  * @return      0 - Success
  * @return      < 0 - Error
  */
-int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *words, unsigned int wordCount);
+int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const unsigned short *words, unsigned int wordCount);
 
 /**
  * @brief	TODO - Brief description goes here.

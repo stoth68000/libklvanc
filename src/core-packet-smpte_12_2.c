@@ -151,6 +151,9 @@ int klvanc_create_SMPTE_12_2_from_ST370(uint32_t st370_tc,
 int parse_SMPTE_12_2(struct klvanc_context_s *ctx,
 		   struct klvanc_packet_header_s *hdr, void **pp)
 {
+	if (ctx->callbacks == NULL || ctx->callbacks->smpte_12_2 == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -223,8 +226,7 @@ int parse_SMPTE_12_2(struct klvanc_context_s *ctx,
 			pkt->dbb1);
 	}
 
-	if (ctx->callbacks && ctx->callbacks->smpte_12_2)
-		ctx->callbacks->smpte_12_2(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->smpte_12_2(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;

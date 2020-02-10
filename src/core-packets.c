@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int isValidHeader(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len)
+static int isValidHeader(struct klvanc_context_s *ctx, const unsigned short *arr, unsigned int len)
 {
 	int ret = 0;
 	if (len > 7) {
@@ -51,13 +51,10 @@ static struct type_s
 	{ 0x40, 0xfe, VANC_TYPE_KL_UINT64_COUNTER, parse_KL_U64LE_COUNTER, klvanc_dump_KL_U64LE_COUNTER, free, },
 	{ 0x41, 0x05, VANC_TYPE_AFD, parse_AFD, klvanc_dump_AFD, free, },
 	{ 0x41, 0x07, VANC_TYPE_SCTE_104, parse_SCTE_104, klvanc_dump_SCTE_104, klvanc_free_SCTE_104, },
-#ifdef SCTE_104_PACKET_TYPE_1
-	{ 0x80, 0x07, VANC_TYPE_SCTE_104, parse_SCTE_104, klvanc_dump_SCTE_104, free, },
-#endif
 	{ 0x60, 0x60, VANC_TYPE_SMPTE_S12_2, parse_SMPTE_12_2, klvanc_dump_SMPTE_12_2, free, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
-    { 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
+	{ 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
 };
 
 static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
@@ -125,7 +122,7 @@ static int dumpByType(struct klvanc_context_s *ctx, struct klvanc_packet_header_
 	return -EINVAL;
 }
 
-static int parse(struct klvanc_context_s *ctx, unsigned short *arr, unsigned int len,
+static int parse(struct klvanc_context_s *ctx, const unsigned short *arr, unsigned int len,
 	struct klvanc_packet_header_s **hdr)
 {
 	if (!isValidHeader(ctx, arr, len)) {
@@ -208,7 +205,7 @@ void klvanc_dump_packet_console(struct klvanc_context_s *ctx, struct klvanc_pack
 	PRINT_DEBUG("\n");
 }
 
-int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsigned short *arr, unsigned int len)
+int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const unsigned short *arr, unsigned int len)
 {
 	int attempts = 0;
 	VALIDATE(ctx);
@@ -250,7 +247,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, unsig
 				ctx->callbacks->all(ctx->callback_context, ctx, hdr);
 
 			/* formally decode the entire packet */
-			void *decodedPacket;
+			void *decodedPacket = NULL;
 			ret = parseByType(ctx, hdr, &decodedPacket);
 			if (ret == KLAPI_OK) {
 				if (ctx->verbose == 2) {

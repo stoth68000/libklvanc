@@ -6,11 +6,12 @@ Ancillary Data (VANC) commonly found in the Serial Digital Interface (SDI) wire 
 The library includes a general parser/decoder and an encoder for
 VANC lines, as well as the ability to both decode and generate protocols
 commonly found in SDI, including:
-- CEA-708 closed captions
-- SMPTE 2016 Active Format Descriptor (AFD)
+- SMPTE ST 334 - CEA-708 closed captions in VANC
+- SMPTE ST 2016 Active Format Descriptor (AFD) and Bar Data
 - SCTE-104 Ad triggers
-- SMPTE 2038 arbitrary VANC encapsulation
-- SMPTE 12-2 Timecodes
+- SMPTE ST 2038 arbitrary VANC encapsulation
+- SMPTE ST 12-2 Timecodes
+- SMPTE RDD 8 Subtitle Distribution packets
 
 By providing both encoders and decoders, the library can be used for common
 use cases involving both capture of SDI (and subsequent decoding) as well as
