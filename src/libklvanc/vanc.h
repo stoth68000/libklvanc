@@ -243,10 +243,11 @@ const char *klvanc_lookupDescriptionByType(enum klvanc_packet_type_e type);
 const char *klvanc_lookupSpecificationByType(enum klvanc_packet_type_e type);
 
 /**
- * @brief	TODO - Brief description goes here.
+ * @brief	Create a copy of a packet header.
  * @param[in]	struct packet_header_s **dst
  * @param[in]	struct packet_header_s *src
- * @return	TODO.
+ * @return      0 - Success
+ * @return      < 0 - Error
  */
 int klvanc_packet_copy(struct klvanc_packet_header_s **dst,
 		       struct klvanc_packet_header_s *src);
