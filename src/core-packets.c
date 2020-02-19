@@ -331,6 +331,9 @@ int klvanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 int klvanc_packet_copy(struct klvanc_packet_header_s **dst, struct klvanc_packet_header_s *src)
 {
 	*dst = malloc(sizeof(*src));
+	if (*dst == NULL)
+		return -ENOMEM;
+
 	memcpy(*dst, src, sizeof(*src));
 	return 0;
 }
