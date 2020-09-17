@@ -343,3 +343,46 @@ void klvanc_packet_free(struct klvanc_packet_header_s *src)
 	free(src);
 }
 
+int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt,
+                       int lineNr, int did)
+{
+	if ((dir == NULL) || (pkt == NULL))
+		return -1;
+
+	if (lineNr >= 0 && lineNr != pkt->lineNr)
+		return -2;
+
+	if (did >= 0 && did != pkt->did)
+		return -3;
+
+	const char *c = klvanc_didLookupDescription(pkt->did, pkt->dbnsdid);
+	char *n = strdup(c);
+	for (int i = 0; i < strlen(n); i++)
+		if (n[i] == '/')
+			n[i] = '-'; 
+	
+	static int idx = 0;
+	char *fn = malloc(strlen(dir) + 128);
+	sprintf(fn, "%s/klvanc-packet-%08d--line-%04d--did-%02x--sdid-%02x--name-%s.bin",
+		dir,
+		idx++,
+		pkt->lineNr,
+		pkt->did,
+		pkt->dbnsdid,
+		n);
+
+	FILE *fh = fopen(fn, "wb");
+	if (fh) {
+		/* TODO: This is a debugging feature. I don't like writing msg + N bytes of
+		 *       arbitrary padding, but neither have I convinced myself that
+		 *       writing rawPayloadLength is always (think good or bad long vanc messages)
+		 *       the correct thing to do. This will suffice for the time being.
+		 */
+		fwrite(pkt->raw, 2, pkt->payloadLengthWords + 6 /* header */ + 4 /* trailing padding */, fh);
+		fclose(fh);
+	} else {
+		fprintf(stderr, "Unable to create %s\n", fn);
+	}
+	free(fn);
+	return 0; /* Success */
+}

@@ -253,6 +253,28 @@ int klvanc_packet_copy(struct klvanc_packet_header_s **dst,
 		       struct klvanc_packet_header_s *src);
 
 /**
+ * @brief	Write the packet to disk, in a debug friendly format that can be
+ *              used by other offline tools.
+ *              The output filename is library generated while the directory prefix
+ *              may be user specified.
+ *              The output filename is:
+ *              uniqueid--klvanc-packet--line-%04d--did-%02x--sdid-%02x--name-%s.bin
+ *              %08d--klvanc-packet--line-%04d--did-%02x--sdid-%02x--name-%s.bin
+ *              The contents of the file are the original caller supplied 16bit
+ *              raw payload words which includes original parity, checksum, payload.
+ * @param[in]	const char *dir
+ * @param[in]	const struct packet_header_s *pkt
+ * @param[in]	int lineNr - Only save pkt if the line number matches this filter,
+ *                           caller should pass -1 if all packets are to be saved.
+ * @param[in]	int did - Only save pkt if the did number in the packet matches this filter,
+ *                           caller should pass -1 if all packets are to be saved.
+ * @return      0 - Success
+ * @return      < 0 - Error
+ */
+int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt,
+                       int lineNr, int did);
+
+/**
  * @brief	TODO - Brief description goes here.
  * @param[in]	struct packet_header_s *src
  */
