@@ -50,6 +50,7 @@ struct klvanc_cache_s
 	struct timeval lastUpdated;
 	int            hasCursor;
 	int            expandUI;
+	int            save;
 	uint32_t       activeCount;
 	struct klvanc_cache_line_s lines[2048];
 };
