@@ -107,8 +107,8 @@ int klvanc_line_insert(struct klvanc_context_s *ctx, struct klvanc_line_set_s *v
 
 static int vanc_ent_comp(const void *a, const void *b)
 {
-	const struct klvanc_entry_s *vala = (struct klvanc_entry_s *)a;
-	const struct klvanc_entry_s *valb = (struct klvanc_entry_s *)b;
+	const struct klvanc_entry_s *vala = *(struct klvanc_entry_s **) a;
+	const struct klvanc_entry_s *valb = *(struct klvanc_entry_s **) b;
 
 	if (vala->h_offset < valb->h_offset)
 		return -1;
