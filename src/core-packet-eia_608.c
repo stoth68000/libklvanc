@@ -82,3 +82,76 @@ int parse_EIA_608(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *h
 	return KLAPI_OK;
 }
 
+int klvanc_create_EIA_608(struct klvanc_packet_eia_608_s **pkt)
+{
+	struct klvanc_packet_eia_608_s *p = calloc(1, sizeof(*p));
+	if (p == NULL)
+		return -ENOMEM;
+
+	*pkt = p;
+	return 0;
+}
+
+void klvanc_destroy_EIA_608(struct klvanc_packet_eia_608_s *pkt)
+{
+	free(pkt);
+}
+
+int klvanc_convert_EIA_608_to_packetBytes(struct klvanc_packet_eia_608_s *pkt, uint8_t **bytes, uint16_t *byteCount)
+{
+	if (!pkt || !bytes) {
+		return -1;
+	}
+
+	struct klbs_context_s *bs = klbs_alloc();
+	if (bs == NULL)
+		return -ENOMEM;
+
+	*bytes = malloc(255);
+	if (*bytes == NULL) {
+		klbs_free(bs);
+		return -ENOMEM;
+	}
+
+	/* Serialize the struct into a binary blob */
+	klbs_write_set_buffer(bs, *bytes, 255);
+
+	if (pkt->field == 0)
+		klbs_write_bits(bs, 1, 1);
+	else
+		klbs_write_bits(bs, 0, 1);
+
+	/* Reserved */
+	klbs_write_bits(bs, 0, 2);
+	klbs_write_bits(bs, pkt->line_offset, 5);
+
+	/* CC Payload */
+	klbs_write_bits(bs, pkt->cc_data_1, 8);
+	klbs_write_bits(bs, pkt->cc_data_2, 8);
+
+	klbs_write_buffer_complete(bs);
+
+	*byteCount = klbs_get_byte_count(bs);
+	klbs_free(bs);
+
+	return 0;
+}
+
+int klvanc_convert_EIA_608_to_words(struct klvanc_packet_eia_608_s *pkt, uint16_t **words, uint16_t *wordCount)
+{
+	uint8_t *buf;
+	uint16_t byteCount;
+	int ret;
+
+	ret = klvanc_convert_EIA_608_to_packetBytes(pkt, &buf, &byteCount);
+	if (ret != 0)
+		return ret;
+
+	/* Create the final array of VANC bytes (with correct DID/SDID,
+	   checksum, etc) */
+	klvanc_sdi_create_payload(0x02, 0x61, buf, byteCount, words, wordCount, 10);
+
+	free(buf);
+
+	return 0;
+}
