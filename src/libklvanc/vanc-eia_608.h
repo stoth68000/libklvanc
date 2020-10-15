@@ -45,9 +45,8 @@ struct klvanc_packet_eia_608_s
 	unsigned char payload[3];
 
 	/* Parsed */
-	int marker_bits;
-	int cc_valid;
-	int cc_type;
+	int field;
+	int line_offset;
 	unsigned char cc_data_1;
 	unsigned char cc_data_2;
 };

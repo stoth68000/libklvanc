@@ -34,14 +34,13 @@ int klvanc_dump_EIA_608(struct klvanc_context_s *ctx, void *p)
 	if (ctx->verbose)
 		PRINT_DEBUG("%s() %p\n", __func__, (void *)pkt);
 
-	PRINT_DEBUG("%s() EIA608: %02x %02x %02x : marker-bits %02x cc_valid %d cc_type %d cc_data_1 %02x cc_data_2 %02x\n",
+	PRINT_DEBUG("%s() EIA608: %02x %02x %02x : field %d line_offset %d cc_data_1 %02x cc_data_2 %02x\n",
 		    __func__,
 		    pkt->payload[0],
 		    pkt->payload[1],
 		    pkt->payload[2],
-		    pkt->marker_bits,
-		    pkt->cc_valid,
-		    pkt->cc_type,
+		    pkt->field,
+		    pkt->line_offset,
 		    pkt->cc_data_1,
 		    pkt->cc_data_2);
 
@@ -68,9 +67,12 @@ int parse_EIA_608(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *h
 	pkt->payload[1] = hdr->payload[1];
 	pkt->payload[2] = hdr->payload[2];
 
-	pkt->marker_bits = pkt->payload[0] >> 3;
-	pkt->cc_valid = (pkt->payload[0] >> 2) & 0x01;
-	pkt->cc_type = pkt->payload[0] & 0x03;
+        /* See SMPTE ST 334-1:2015 Annex B */
+	if (pkt->payload[0] & 0x80)
+		pkt->field = 0;
+	else
+		pkt->field = 1;
+	pkt->line_offset = pkt->payload[0] & 0x1f;
 	pkt->cc_data_1 = pkt->payload[1];
 	pkt->cc_data_2 = pkt->payload[2];
 
