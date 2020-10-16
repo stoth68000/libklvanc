@@ -309,6 +309,37 @@ static int test_EIA_708B(struct klvanc_context_s *ctx)
 	return 0;
 }
 
+static unsigned char eia608_entry[] = {
+	0x00, 0x00, 0x03, 0xff, 0x03, 0xff, 0x01, 0x61, 0x01, 0x02, 0x02, 0x03,
+	0x02, 0x95, 0x01, 0x80, 0x01, 0x80, 0x01, 0xfb, 0x02, 0x00, 0x00, 0x40,
+	0x02, 0x00
+};
+static int test_EIA_608(struct klvanc_context_s *ctx)
+{
+
+	printf("\nParsing a new CEA-608 VANC packet......\n");
+	uint16_t *arr = malloc(sizeof(eia608_entry) / 2 * sizeof(uint16_t));
+	if (arr == NULL)
+		return -1;
+
+	for (int i = 0; i < (sizeof(eia608_entry) / 2); i++) {
+		arr[i] = eia608_entry[i * 2] << 8 | eia608_entry[i * 2 + 1];
+	}
+
+	printf("Original Input\n");
+	for (int i = 0; i < (sizeof(eia608_entry) / 2); i++) {
+		printf("%04x ", arr[i]);
+	}
+	printf("\n");
+
+	int ret = klvanc_packet_parse(ctx, 13, arr, sizeof(eia608_entry) / sizeof(unsigned short));
+	free(arr);
+
+	return ret;
+
+	return 0;
+}
+
 static int test_checksum()
 {
 	/* 3 words ADF, 31 words of message, 1 words checksum */
@@ -402,6 +433,10 @@ int demo_main(int argc, char *argv[])
 	ret = test_EIA_708B(ctx);
 	if (ret < 0)
 		fprintf(stderr, "EIA_708B failed to parse\n");
+
+	ret = test_EIA_608(ctx);
+	if (ret < 0)
+		fprintf(stderr, "EIA_608 failed to parse\n");
 
 	ret = test_scte_104(ctx);
 	if (ret < 0)
