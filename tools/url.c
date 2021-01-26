@@ -78,6 +78,7 @@ static int regex_match(const char *str, const char *pattern)
 		}
 	}
 
+	regfree(&rex);
 	return ret;
 }
 
