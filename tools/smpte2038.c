@@ -54,6 +54,7 @@ static struct app_context_s
 
 	struct iso13818_udp_receiver_s *udprx;
 	struct pes_extractor_s *pe;
+	struct klvanc_context_s *vanchdl;
 } app_context;
 
 static struct app_context_s *ctx = &app_context;
@@ -99,19 +100,9 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 				printf("\n\n");
 			}
 
-			/* Heck, why don't we attempt to parse the vanc?
-			 * Production apps to create the vanc context once.... obviously,
-			 * don't keep intializing and destroying the vanchdl.
-			 */
-			struct klvanc_context_s *vanchdl;
-			if (klvanc_context_create(&vanchdl) < 0) {
-				fprintf(stderr, "Error initializing library context\n");
-				exit(1);
+			/* Heck, why don't we attempt to parse the vanc? */
+			if (klvanc_packet_parse(ctx->vanchdl, l->line_number, words, wordCount) < 0) {
 			}
-			vanchdl->verbose = 1;
-			if (klvanc_packet_parse(vanchdl, l->line_number, words, wordCount) < 0) {
-			}
-			klvanc_context_destroy(vanchdl);
 
 			free(words); /* Caller must free the resource */
 
@@ -357,6 +348,12 @@ static int _main(int argc, char *argv[])
 	pe_alloc(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
 	signal(SIGINT, signal_handler);
 
+	if (klvanc_context_create(&ctx->vanchdl) < 0) {
+		fprintf(stderr, "Error initializing klvanc library context\n");
+		exit(1);
+	}
+	ctx->vanchdl->verbose = 1;
+
 	if (inputType == IT_UDP) {
       	  int fs = DEFAULT_FIFOSIZE;
 		if (ctx->i_url->has_fifosize)
@@ -402,6 +399,8 @@ static int _main(int argc, char *argv[])
 	pe_free(&ctx->pe);
 
 no_mem:
+
+	klvanc_context_destroy(ctx->vanchdl);
 	return exitStatus;
 }
 
