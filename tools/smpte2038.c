@@ -388,7 +388,7 @@ static int _main(int argc, char *argv[])
 		if (fh) {
 
 			uint8_t pkt[188];
-			while (!feof(fh)) {
+			while (!feof(fh) && ctx->running) {
 				if (fread(pkt, 188, 1, fh) != 1)
 					break;
 
