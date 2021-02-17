@@ -57,9 +57,10 @@ noinst_HEADERS += udp.h
 noinst_HEADERS += url.h
 noinst_HEADERS += version.h
 
-test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd
+test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd klvanc_smpte2038
 	./klvanc_eia708
 	./klvanc_genscte104
 	./klvanc_scte104
 	./klvanc_smpte12_2
 	./klvanc_afd
+	./klvanc_smpte2038 -i ../samples/smpte2038-sample-pid-01e9.ts -P 0x1e9

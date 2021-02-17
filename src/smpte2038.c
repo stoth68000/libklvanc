@@ -45,7 +45,7 @@ void klvanc_smpte2038_anc_data_packet_free(struct klvanc_smpte2038_anc_data_pack
 
 	for (int i = 0; i < pkt->lineCount; i++) {
 		struct klvanc_smpte2038_anc_data_line_s *l = pkt->lines + i;
-		if (l->data_count)
+		if (VANC8(l->data_count))
 			free(l->user_data_words);
 	}
 	if (pkt->lineCount)
@@ -133,9 +133,9 @@ static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klv
 		/* Lets put the checksum at the end of the array then pull it back
 		 * into the checksum field later, it makes for easier processing.
 		 */
-		l->user_data_words = calloc(sizeof(uint16_t), l->data_count + 1);
+		l->user_data_words = calloc(sizeof(uint16_t), VANC8(l->data_count) + 1);
 
-		udwByteCount = (((l->data_count + 1) * 10) / 8);
+		udwByteCount = (((VANC8(l->data_count) + 1) * 10) / 8);
 
 		/* Ensure we not overrunning because of bad data. */
 		if (udwByteCount > (klbs_get_buffer_size(bs) - klbs_get_byte_count(bs))) {

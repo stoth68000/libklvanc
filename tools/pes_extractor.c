@@ -129,7 +129,7 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
 
 		uint16_t pes_length = ((l[0] & 0xff) << 8) | (l[1] & 0xff);
 
-		if (rb_used(pe->rb) + 2 > pes_length) {
+		if (rb_used(pe->rb) >= pes_length + 2) {
 			/* Dequeue and process a complete pes message */
 			unsigned char *msg = malloc(pes_length + 6);
 			if (msg) {
