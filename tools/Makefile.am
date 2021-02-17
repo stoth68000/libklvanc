@@ -22,6 +22,7 @@ SRC += scte104.c
 SRC += genscte104.c
 SRC += eia708.c
 SRC += smpte12_2.c
+SRC += afd.c
 SRC += udp.c
 SRC += url.c
 SRC += ts_packetizer.c
@@ -35,6 +36,7 @@ bin_PROGRAMS += klvanc_scte104
 bin_PROGRAMS += klvanc_genscte104
 bin_PROGRAMS += klvanc_eia708
 bin_PROGRAMS += klvanc_smpte12_2
+bin_PROGRAMS += klvanc_afd
 
 klvanc_util_SOURCES = $(SRC)
 klvanc_parse_SOURCES = $(SRC)
@@ -43,6 +45,7 @@ klvanc_scte104_SOURCES = $(SRC)
 klvanc_genscte104_SOURCES = $(SRC)
 klvanc_eia708_SOURCES = $(SRC)
 klvanc_smpte12_2_SOURCES = $(SRC)
+klvanc_afd_SOURCES = $(SRC)
 
 libklvanc_noinst_includedir = $(includedir)
 
@@ -54,8 +57,10 @@ noinst_HEADERS += udp.h
 noinst_HEADERS += url.h
 noinst_HEADERS += version.h
 
-test: klvanc_eia708 klvanc_genscte104 klvanc_scte104
+test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd klvanc_smpte2038
 	./klvanc_eia708
 	./klvanc_genscte104
 	./klvanc_scte104
 	./klvanc_smpte12_2
+	./klvanc_afd
+	./klvanc_smpte2038 -i ../samples/smpte2038-sample-pid-01e9.ts -P 0x1e9

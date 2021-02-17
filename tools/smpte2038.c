@@ -51,9 +51,12 @@ static struct app_context_s
 	char *input_url;
 	struct url_opts_s *i_url;
 	unsigned int pid;
+	int pes_packets_found;
+	int vanc_packets_found;
 
 	struct iso13818_udp_receiver_s *udprx;
 	struct pes_extractor_s *pe;
+	struct klvanc_context_s *vanchdl;
 } app_context;
 
 static struct app_context_s *ctx = &app_context;
@@ -76,6 +79,7 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 	struct klvanc_smpte2038_anc_data_packet_s *pkt = 0;
 	klvanc_smpte2038_parse_pes_packet(buf, byteCount, &pkt);
 	if (pkt) {
+		ctx->pes_packets_found++;
 
 		/* Dump the entire message in english to console, handy for debugging. */
 		klvanc_smpte2038_anc_data_packet_dump(pkt);
@@ -99,22 +103,13 @@ pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 				printf("\n\n");
 			}
 
-			/* Heck, why don't we attempt to parse the vanc?
-			 * Production apps to create the vanc context once.... obviously,
-			 * don't keep intializing and destroying the vanchdl.
-			 */
-			struct klvanc_context_s *vanchdl;
-			if (klvanc_context_create(&vanchdl) < 0) {
-				fprintf(stderr, "Error initializing library context\n");
-				exit(1);
+			/* Heck, why don't we attempt to parse the vanc? */
+			if (klvanc_packet_parse(ctx->vanchdl, l->line_number, words, wordCount) < 0) {
 			}
-			vanchdl->verbose = 1;
-			if (klvanc_packet_parse(vanchdl, l->line_number, words, wordCount) < 0) {
-			}
-			klvanc_context_destroy(vanchdl);
 
 			free(words); /* Caller must free the resource */
 
+			ctx->vanc_packets_found++;
 		}
 
 		/* Don't forget to free the parsed SMPTE2038 packet */
@@ -357,6 +352,12 @@ static int _main(int argc, char *argv[])
 	pe_alloc(&ctx->pe, ctx, (pes_extractor_callback)pes_cb, ctx->pid);
 	signal(SIGINT, signal_handler);
 
+	if (klvanc_context_create(&ctx->vanchdl) < 0) {
+		fprintf(stderr, "Error initializing klvanc library context\n");
+		exit(1);
+	}
+	ctx->vanchdl->verbose = 1;
+
 	if (inputType == IT_UDP) {
       	  int fs = DEFAULT_FIFOSIZE;
 		if (ctx->i_url->has_fifosize)
@@ -388,7 +389,7 @@ static int _main(int argc, char *argv[])
 		if (fh) {
 
 			uint8_t pkt[188];
-			while (!feof(fh)) {
+			while (!feof(fh) && ctx->running) {
 				if (fread(pkt, 188, 1, fh) != 1)
 					break;
 
@@ -402,6 +403,13 @@ static int _main(int argc, char *argv[])
 	pe_free(&ctx->pe);
 
 no_mem:
+
+	/* Print summary */
+	printf("Total PES packets found: %d\n", ctx->pes_packets_found);
+	printf("Total VANC packets found: %d\n", ctx->vanc_packets_found);
+	printf("Total VANC checksum failures: %d\n", ctx->vanchdl->checksum_failures);
+
+	klvanc_context_destroy(ctx->vanchdl);
 	return exitStatus;
 }
 

@@ -138,7 +138,24 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 	PRINT_DEBUG_MEMBER_INTI(pkt->header.caption_service_active, 1);
 	PRINT_DEBUG_MEMBER_INTI(pkt->header.cdp_hdr_sequence_cntr, 1);
 	if (pkt->header.time_code_present) {
-
+		PRINT_DEBUG("  pkt->tcdata.time_code_section_id = 0x%02x (%s)\n",
+			    pkt->tc.time_code_section_id,
+			    pkt->tc.time_code_section_id == 0x71 ? "VALID" : "INVALID");
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10hrs, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1hrs, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10min, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1min, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_field_flag, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10sec, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1sec, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.drop_frame_flag, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_10fr, 2);
+		PRINT_DEBUG_MEMBER_INTI(pkt->tc.tc_1fr, 2);
+		PRINT_DEBUG("  timecode = %02d:%02d:%02d:%02d\n",
+			    pkt->tc.tc_10hrs * 10 + pkt->tc.tc_1hrs,
+			    pkt->tc.tc_10min * 10 + pkt->tc.tc_1min,
+			    pkt->tc.tc_10sec * 10 + pkt->tc.tc_1sec,
+			    pkt->tc.tc_10fr * 10 + pkt->tc.tc_1fr);
 	}
 
 	if (pkt->header.ccdata_present) {
@@ -166,7 +183,8 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_info_complete, 2);
 		PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc_count, 2);
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
-			PRINT_DEBUG("  pkt->ccssvc.entry[%d]\n", i);
+			/* Format defined in ATSC A/65:2013 Sec 6.9.2 */
+			PRINT_DEBUG("  pkt->ccsvc.svc[%d]\n", i);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].caption_service_number, 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[0], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[1], 3);
@@ -174,6 +192,15 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[3], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[4], 3);
 			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].svc_data_byte[5], 3);
+			PRINT_DEBUG("   pkt->ccsvc.svc[i].language = %s\n", pkt->ccsvc.svc[i].language);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].digital_cc, 3);
+			if (pkt->ccsvc.svc[i].digital_cc) {
+				PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].csn, 3);
+			} else {
+				PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].line21_field, 3);
+			}
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].easy_reader, 3);
+			PRINT_DEBUG_MEMBER_INTI(pkt->ccsvc.svc[i].wide_aspect_ratio, 3);
 		}
 	}
 
@@ -195,7 +222,13 @@ int klvanc_dump_EIA_708B(struct klvanc_context_s *ctx, void *p)
 
 int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
-	struct klbs_context_s *bs = klbs_alloc();
+	struct klbs_context_s *bs;
+	uint8_t next_section_id;
+
+	if (ctx->callbacks == NULL || ctx->callbacks->eia_708b == NULL)
+		return KLAPI_OK;
+
+	bs = klbs_alloc();
 	if (bs == NULL)
 		return -ENOMEM;
 
@@ -237,14 +270,21 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	klbs_read_bits(bs, 1); /* Reserved */
 	pkt->header.cdp_hdr_sequence_cntr = klbs_read_bits(bs, 16);
 
-	if (pkt->header.time_code_present) {
+	if (klbs_get_byte_count_free(bs) < 1) {
+		free(pkt);
+		klbs_free(bs);
+		return -ENOMEM;
+	}
+	next_section_id = klbs_read_bits(bs, 8);
+
+	if (next_section_id == 0x71) {
 		if (klbs_get_byte_count_free(bs) < 5) {
 			free(pkt);
 			klbs_free(bs);
 			return -ENOMEM;
 		}
 		/* timecode_section (Sec 11.2.3) */
-		pkt->tc.time_code_section_id = klbs_read_bits(bs, 8);
+		pkt->tc.time_code_section_id = next_section_id;
 		klbs_read_bits(bs, 2); /* Reserved */
 		pkt->tc.tc_10hrs = klbs_read_bits(bs, 2);
 		pkt->tc.tc_1hrs = klbs_read_bits(bs, 4);
@@ -254,20 +294,23 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		pkt->tc.tc_field_flag = klbs_read_bits(bs, 1);
 		pkt->tc.tc_10sec = klbs_read_bits(bs, 3);
 		pkt->tc.tc_1sec = klbs_read_bits(bs, 4);
-		klbs_read_bits(bs, 1); /* Reserved */
 		pkt->tc.drop_frame_flag = klbs_read_bits(bs, 1);
-		pkt->tc.tc_10fr = klbs_read_bits(bs, 3);
+		/* Note: differs between 708-B and subsequent
+		   revisions of spec */
+		klbs_read_bits(bs, 1); /* zero */
+		pkt->tc.tc_10fr = klbs_read_bits(bs, 2);
 		pkt->tc.tc_1fr = klbs_read_bits(bs, 4);
+		next_section_id = klbs_read_bits(bs, 8);
 	}
 
-	if (pkt->header.ccdata_present) {
+	if (next_section_id == 0x72) {
 		if (klbs_get_byte_count_free(bs) < 2) {
 			free(pkt);
 			klbs_free(bs);
 			return -ENOMEM;
 		}
 		/* cc_data_section (Sec 11.2.4) */
-		pkt->ccdata.ccdata_id = klbs_read_bits(bs, 8);
+		pkt->ccdata.ccdata_id = next_section_id;
 		klbs_read_bits(bs, 3); /* Marker Bits */
 		pkt->ccdata.cc_count = klbs_read_bits(bs, 5);
 
@@ -283,50 +326,67 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 			pkt->ccdata.cc[i].cc_data[0] = klbs_read_bits(bs, 8);
 			pkt->ccdata.cc[i].cc_data[1] = klbs_read_bits(bs, 8);
 		}
+		next_section_id = klbs_read_bits(bs, 8);
 	}
 
-	if (pkt->header.svcinfo_present) {
+	if (next_section_id == 0x73) {
 		if (klbs_get_byte_count_free(bs) < 3) {
 			free(pkt);
 			klbs_free(bs);
 			return -ENOMEM;
 		}
 		/* ccsvcinfo_section (Sec 11.2.5) */
-		pkt->ccsvc.ccsvcinfo_id = klbs_read_bits(bs, 8);
+		pkt->ccsvc.ccsvcinfo_id = next_section_id;
 		klbs_read_bits(bs, 1); /* Marker Bits */
 		pkt->ccsvc.svc_info_start = klbs_read_bits(bs, 1);
 		pkt->ccsvc.svc_info_change = klbs_read_bits(bs, 1);
 		pkt->ccsvc.svc_info_complete = klbs_read_bits(bs, 1);
 		pkt->ccsvc.svc_count = klbs_read_bits(bs, 4);
+
+		/* Abort the parse if we don't have enough data in the bitstream. */
+		if (klbs_get_byte_count_free(bs) < pkt->ccsvc.svc_count * 7) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
+
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
 			klbs_read_bits(bs, 3); /* Marker Bits */
 			pkt->ccsvc.svc[i].caption_service_number = klbs_read_bits(bs, 5);
-
-			/* Abort the parse if we don't have enough data in the bitstream. */
-			if (klbs_get_byte_count_free(bs) < 6) {
-				free(pkt);
-				klbs_free(bs);
-				return -ENOMEM;
-			}
-
 			for (int n = 0; n < 6; n++) {
 				pkt->ccsvc.svc[i].svc_data_byte[n] = klbs_read_bits(bs, 8);
 			}
+
+			pkt->ccsvc.svc[i].language[0] = pkt->ccsvc.svc[i].svc_data_byte[0];
+			pkt->ccsvc.svc[i].language[1] = pkt->ccsvc.svc[i].svc_data_byte[1];
+			pkt->ccsvc.svc[i].language[2] = pkt->ccsvc.svc[i].svc_data_byte[2];
+			if (pkt->ccsvc.svc[i].svc_data_byte[3] & 0x80) {
+				pkt->ccsvc.svc[i].digital_cc = 1;
+				pkt->ccsvc.svc[i].csn = pkt->ccsvc.svc[i].svc_data_byte[3] & 0x3f;
+			} else {
+				pkt->ccsvc.svc[i].line21_field = pkt->ccsvc.svc[i].svc_data_byte[3] & 0x01;
+			}
+			if (pkt->ccsvc.svc[i].svc_data_byte[4] & 0x80)
+				pkt->ccsvc.svc[i].easy_reader = 1;
+			if (pkt->ccsvc.svc[i].svc_data_byte[4] & 0x40)
+				pkt->ccsvc.svc[i].wide_aspect_ratio = 1;
 		}
+		next_section_id = klbs_read_bits(bs, 8);
 	}
 
 	/* FIXME: add support for "future_section" (Sec 11.2.7) */
 
-	if (klbs_get_byte_count_free(bs) < 4) {
-		free(pkt);
-		klbs_free(bs);
-		return -ENOMEM;
+	if (next_section_id == 0x74) {
+		/* cdp_footer section (Sec 11.2.6) */
+		if (klbs_get_byte_count_free(bs) < 3) {
+			free(pkt);
+			klbs_free(bs);
+			return -ENOMEM;
+		}
+		pkt->footer.cdp_footer_id = next_section_id;
+		pkt->footer.cdp_ftr_sequence_cntr = klbs_read_bits(bs, 16);
+		pkt->footer.packet_checksum = klbs_read_bits(bs, 8);
 	}
-
-	/* cdp_footer section (Sec 11.2.6) */
-	pkt->footer.cdp_footer_id = klbs_read_bits(bs, 8);
-	pkt->footer.cdp_ftr_sequence_cntr = klbs_read_bits(bs, 16);
-	pkt->footer.packet_checksum = klbs_read_bits(bs, 8);
 
 	/* Validate checksum */
 	uint8_t sum = 0;
@@ -338,8 +398,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	else
 		pkt->checksum_valid = 0;
 
-	if (ctx->callbacks && ctx->callbacks->eia_708b)
-		ctx->callbacks->eia_708b(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->eia_708b(ctx->callback_context, ctx, pkt);
 
 	klbs_free(bs);
 
@@ -387,7 +446,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 	klbs_write_bits(bs, 0x01, 1); /* Reserved */
 	klbs_write_bits(bs, pkt->header.cdp_hdr_sequence_cntr, 16);
 
-        if (pkt->header.time_code_present) {
+        if (pkt->header.time_code_present && pkt->tc.time_code_section_id == 0x71) {
 		/* timecode_section (Sec 11.2.3) */
 		klbs_write_bits(bs, pkt->tc.time_code_section_id, 8);
 		klbs_write_bits(bs, 0x03, 2); /* Reserved */
@@ -404,7 +463,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 		klbs_write_bits(bs, pkt->tc.tc_1fr, 4);
         }
 
-	if (pkt->header.ccdata_present) {
+	if (pkt->header.ccdata_present && pkt->ccdata.ccdata_id == 0x72) {
 		/* cc_data_section (Sec 11.2.4) */
 		klbs_write_bits(bs, pkt->ccdata.ccdata_id, 8);
 		klbs_write_bits(bs, 0x07, 3); /* Marker bits */
@@ -418,7 +477,7 @@ int klvanc_convert_EIA_708B_to_packetBytes(struct klvanc_packet_eia_708b_s *pkt,
 		}
 	}
 
-	if (pkt->header.svcinfo_present) {
+	if (pkt->header.svcinfo_present && pkt->ccsvc.ccsvcinfo_id == 0x73) {
 		/* ccsvcinfo_section (Sec 11.2.5) */
 		klbs_write_bits(bs, pkt->ccsvc.ccsvcinfo_id, 8);
 		klbs_write_bits(bs, 0x01, 1); /* Marker bits */

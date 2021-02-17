@@ -85,7 +85,15 @@ struct klvanc_packet_eia_708b_ccdata_section
 struct klvanc_packet_eia_708b_ccsvcinfo_entry
 {
 	uint8_t caption_service_number;
-	uint8_t svc_data_byte[6];
+	uint8_t svc_data_byte[6]; /* Raw bytes */
+	/* Decoding of svc_data_bytes defined in ATSC A/65 Sec 6.9.2 */
+	uint8_t language[4]; /* includes NULL termination for easy printing */
+	uint8_t digital_cc;
+	uint8_t csn;
+	uint8_t line21_field;
+	uint8_t easy_reader;
+	uint8_t wide_aspect_ratio;
+
 };
 
 #define KLVANC_MAX_CCSVC_COUNT 16

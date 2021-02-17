@@ -239,6 +239,7 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 	int numWords = bufSize / 2;
 	int mismatch = 0;
 
+	/* Clear out any previous results in case the callback never fires */
 	vancResultCount = 0;
 
 	printf("\nParsing a new SCTE104 VANC packet......\n");

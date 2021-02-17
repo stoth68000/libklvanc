@@ -39,7 +39,7 @@
  * 000 03FF 03FF 111 222 333 CHKSUM
  * So pass the address of 111 with a wordCount of 3.
  */
-uint16_t klvanc_checksum_calculate(uint16_t *words, int wordCount)
+uint16_t klvanc_checksum_calculate(const uint16_t *words, int wordCount)
 {
 	uint16_t s = 0;
 	for (uint16_t i = 0; i < wordCount; i++) {
@@ -61,7 +61,7 @@ uint16_t klvanc_checksum_calculate(uint16_t *words, int wordCount)
  *
  * Returns: Boolean true or false.
  */
-int klvanc_checksum_is_valid(uint16_t *words, int wordCount)
+int klvanc_checksum_is_valid(const uint16_t *words, int wordCount)
 {
 #define LOCAL_DEBUG 0
 #if 0

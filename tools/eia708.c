@@ -75,33 +75,80 @@ static unsigned char test1[] = {
 
 };
 
-static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+/* svcinfo_present flag set but section missing */
+unsigned short test_data_708_1[] = {
+  0x0000, 0x03ff, 0x03ff, 0x0161, 0x0101, 0x022b, 0x0296, 0x0269, 0x022b,
+  0x017f, 0x0277, 0x01bf, 0x022e, 0x0272, 0x01ea, 0x01fd, 0x0180, 0x0180,
+  0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200,
+  0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200,
+  0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200,
+  0x0274, 0x01bf, 0x022e, 0x026f, 0x028d
+};
+
+/* svcinfo_present flag set but section missing (2) */
+unsigned short test_data_708_2[] = {
+  0x0000, 0x03ff, 0x03ff, 0x0161, 0x0101, 0x022b, 0x0296, 0x0269, 0x022b,
+  0x017f, 0x0277, 0x0263, 0x016d, 0x0272, 0x01ea, 0x01fd, 0x01d3, 0x01d3,
+  0x02ff, 0x02c3, 0x0123, 0x01fe, 0x0255, 0x0154, 0x01fe, 0x0203, 0x0200,
+  0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200,
+  0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200, 0x02fa, 0x0200, 0x0200,
+  0x0274, 0x0263, 0x016d, 0x0164, 0x018d, 0x0040, 0x0040, 0x0040, 0x0040,
+};
+
+/* Includes Service Info */
+static unsigned short test_data_708_3[] = {
+	0x0000, 0x03ff, 0x03ff, 0x0161, 0x0101, 0x0259, 0x0296, 0x0269,
+	0x0259, 0x014f, 0x0277, 0x01fb, 0x0168, 0x0272, 0x01f4, 0x02fc,
+	0x01ec, 0x01e9, 0x01fd, 0x0173, 0x0161, 0x02ff, 0x0192, 0x0167,
+	0x01fe, 0x0198, 0x0230, 0x01fe, 0x012a, 0x028b, 0x01fe, 0x0140,
+	0x0205, 0x01fe, 0x0200, 0x0259, 0x01fe, 0x0266, 0x0167, 0x01fe,
+	0x0120, 0x0230, 0x01fe, 0x022d, 0x0131, 0x01fe, 0x022d, 0x0230,
+	0x01fe, 0x0120, 0x0173, 0x01fe, 0x026f, 0x026c, 0x01fe, 0x0269,
+	0x0164, 0x01fe, 0x010d, 0x0162, 0x01fe, 0x0167, 0x0120, 0x01fe,
+	0x0131, 0x022d, 0x01fe, 0x0233, 0x022d, 0x01fe, 0x0131, 0x0120,
+	0x01fe, 0x0274, 0x0200, 0x0173, 0x02d2, 0x02e1, 0x0265, 0x016e,
+	0x0167, 0x01c1, 0x017f, 0x02ff, 0x02e2, 0x0173, 0x0170, 0x0161,
+	0x01c2, 0x01bf, 0x02ff, 0x0274, 0x01fb, 0x0168, 0x02de, 0x02bb
+};
+
+/* Includes Timecode */
+static unsigned short test_data_708_4[] = {
+	0x0000, 0x03ff, 0x03ff, 0x0161, 0x0101, 0x024e, 0x0296, 0x0269,
+	0x024e, 0x014f, 0x02c3, 0x018c, 0x026f, 0x0271, 0x01e0, 0x02c6,
+	0x0185, 0x02a6, 0x0272, 0x01f4, 0x02fc, 0x0180, 0x0180, 0x01fd,
+	0x01b3, 0x0120, 0x02ff, 0x0151, 0x029f, 0x01fe, 0x018c, 0x01fe,
+	0x01fe, 0x0180, 0x0230, 0x01fe, 0x0278, 0x0233, 0x01fe, 0x0233,
+	0x0120, 0x01fe, 0x0110, 0x0233, 0x01fe, 0x0120, 0x0230, 0x01fe,
+	0x0278, 0x0233, 0x01fe, 0x0134, 0x0120, 0x01fe, 0x0110, 0x0134,
+	0x01fe, 0x0120, 0x0230, 0x01fe, 0x0278, 0x0233, 0x01fe, 0x0235,
+	0x0120, 0x01fe, 0x0110, 0x0235, 0x01fe, 0x0120, 0x0230, 0x01fe,
+	0x0278, 0x0233, 0x01fe, 0x0239, 0x0200, 0x02fa, 0x0200, 0x0200,
+	0x0274, 0x018c, 0x026f, 0x0123, 0x01b0
+};
+
+static int test_eia_708_u16(struct klvanc_context_s *ctx, const unsigned short *arr, int items)
 {
-	int numWords = bufSize / 2;
 	int mismatch = 0;
 
-	printf("\nParsing a new EIA-708 VANC packet......\n");
-	uint16_t *arr = malloc(bufSize);
-	if (arr == NULL)
-		return -1;
+	printf("\nParsing a new EIA-708 VANC packet (%d words)......\n", items);
 
-	for (int i = 0; i < numWords; i++) {
-		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
-	}
+	/* Clear out any previous results in case the callback never fires */
+	vancResultCount = 0;
 
 	printf("Original Input\n");
-	for (int i = 0; i < numWords; i++) {
+	for (int i = 0; i < items; i++) {
 		printf("%04x ", arr[i]);
 	}
 	printf("\n");
 
-	int ret = klvanc_packet_parse(ctx, 13, arr, numWords);
+	int ret = klvanc_packet_parse(ctx, 9, arr, items);
 
 	printf("Final output\n");
 	for (int i = 0; i < vancResultCount; i++) {
 		printf("%04x ", vancResult[i]);
 	}
 	printf("\n");
+
 
 	for (int i = 0; i < vancResultCount; i++) {
 		if (arr[i] != vancResult[i]) {
@@ -110,8 +157,12 @@ static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t
 			break;
 		}
 	}
-
-	free(arr);
+	if (vancResultCount == 0) {
+		/* No output at all.  This is usually because the VANC parser choked
+		   on the VANC checksum and thus the parser never ran */
+		fprintf(stderr, "No output generated\n");
+		mismatch = 1;
+	}
 
 	if (mismatch) {
 		printf("Printing mismatched structure:\n");
@@ -121,6 +172,27 @@ static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t
 		printf("Original and generated versions match!\n");
 		passCount++;
 	}
+
+	return ret;
+}
+
+static int test_eia_708(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+{
+	int numWords = bufSize / 2;
+	int ret;
+
+
+	uint16_t *arr = malloc(bufSize);
+	if (arr == NULL)
+		return -1;
+
+	for (int i = 0; i < numWords; i++) {
+		arr[i] = buf[i * 2] << 8 | buf[i * 2 + 1];
+	}
+
+	ret = test_eia_708_u16(ctx, arr, numWords);
+
+	free(arr);
 
 	return ret;
 }
@@ -143,6 +215,22 @@ int eia708_main(int argc, char *argv[])
 	ret = test_eia_708(ctx, test1, sizeof(test1));
 	if (ret < 0)
 		fprintf(stderr, "EIA-708B failed to parse\n");
+
+	ret = test_eia_708_u16(ctx, test_data_708_1, sizeof(test_data_708_1) / sizeof(unsigned short));
+	if (ret < 0)
+		fprintf(stderr, "EIA-708B-1 failed to parse\n");
+
+	ret = test_eia_708_u16(ctx, test_data_708_2, sizeof(test_data_708_2) / sizeof(unsigned short));
+	if (ret < 0)
+		fprintf(stderr, "EIA-708B-2 failed to parse\n");
+
+	ret = test_eia_708_u16(ctx, test_data_708_3, sizeof(test_data_708_3) / sizeof(unsigned short));
+	if (ret < 0)
+		fprintf(stderr, "EIA-708B-3 failed to parse\n");
+
+	ret = test_eia_708_u16(ctx, test_data_708_4, sizeof(test_data_708_4) / sizeof(unsigned short));
+	if (ret < 0)
+		fprintf(stderr, "EIA-708B-4 failed to parse\n");
 
 	klvanc_context_destroy(ctx);
 	printf("Library destroyed.\n");

@@ -913,6 +913,9 @@ void klvanc_free_SCTE_104(void *p)
 int parse_SCTE_104(struct klvanc_context_s *ctx,
 		   struct klvanc_packet_header_s *hdr, void **pp)
 {
+	if (ctx->callbacks == NULL || ctx->callbacks->scte_104 == NULL)
+		return KLAPI_OK;
+
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
 
@@ -1066,8 +1069,7 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		return -1;
 	}
 
-	if (ctx->callbacks && ctx->callbacks->scte_104)
-		ctx->callbacks->scte_104(ctx->callback_context, ctx, pkt);
+	ctx->callbacks->scte_104(ctx->callback_context, ctx, pkt);
 
 	*pp = pkt;
 	return KLAPI_OK;
