@@ -135,23 +135,23 @@ void klvanc_y10_to_v210(uint16_t *src, uint8_t *dst, int width)
 	size_t w;
 
 	for (w = 0; w < len; w++) {
-		put_le32(&dst, src[w * 6 + 0] << 10);
-		put_le32(&dst, src[w * 6 + 1] | (src[w * 6 + 2] << 20));
-		put_le32(&dst, src[w * 6 + 3] << 10);
-		put_le32(&dst, src[w * 6 + 4] | (src[w * 6 + 5] << 20));
+		put_le32(&dst, 0x200          | (src[w * 6 + 0] << 10) | (0x200 << 20));
+		put_le32(&dst, src[w * 6 + 1] | (0x200 << 10)          | (src[w * 6 + 2] << 20));
+		put_le32(&dst, 0x200          | (src[w * 6 + 3] << 10) | (0x200 << 20));
+		put_le32(&dst, src[w * 6 + 4] | (0x200 << 10)          | (src[w * 6 + 5] << 20));
 	}
 
 	/* Handle remaining 0-5 bytes if any */
 	if (width % 6 > 0)
-		put_le32(&dst, src[w * 6 + 0] << 10);
+		put_le32(&dst, 0x200          | (src[w * 6 + 0] << 10) | (0x200 << 20));
 	if (width % 6 > 2)
-		put_le32(&dst, src[w * 6 + 1] | (src[w * 6 + 2] << 20));
+		put_le32(&dst, src[w * 6 + 1] | (0x200 << 10)          | (src[w * 6 + 2] << 20));
 	else if (width % 6 > 1)
-		put_le32(&dst, src[w * 6 + 1]);
+		put_le32(&dst, src[w * 6 + 1] | (0x200 << 10)          | (0x040 << 20));
 	if (width % 6 > 3)
-		put_le32(&dst, src[w * 6 + 3] << 10);
+		put_le32(&dst, 0x200          | (src[w * 6 + 3] << 10) | (0x200 << 20));
 	if (width % 6 > 4)
-		put_le32(&dst, src[w * 6 + 4]);
+		put_le32(&dst, src[w * 6 + 4] | (0x200 << 10)          | (0x040 << 20));
 }
 
 void klvanc_uyvy_to_v210(uint16_t *src, uint8_t *dst, int width)
