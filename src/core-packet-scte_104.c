@@ -938,14 +938,25 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	 * Eg. payloadDescriptor value 0x08.
 	 */
 	if (pkt->payloadDescriptorByte != 0x08) {
+		printf("pkt->payloadDescriptorByte != 0x08 (0x%x)\n", pkt->payloadDescriptorByte);
 		free(pkt);
 		return -1;
 	}
 
 	/* First byte is the padloadDescriptor, the rest is the SCTE104 message...
-	 * up to 200 bytes in length item 5.3.3 page 7 */
-	for (int i = 0; i < 200; i++)
+	 * up to 200 bytes in length item ST2010-2008 5.3.3 page 7.
+	 * "ANSI/SCTE 104 messages using the single_operation_message() structure cannot
+	 * exceed 200 bytes in length due to constraints in the message syntax, and
+	 * typically range is between 13 and 21 bytes in length. ANSI/SCTE 104 messages
+	 * using the multiple_operation_message() structure might, under certain
+	 * circumstances, exceed 254 bytes in length, although a typical message length
+	 * is less than 100 bytes. The normative constraints on message size may be
+	 * found in the final paragraph of § 5."
+	 */
+	for (int i = 0; i < sizeof(pkt->payload); i++) {
+		/* hdr->payload is defined as 16384 shorts */
 		pkt->payload[i] = hdr->payload[1 + i];
+	}
 
 	struct klvanc_single_operation_message *m = &pkt->so_msg;
 	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
