@@ -1240,7 +1240,8 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	if (bs == NULL)
 		return -1;
 
-	*bytes = malloc(255);
+	int blen = 2000;
+	*bytes = malloc(blen);
 	if (*bytes == NULL) {
 		klbs_free(bs);
 		return -1;
@@ -1249,7 +1250,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	m = &pkt->mo_msg;
 
 	/* Serialize the SCTE 104 into a binary blob */
-	klbs_write_set_buffer(bs, *bytes, 255);
+	klbs_write_set_buffer(bs, *bytes, blen);
 
 	klbs_write_bits(bs, 0xffff, 16); /* reserved */
 
@@ -1370,8 +1371,10 @@ int klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(struct klvanc_context_s *c
 	   a SCTE-104 packet across multiple 2010 packets */
 
 	/* Maximum permitted size for a Multiple Operation Message within a single
-	   SMPTE 2010 packet is 254 (ST 2010:2008 Sec 5.4). */
-	if (inCount > 254)
+	   SMPTE 2010 packet is 254 (ST 2010:2008 Sec 5.4).
+	   Grown to 2000 to support fragmented messages.
+	   ST2010-2008 section 5.3.3. Grown from 256 to support 2k messages */
+	if (inCount > 2000)
 		return -1;
 
 	len = inCount + 1;

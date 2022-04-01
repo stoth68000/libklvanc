@@ -291,7 +291,7 @@ struct klvanc_packet_scte_104_s
 	int following_pkt;
 	int duplicate_msg;
 
-	unsigned char payload[256]; /* ST2010-2008 section 5.3.3 */
+	unsigned char payload[2000]; /* ST2010-2008 section 5.3.3. Grown from 256 to support 2k messages */
 	unsigned int payloadLengthBytes;
 
 	struct klvanc_single_operation_message so_msg;
