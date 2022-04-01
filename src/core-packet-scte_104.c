@@ -1199,7 +1199,7 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 				parse_time_descriptor(o->data, &o->time_data);
 
 #if 0
-			PRINT_DEBUG("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
+			PRINT_DEBUG("PARSED: opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
 			hexdump(ctx, o->data, o->data_length, 32, "");
 #endif
 		}
