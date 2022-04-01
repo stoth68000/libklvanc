@@ -921,6 +921,8 @@ void klvanc_free_SCTE_104(void *p)
  */
 static int messageFragmentAppend(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
 {
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
 
 	int ret = klvanc_packet_copy(&ctx->scte104_fragments[ctx->scte104_fragment_count], hdr);
 	if (ret < 0) {
@@ -934,6 +936,9 @@ static int messageFragmentAppend(struct klvanc_context_s *ctx, struct klvanc_pac
 
 static void messageFragmentReset(struct klvanc_context_s *ctx)
 {
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
 	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
 		klvanc_packet_free(ctx->scte104_fragments[i]);
 		ctx->scte104_fragments[i] = NULL;
