@@ -386,3 +386,14 @@ int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt
 	free(fn);
 	return 0; /* Success */
 }
+
+int klvanc_packet_payload_append(struct klvanc_packet_header_s *dst, struct klvanc_packet_header_s *src, int srcOffset)
+{
+	if (dst->payloadLengthWords + (src->payloadLengthWords - srcOffset) > LIBKLVANC_PACKET_MAX_PAYLOAD)
+		return -1;
+
+	memcpy(&dst->payload[dst->payloadLengthWords], &src->payload[srcOffset], (src->payloadLengthWords - srcOffset) * sizeof(uint16_t));
+	dst->payloadLengthWords += (src->payloadLengthWords - srcOffset);
+
+	return 0; /* Success */
+}

@@ -290,6 +290,12 @@ int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt
  */
 void klvanc_packet_free(struct klvanc_packet_header_s *src);
 
+/**
+ * @brief Append the payload words from srd to dst. Start copying from srcOffset position.
+ * @return 0 on success, else < 0.
+ */
+int klvanc_packet_payload_append(struct klvanc_packet_header_s *dst, struct klvanc_packet_header_s *src, int srcOffset);
+
 #ifdef __cplusplus
 };
 #endif
