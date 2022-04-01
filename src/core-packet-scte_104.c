@@ -19,6 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* References:
+ * ST2010-2008 "Vertical Ancillary Data Mapping of ANSI/SCTE 104 Messages"
+ * ANSI/SCTE104 2019a
+ */
+
 #include <libklvanc/vanc.h>
 
 #include "core-private.h"
@@ -925,11 +930,12 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 
-        pkt->payloadDescriptorByte = hdr->payload[0];
-        pkt->version               = (pkt->payloadDescriptorByte >> 3) & 0x03;
-        pkt->continued_pkt         = (pkt->payloadDescriptorByte >> 2) & 0x01;
-        pkt->following_pkt         = (pkt->payloadDescriptorByte >> 1) & 0x01;
-        pkt->duplicate_msg         = pkt->payloadDescriptorByte & 0x01;
+	/* See See ST2010-2008 Section 5.1 UDW Format */
+	pkt->payloadDescriptorByte = hdr->payload[0];
+	pkt->version               = (pkt->payloadDescriptorByte >> 3) & 0x03;
+	pkt->continued_pkt         = (pkt->payloadDescriptorByte >> 2) & 0x01;
+	pkt->following_pkt         = (pkt->payloadDescriptorByte >> 1) & 0x01;
+	pkt->duplicate_msg         = pkt->payloadDescriptorByte & 0x01;
 
 	/* We only support SCTE104 messages of type
 	 * single_operation_message() that are completely
