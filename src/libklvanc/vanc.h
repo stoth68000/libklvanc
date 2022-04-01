@@ -192,7 +192,7 @@ int klvanc_context_dump(struct klvanc_context_s *ctx);
  * @param[in]	unsigned int lineNr - SDI line number the array data came from. Used for information / tracking purposes only.
  * @param[in]	unsigned short *words - Array of SDI words (10bit) that the caller wants parsed.
  * @param[in]	unsigned int wordCount - Number of words in array.
- * @return      0 - Success
+ * @return      The number of VANC frames found and parsing was attempted.
  * @return      < 0 - Error
  */
 int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const unsigned short *words, unsigned int wordCount);
