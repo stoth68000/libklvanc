@@ -981,7 +981,7 @@ static int messageFragmentFollowing(struct klvanc_context_s *ctx, struct klvanc_
 	return messageFragmentAppend(ctx, hdr);
 }
 
-static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, struct klvanc_packet_header_s **complete)
 {
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
@@ -1001,7 +1001,52 @@ static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_pack
 		return -1;
 	}
 
-	/* Now we have a series of fragments, possibly with missing intermediate fragments. */
+	/* Now we have a series of fragments, possibly with missing intermediate fragments.
+	 * The method will be, to construct a very large single struct klvanc_packet_header_s object,
+	 * containign all of the defrag'd contents. Return this from this function,
+	 * expect the higher levels stack to switch parse to this new hader, instead of the closeing
+	 * framgment header that go us here.
+	 * Clone the fragment final packet, which is mostly correctl, update its headers and paylaod 
+	 * to incoude al the fragments.
+	 */
+	struct klvanc_packet_header_s *dst;
+	if (klvanc_packet_copy(&dst, hdr) < 0) {
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* These two packet header fields will need to be adjusted.
+	 * unsigned short		payload[16384];
+	 * unsigned short		payloadLengthWords;
+	 * The following two fields shouldn't be referenced during parsing, I'm ignoring them.
+	 * unsigned short		raw[16384];
+	 * unsigned int 		rawLengthWords;
+	 */
+
+	dst->checksumValid = 0;
+	dst->payloadLengthWords = 0;
+
+	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
+		int offset = 0; 
+		if (i > 0) {
+			offset = 1; /* Skip the payloadDscriptor byte on messages #2 onwards. */
+		}
+
+		if (klvanc_packet_payload_append(dst, ctx->scte104_fragments[i], offset) < 0) {
+			messageFragmentReset(ctx);
+			return -1;
+		}
+	}
+
+	/* We're done, free any cached fragments.*/
+	messageFragmentReset(ctx);
+
+	if (ctx->verbose)
+		PRINT_DEBUG("%s() Dumping fully assembled fragment packet\n", __func__);
+
+	klvanc_dump_packet_console(ctx, dst);
+
+	*complete = dst;
 	return 0; /* Success */
 }
 
@@ -1042,7 +1087,10 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		return -1;
 	}
 
+	struct klvanc_packet_header_s *fullhdr = NULL;
 	if (pkt->payloadDescriptorByte != 0x08) {
+		/* Process one or more messages in fragmented form */
+
 		/* See ST2010-2008 Table 3 - Continued Packet and Following Packet Flag Bits */
 		if (pkt->continued_pkt && pkt->following_pkt == 0) {
 			/* First packet.
@@ -1052,20 +1100,35 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 			 */
 			messageFragmentReset(ctx);
 			messageFragmentContinued(ctx, hdr);
+			free(pkt);
+			return -1; /* Signal upper layers we're not happy. In reality we're collecting. */
 		} else
 		if (pkt->continued_pkt && pkt->following_pkt) {
 			/* Intermediate packet */
 			messageFragmentFollowing(ctx, hdr);
+			free(pkt);
+			return -1; /* Signal upper layers we're not happy. In reality we're collecting. */
 		} else
 		if (pkt->continued_pkt == 0 && pkt->following_pkt) {
 			/* Final packet */
-			messageFragmentFinal(ctx, hdr);
+			if (messageFragmentFinal(ctx, hdr, &fullhdr) < 0) {
+				printf("%s() unable to assemble fragments, skipping.\n", __func__);
+				free(pkt);
+				return -1;
+			}
+			/* Use the complete defragged header, not the final fragment header
+			 * in all the following parsing.
+			 */
+			hdr = fullhdr;
+
 		} else {
-			printf("%s pkt->payloadDescriptorByte != 0x08 (0x%x)\n", __func__, pkt->payloadDescriptorByte);
+			printf("%s() pkt->payloadDescriptorByte != 0x08 (0x%x)\n", __func__, pkt->payloadDescriptorByte);
 			free(pkt);
 			return -1;
 		}
 	} else {
+		/* Process a single complete message inside this hdr packet. */
+
 		/* Avoid cases where we're mixing single messages potentially when in the process
 		 * of message fragment building. Lose any previous fragments 
 		 */
@@ -1216,6 +1279,9 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	}
 
 	ctx->callbacks->scte_104(ctx->callback_context, ctx, pkt);
+
+	if (fullhdr)
+		klvanc_packet_free(fullhdr);
 
 	*pp = pkt;
 	return KLAPI_OK;
