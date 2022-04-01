@@ -1085,6 +1085,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	 * circumstances, exceed 254 bytes in length, although a typical message length
 	 * is less than 100 bytes. The normative constraints on message size may be
 	 * found in the final paragraph of § 5."
+	 * ST: Subsequently extended this to support much larger messages, up to 2000
+	 *     as ser ST2010-2008 Section 5.
 	 */
 	for (int i = 0; i < sizeof(pkt->payload); i++) {
 		/* hdr->payload is defined as 16384 shorts */
