@@ -61,11 +61,12 @@ struct klvanc_packet_header_s
 	unsigned short		did;
 	unsigned short		dbnsdid;
 	unsigned short		checksum;
-	unsigned short		payload[16384];
+#define LIBKLVANC_PACKET_MAX_PAYLOAD (16384)
+	unsigned short		payload[LIBKLVANC_PACKET_MAX_PAYLOAD];
 	unsigned short		payloadLengthWords;
 	unsigned int 		checksumValid;
 	unsigned int		lineNr; 		/**< The vanc in this header came from line.... */
-	unsigned short		raw[16384];
+	unsigned short		raw[LIBKLVANC_PACKET_MAX_PAYLOAD];
 	unsigned int 		rawLengthWords;
 	unsigned short		horizontalOffset;	/**< Horizontal word where the ADF was detected. */
 };
