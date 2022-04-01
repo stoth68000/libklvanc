@@ -142,6 +142,16 @@ struct klvanc_context_s
 	 * overwrites our previous cached message.
 	 */
 	struct klvanc_cache_s *cacheLines;
+
+	/* SCTE104 messages can be fragmented across multiple VANC packets.
+	 * See ST2010-2008 Section 5 "Format of VANC Data Packets"
+	 * Create a container for multiple vanc packets to be parsed consecutively.
+	 * Create storage for 10 packets, track them, free them etc.
+	 * Maintain a count of how many are in the list.
+	 */
+#define LIBKLVANC_SCTE104_MAX_FRAGMENTS (10)
+	struct klvanc_packet_header_s *scte104_fragments[LIBKLVANC_SCTE104_MAX_FRAGMENTS];
+	int scte104_fragment_count;
 };
 
 #define LIBKLVANC_LOGLEVEL_ERR 0

@@ -915,6 +915,90 @@ void klvanc_free_SCTE_104(void *p)
 	free(pkt);
 }
 
+/* TODO: If we find another VANC case where packets are fragmented, lift this code
+ * into the core and adjust function naming, share/re-use.
+ */
+static int messageFragmentAppend(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+
+	int ret = klvanc_packet_copy(&ctx->scte104_fragments[ctx->scte104_fragment_count], hdr);
+	if (ret < 0) {
+		return -1;
+	} 
+
+	ctx->scte104_fragment_count++;
+
+	return 0; /* Success */
+}
+
+static void messageFragmentReset(struct klvanc_context_s *ctx)
+{
+	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
+		klvanc_packet_free(ctx->scte104_fragments[i]);
+		ctx->scte104_fragments[i] = NULL;
+	}
+	ctx->scte104_fragment_count = 0;
+}
+
+static int messageFragmentContinued(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* State machine has been reset before entering here.
+	 * Go ahead and append the first header into the fragment list.
+	 */
+	return messageFragmentAppend(ctx, hdr);
+}
+
+static int messageFragmentFollowing(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* A following packet must have been proceeded with one or more previous packets. */
+	if (ctx->scte104_fragment_count == 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Following wasn't proceeded with a Continuted. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Avoid an overflow. */
+	if (ctx->scte104_fragment_count + 1 == LIBKLVANC_SCTE104_MAX_FRAGMENTS) {
+		PRINT_ERR("%s() SCTE104, exceeded max fragment count, avoided. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Thinks appear ok, go ahead and append. */
+	return messageFragmentAppend(ctx, hdr);
+}
+
+static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* A final packet must have been proceeded with one or more previous packets. */
+	if (ctx->scte104_fragment_count == 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Final wasn't proceeded with a Continuted. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	if (messageFragmentAppend(ctx, hdr) < 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Final unable to append. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Now we have a series of fragments, possibly with missing intermediate fragments. */
+	return 0; /* Success */
+}
+
 int parse_SCTE_104(struct klvanc_context_s *ctx,
 		   struct klvanc_packet_header_s *hdr, void **pp)
 {
@@ -942,12 +1026,49 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	 * self containined with a single VANC line, and
 	 * are not continuation messages.
 	 * Eg. payloadDescriptor value 0x08.
+	 * 
+	 * Duplicate message flags are not supported.
 	 */
-	if (pkt->payloadDescriptorByte != 0x08) {
-		printf("pkt->payloadDescriptorByte != 0x08 (0x%x)\n", pkt->payloadDescriptorByte);
+
+	if (pkt->duplicate_msg) {
+		printf("%s() pkt->duplicate_msg is unsupported, parse aborted.\n", __func__);
 		free(pkt);
 		return -1;
 	}
+
+	if (pkt->payloadDescriptorByte != 0x08) {
+		/* See ST2010-2008 Table 3 - Continued Packet and Following Packet Flag Bits */
+		if (pkt->continued_pkt && pkt->following_pkt == 0) {
+			/* First packet.
+			 * Begin of a new series of fragmented packets.
+			 * Handle any previous allocations, if packet loss or issues caused
+			 * The fragmented state machine to become broken.
+			 */
+			messageFragmentReset(ctx);
+			messageFragmentContinued(ctx, hdr);
+		} else
+		if (pkt->continued_pkt && pkt->following_pkt) {
+			/* Intermediate packet */
+			messageFragmentFollowing(ctx, hdr);
+		} else
+		if (pkt->continued_pkt == 0 && pkt->following_pkt) {
+			/* Final packet */
+			messageFragmentFinal(ctx, hdr);
+		} else {
+			printf("%s pkt->payloadDescriptorByte != 0x08 (0x%x)\n", __func__, pkt->payloadDescriptorByte);
+			free(pkt);
+			return -1;
+		}
+	} else {
+		/* Avoid cases where we're mixing single messages potentially when in the process
+		 * of message fragment building. Lose any previous fragments 
+		 */
+		messageFragmentReset(ctx);
+	}
+
+	/* SCTE104 packets can be 200 bytes (single message) and up to 2000 bytes
+	 * in length (ST2010-2008 section 5) for multiple messages fragmented.
+	 */
 
 	/* First byte is the padloadDescriptor, the rest is the SCTE104 message...
 	 * up to 200 bytes in length item ST2010-2008 5.3.3 page 7.
