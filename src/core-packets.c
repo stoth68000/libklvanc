@@ -212,9 +212,9 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const
 	VALIDATE(arr);
 	VALIDATE(len);
 
-	if (len > 16384) {
+	if (len > LIBKLVANC_PACKET_MAX_PAYLOAD) {
 		/* Safety */
-		PRINT_ERR("%s() length %d exceeds 16384, ignoring.\n", __func__, len);
+		PRINT_ERR("%s() length %d exceeds %d, ignoring.\n", __func__, len, LIBKLVANC_PACKET_MAX_PAYLOAD);
 		return -EINVAL;
 	}
 
