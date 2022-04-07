@@ -19,6 +19,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* References:
+ * ST2010-2008 "Vertical Ancillary Data Mapping of ANSI/SCTE 104 Messages"
+ * ANSI/SCTE104 2019a
+ */
+
 #include <libklvanc/vanc.h>
 
 #include "core-private.h"
@@ -27,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 static const char *gpiEdge(unsigned char edge)
 {
@@ -785,7 +791,7 @@ static int dump_mom(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_
 			PRINT_DEBUG(" d->upid_type = 0x%02x (%s)\n", d->upid_type, seg_upid_type(d->upid_type));
 			PRINT_DEBUG_MEMBER_INT(d->upid_length);
 			for (int j = 0; j < d->upid_length; j++) {
-				PRINT_DEBUG_MEMBER_INT(d->upid[j]);
+				PRINT_DEBUG( "d->upid[%d] = 0x%02x (%c)\n", j, d->upid[j], isprint(d->upid[j]) ? d->upid[j] : '?');
 			}
 			PRINT_DEBUG(" d->type_id = 0x%02x (%s)\n", d->type_id, seg_type_id(d->type_id));
 			PRINT_DEBUG_MEMBER_INT(d->segment_num);
@@ -910,6 +916,140 @@ void klvanc_free_SCTE_104(void *p)
 	free(pkt);
 }
 
+/* TODO: If we find another VANC case where packets are fragmented, lift this code
+ * into the core and adjust function naming, share/re-use.
+ */
+static int messageFragmentAppend(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	int ret = klvanc_packet_copy(&ctx->scte104_fragments[ctx->scte104_fragment_count], hdr);
+	if (ret < 0) {
+		return -1;
+	} 
+
+	ctx->scte104_fragment_count++;
+
+	return 0; /* Success */
+}
+
+static void messageFragmentReset(struct klvanc_context_s *ctx)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
+		klvanc_packet_free(ctx->scte104_fragments[i]);
+		ctx->scte104_fragments[i] = NULL;
+	}
+	ctx->scte104_fragment_count = 0;
+}
+
+static int messageFragmentContinued(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* State machine has been reset before entering here.
+	 * Go ahead and append the first header into the fragment list.
+	 */
+	return messageFragmentAppend(ctx, hdr);
+}
+
+static int messageFragmentFollowing(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* A following packet must have been proceeded with one or more previous packets. */
+	if (ctx->scte104_fragment_count == 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Following wasn't proceeded with a Continuted. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Avoid an overflow. */
+	if (ctx->scte104_fragment_count + 1 == LIBKLVANC_SCTE104_MAX_FRAGMENTS) {
+		PRINT_ERR("%s() SCTE104, exceeded max fragment count, avoided. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Thinks appear ok, go ahead and append. */
+	return messageFragmentAppend(ctx, hdr);
+}
+
+static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, struct klvanc_packet_header_s **complete)
+{
+	if (ctx->verbose)
+		PRINT_DEBUG("%s()\n", __func__);
+
+	/* A final packet must have been proceeded with one or more previous packets. */
+	if (ctx->scte104_fragment_count == 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Final wasn't proceeded with a Continuted. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	if (messageFragmentAppend(ctx, hdr) < 0) {
+		/* Possible stream corruption causing a missing continuation packet. */
+		PRINT_ERR("%s() SCTE104, Final unable to append. Resetting statemachine.\n", __func__);
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* Now we have a series of fragments, possibly with missing intermediate fragments.
+	 * The method will be, to construct a very large single struct klvanc_packet_header_s object,
+	 * containign all of the defrag'd contents. Return this from this function,
+	 * expect the higher levels stack to switch parse to this new hader, instead of the closeing
+	 * framgment header that go us here.
+	 * Clone the fragment final packet, which is mostly correctl, update its headers and paylaod 
+	 * to incoude al the fragments.
+	 */
+	struct klvanc_packet_header_s *dst;
+	if (klvanc_packet_copy(&dst, hdr) < 0) {
+		messageFragmentReset(ctx);
+		return -1;
+	}
+
+	/* These two packet header fields will need to be adjusted.
+	 * unsigned short		payload[16384];
+	 * unsigned short		payloadLengthWords;
+	 * The following two fields shouldn't be referenced during parsing, I'm ignoring them.
+	 * unsigned short		raw[16384];
+	 * unsigned int 		rawLengthWords;
+	 */
+
+	dst->checksumValid = 0;
+	dst->payloadLengthWords = 0;
+
+	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
+		int offset = 0; 
+		if (i > 0) {
+			offset = 1; /* Skip the payloadDscriptor byte on messages #2 onwards. */
+		}
+
+		if (klvanc_packet_payload_append(dst, ctx->scte104_fragments[i], offset) < 0) {
+			messageFragmentReset(ctx);
+			return -1;
+		}
+	}
+
+	/* We're done, free any cached fragments.*/
+	messageFragmentReset(ctx);
+
+	if (ctx->verbose)
+		PRINT_DEBUG("%s() Dumping fully assembled fragment packet\n", __func__);
+
+	klvanc_dump_packet_console(ctx, dst);
+
+	*complete = dst;
+	return 0; /* Success */
+}
+
 int parse_SCTE_104(struct klvanc_context_s *ctx,
 		   struct klvanc_packet_header_s *hdr, void **pp)
 {
@@ -925,27 +1065,96 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 
-        pkt->payloadDescriptorByte = hdr->payload[0];
-        pkt->version               = (pkt->payloadDescriptorByte >> 3) & 0x03;
-        pkt->continued_pkt         = (pkt->payloadDescriptorByte >> 2) & 0x01;
-        pkt->following_pkt         = (pkt->payloadDescriptorByte >> 1) & 0x01;
-        pkt->duplicate_msg         = pkt->payloadDescriptorByte & 0x01;
+	/* See See ST2010-2008 Section 5.1 UDW Format */
+	pkt->payloadDescriptorByte = hdr->payload[0];
+	pkt->version               = (pkt->payloadDescriptorByte >> 3) & 0x03;
+	pkt->continued_pkt         = (pkt->payloadDescriptorByte >> 2) & 0x01;
+	pkt->following_pkt         = (pkt->payloadDescriptorByte >> 1) & 0x01;
+	pkt->duplicate_msg         = pkt->payloadDescriptorByte & 0x01;
 
 	/* We only support SCTE104 messages of type
 	 * single_operation_message() that are completely
 	 * self containined with a single VANC line, and
 	 * are not continuation messages.
 	 * Eg. payloadDescriptor value 0x08.
+	 * 
+	 * Duplicate message flags are not supported.
 	 */
-	if (pkt->payloadDescriptorByte != 0x08) {
+
+	if (pkt->duplicate_msg) {
+		printf("%s() pkt->duplicate_msg is unsupported, parse aborted.\n", __func__);
 		free(pkt);
 		return -1;
 	}
 
+	struct klvanc_packet_header_s *fullhdr = NULL;
+	if (pkt->payloadDescriptorByte != 0x08) {
+		/* Process one or more messages in fragmented form */
+
+		/* See ST2010-2008 Table 3 - Continued Packet and Following Packet Flag Bits */
+		if (pkt->continued_pkt && pkt->following_pkt == 0) {
+			/* First packet.
+			 * Begin of a new series of fragmented packets.
+			 * Handle any previous allocations, if packet loss or issues caused
+			 * The fragmented state machine to become broken.
+			 */
+			messageFragmentReset(ctx);
+			messageFragmentContinued(ctx, hdr);
+			free(pkt);
+			return -1; /* Signal upper layers we're not happy. In reality we're collecting. */
+		} else
+		if (pkt->continued_pkt && pkt->following_pkt) {
+			/* Intermediate packet */
+			messageFragmentFollowing(ctx, hdr);
+			free(pkt);
+			return -1; /* Signal upper layers we're not happy. In reality we're collecting. */
+		} else
+		if (pkt->continued_pkt == 0 && pkt->following_pkt) {
+			/* Final packet */
+			if (messageFragmentFinal(ctx, hdr, &fullhdr) < 0) {
+				printf("%s() unable to assemble fragments, skipping.\n", __func__);
+				free(pkt);
+				return -1;
+			}
+			/* Use the complete defragged header, not the final fragment header
+			 * in all the following parsing.
+			 */
+			hdr = fullhdr;
+
+		} else {
+			printf("%s() pkt->payloadDescriptorByte != 0x08 (0x%x)\n", __func__, pkt->payloadDescriptorByte);
+			free(pkt);
+			return -1;
+		}
+	} else {
+		/* Process a single complete message inside this hdr packet. */
+
+		/* Avoid cases where we're mixing single messages potentially when in the process
+		 * of message fragment building. Lose any previous fragments 
+		 */
+		messageFragmentReset(ctx);
+	}
+
+	/* SCTE104 packets can be 200 bytes (single message) and up to 2000 bytes
+	 * in length (ST2010-2008 section 5) for multiple messages fragmented.
+	 */
+
 	/* First byte is the padloadDescriptor, the rest is the SCTE104 message...
-	 * up to 200 bytes in length item 5.3.3 page 7 */
-	for (int i = 0; i < 200; i++)
+	 * up to 200 bytes in length item ST2010-2008 5.3.3 page 7.
+	 * "ANSI/SCTE 104 messages using the single_operation_message() structure cannot
+	 * exceed 200 bytes in length due to constraints in the message syntax, and
+	 * typically range is between 13 and 21 bytes in length. ANSI/SCTE 104 messages
+	 * using the multiple_operation_message() structure might, under certain
+	 * circumstances, exceed 254 bytes in length, although a typical message length
+	 * is less than 100 bytes. The normative constraints on message size may be
+	 * found in the final paragraph of § 5."
+	 * ST: Subsequently extended this to support much larger messages, up to 2000
+	 *     as ser ST2010-2008 Section 5.
+	 */
+	for (int i = 0; i < sizeof(pkt->payload); i++) {
+		/* hdr->payload is defined as 16384 shorts */
 		pkt->payload[i] = hdr->payload[1 + i];
+	}
 
 	struct klvanc_single_operation_message *m = &pkt->so_msg;
 	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
@@ -1053,7 +1262,7 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 				parse_time_descriptor(o->data, &o->time_data);
 
 #if 0
-			PRINT_DEBUG("opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
+			PRINT_DEBUG("PARSED: opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
 			hexdump(ctx, o->data, o->data_length, 32, "");
 #endif
 		}
@@ -1070,6 +1279,9 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	}
 
 	ctx->callbacks->scte_104(ctx->callback_context, ctx, pkt);
+
+	if (fullhdr)
+		klvanc_packet_free(fullhdr);
 
 	*pp = pkt;
 	return KLAPI_OK;
@@ -1096,7 +1308,8 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	if (bs == NULL)
 		return -1;
 
-	*bytes = malloc(255);
+	int blen = 2000;
+	*bytes = malloc(blen);
 	if (*bytes == NULL) {
 		klbs_free(bs);
 		return -1;
@@ -1105,7 +1318,7 @@ int klvanc_convert_SCTE_104_to_packetBytes(struct klvanc_context_s *ctx,
 	m = &pkt->mo_msg;
 
 	/* Serialize the SCTE 104 into a binary blob */
-	klbs_write_set_buffer(bs, *bytes, 255);
+	klbs_write_set_buffer(bs, *bytes, blen);
 
 	klbs_write_bits(bs, 0xffff, 16); /* reserved */
 
@@ -1226,8 +1439,10 @@ int klvanc_convert_SCTE_104_packetbytes_to_SMPTE_2010(struct klvanc_context_s *c
 	   a SCTE-104 packet across multiple 2010 packets */
 
 	/* Maximum permitted size for a Multiple Operation Message within a single
-	   SMPTE 2010 packet is 254 (ST 2010:2008 Sec 5.4). */
-	if (inCount > 254)
+	   SMPTE 2010 packet is 254 (ST 2010:2008 Sec 5.4).
+	   Grown to 2000 to support fragmented messages.
+	   ST2010-2008 section 5.3.3. Grown from 256 to support 2k messages */
+	if (inCount > 2000)
 		return -1;
 
 	len = inCount + 1;

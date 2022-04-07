@@ -142,6 +142,16 @@ struct klvanc_context_s
 	 * overwrites our previous cached message.
 	 */
 	struct klvanc_cache_s *cacheLines;
+
+	/* SCTE104 messages can be fragmented across multiple VANC packets.
+	 * See ST2010-2008 Section 5 "Format of VANC Data Packets"
+	 * Create a container for multiple vanc packets to be parsed consecutively.
+	 * Create storage for 10 packets, track them, free them etc.
+	 * Maintain a count of how many are in the list.
+	 */
+#define LIBKLVANC_SCTE104_MAX_FRAGMENTS (10)
+	struct klvanc_packet_header_s *scte104_fragments[LIBKLVANC_SCTE104_MAX_FRAGMENTS];
+	int scte104_fragment_count;
 };
 
 #define LIBKLVANC_LOGLEVEL_ERR 0
@@ -182,7 +192,7 @@ int klvanc_context_dump(struct klvanc_context_s *ctx);
  * @param[in]	unsigned int lineNr - SDI line number the array data came from. Used for information / tracking purposes only.
  * @param[in]	unsigned short *words - Array of SDI words (10bit) that the caller wants parsed.
  * @param[in]	unsigned int wordCount - Number of words in array.
- * @return      0 - Success
+ * @return      The number of VANC frames found and parsing was attempted.
  * @return      < 0 - Error
  */
 int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const unsigned short *words, unsigned int wordCount);
@@ -279,6 +289,12 @@ int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt
  * @param[in]	struct packet_header_s *src
  */
 void klvanc_packet_free(struct klvanc_packet_header_s *src);
+
+/**
+ * @brief Append the payload words from srd to dst. Start copying from srcOffset position.
+ * @return 0 on success, else < 0.
+ */
+int klvanc_packet_payload_append(struct klvanc_packet_header_s *dst, struct klvanc_packet_header_s *src, int srcOffset);
 
 #ifdef __cplusplus
 };
