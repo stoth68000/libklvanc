@@ -133,8 +133,11 @@ static int parse(struct klvanc_context_s *ctx, const unsigned short *arr, unsign
 	if (!p)
 		return -ENOMEM;
 
+	/* Place the entire raw frame passed into raw words, but update raw length
+	 * to reflect the detected payload size plus a minor overheader to compenate
+	 * for a few leading header and trailer words.
+	 */
 	memcpy(&p->raw[0], arr, len * sizeof(unsigned short));
-	p->rawLengthWords = len;
 	p->adf[0] = *(arr + 0);
 	p->adf[1] = *(arr + 1);
 	p->adf[2] = *(arr + 2);
@@ -142,6 +145,8 @@ static int parse(struct klvanc_context_s *ctx, const unsigned short *arr, unsign
 	p->dbnsdid = sanitizeWord(*(arr + 4));
 
 	p->payloadLengthWords = sanitizeWord(*(arr + 5));
+	p->rawLengthWords = p->payloadLengthWords + 8;
+	p->rawLengthWords = len;
 	if (p->payloadLengthWords > (sizeof(p->payload) / sizeof(unsigned short))) {
 		free(p);
 		return -ENOMEM;
