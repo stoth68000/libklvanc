@@ -927,7 +927,8 @@ static int messageFragmentAppend(struct klvanc_context_s *ctx, struct klvanc_pac
 	int ret = klvanc_packet_copy(&ctx->scte104_fragments[ctx->scte104_fragment_count], hdr);
 	if (ret < 0) {
 		return -1;
-	} 
+	}
+	ctx->scte104_fragments[ctx->scte104_fragment_count]->rawLengthWords = ctx->scte104_fragments[ctx->scte104_fragment_count]->payloadLengthWords + 7; 
 
 	ctx->scte104_fragment_count++;
 
@@ -1025,6 +1026,9 @@ static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_pack
 
 	dst->checksumValid = 0;
 	dst->payloadLengthWords = 0;
+	dst->rawLengthWords = 0;
+	memset(dst->raw, 0, sizeof(dst->raw));
+	memset(dst->payload, 0, sizeof(dst->payload));
 
 	for (int i = 0; i < ctx->scte104_fragment_count; i++) {
 		int offset = 0; 
@@ -1120,6 +1124,7 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 			 * in all the following parsing.
 			 */
 			hdr = fullhdr;
+			memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 
 		} else {
 			printf("%s() pkt->payloadDescriptorByte != 0x08 (0x%x)\n", __func__, pkt->payloadDescriptorByte);
