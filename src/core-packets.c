@@ -394,11 +394,21 @@ int klvanc_packet_save(const char *dir, const struct klvanc_packet_header_s *pkt
 
 int klvanc_packet_payload_append(struct klvanc_packet_header_s *dst, struct klvanc_packet_header_s *src, int srcOffset)
 {
-	if (dst->payloadLengthWords + (src->payloadLengthWords - srcOffset) > LIBKLVANC_PACKET_MAX_PAYLOAD)
+	if (dst->payloadLengthWords + (src->payloadLengthWords - srcOffset) > LIBKLVANC_PACKET_MAX_PAYLOAD) {
+		fprintf(stderr, "%s() Payload Overflow avoided\n", __func__);
 		return -1;
+	}
+
+	if (dst->rawLengthWords + src->rawLengthWords > LIBKLVANC_PACKET_MAX_PAYLOAD) {
+		fprintf(stderr, "%s() Raw Overflow avoided\n", __func__);
+		return -1;
+	}
 
 	memcpy(&dst->payload[dst->payloadLengthWords], &src->payload[srcOffset], (src->payloadLengthWords - srcOffset) * sizeof(uint16_t));
 	dst->payloadLengthWords += (src->payloadLengthWords - srcOffset);
+
+	memcpy(&dst->raw[dst->rawLengthWords], &src->raw[0], src->rawLengthWords * sizeof(uint16_t));
+	dst->rawLengthWords += src->rawLengthWords;
 
 	return 0; /* Success */
 }
