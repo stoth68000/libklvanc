@@ -255,7 +255,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const
 			void *decodedPacket = NULL;
 			ret = parseByType(ctx, hdr, &decodedPacket);
 			if (ret == KLAPI_OK) {
-				if (ctx->verbose == 2) {
+				if (ctx->verbose == 2 && decodedPacket) {
 					ret = dumpByType(ctx, decodedPacket);
 					if (ret < 0) {
 						PRINT_ERR("Failed to dump by type, missing dumper function?\n");
