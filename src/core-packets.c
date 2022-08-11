@@ -35,7 +35,7 @@ static int isValidHeader(struct klvanc_context_s *ctx, const unsigned short *arr
 			ret = 1;
 	}
 
-	if (ctx->verbose > 1)
+	if (ctx->verbose > 2)
 		PRINT_DEBUG("%04x %04x %04x %s\n", *(arr + 0), *(arr + 1), *(arr + 2), ret ? "valid": "invalid");
 	return ret;
 }
