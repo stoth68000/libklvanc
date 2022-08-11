@@ -66,7 +66,7 @@ static struct app_context_s *ctx = &app_context;
  * called with the entire PES array. Parse it, dump it to console.
  * We're called from the thread context of whoever calls pe_push().
  */
-pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
+static pes_extractor_callback pes_cb(void *cb_context, uint8_t *buf, int byteCount)
 {
 	/* Warning: we're shadowing the global ctx at this point. */
 	struct app_context_s *ctx = cb_context;
