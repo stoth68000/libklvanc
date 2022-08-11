@@ -53,6 +53,7 @@ static struct app_context_s
 	unsigned int pid;
 	int pes_packets_found;
 	int vanc_packets_found;
+	char *decode_types;
 
 	struct iso13818_udp_receiver_s *udprx;
 	struct pes_extractor_s *pe;
@@ -278,6 +279,20 @@ static void signal_handler(int signum)
 	ctx->running = 0;
 }
 
+/* FIXME: Maybe move this into the library itself? */
+static struct decode_types {
+	const char *name;
+	enum klvanc_packet_type_e type;
+} valid_decode_types[] = {
+	{ "cea608", VANC_TYPE_EIA_608 },
+	{ "cea708", VANC_TYPE_EIA_708B },
+	{ "afd", VANC_TYPE_AFD },
+	{ "atc", VANC_TYPE_SMPTE_S12_2 },
+	{ "klcounter", VANC_TYPE_KL_UINT64_COUNTER },
+	{ "scte104", VANC_TYPE_SCTE_104 },
+	{ "sdp", VANC_TYPE_SDP },
+};
+
 static int _usage(const char *progname, int status)
 {
 	fprintf(stderr, COPYRIGHT "\n");
@@ -286,12 +301,85 @@ static int _usage(const char *progname, int status)
 		"    -i <udp url. Eg. udp://224.0.0.1:5000>\n"
 		"    -P <pid 0xNNNN> VANC PID to process (def: 0x%x)\n"
 		"    -v Increase verbose level\n"
-		"    -g generate sample SMPTE2038 stream and parse it.\n",
+		"    -g generate sample SMPTE2038 stream and parse it.\n"
+		"    -t <vanc_types> enable VANC dumping (e.g. 'cea708,scte104')\n"
+		"       valid types are: all",
 	basename((char *)progname),
 	DEFAULT_PID
 	);
+	for (int j = 0; j < (sizeof(valid_decode_types) / sizeof(struct decode_types)); j++) {
+		fprintf(stderr, ",%s", valid_decode_types[j].name);
+	}
+	fprintf(stderr, "\n");
 
 	exit(status);
+}
+
+static int cb_AFD(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_afd_s *pkt)
+{
+	return klvanc_dump_AFD(ctx, pkt);
+}
+
+static int cb_EIA_708B(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_708b_s *pkt)
+{
+	return klvanc_dump_EIA_708B(ctx, pkt);
+}
+
+static int cb_EIA_608(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_eia_608_s *pkt)
+{
+	return klvanc_dump_EIA_608(ctx, pkt);
+}
+
+static int cb_SCTE_104(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_s *pkt)
+{
+	return klvanc_dump_SCTE_104(ctx, pkt);
+}
+
+static int cb_SMPTE_12M(void *callback_context, struct klvanc_context_s *ctx, struct klvanc_packet_smpte_12_2_s *pkt)
+{
+	return klvanc_dump_SMPTE_12_2(ctx, pkt);
+}
+
+static int cb_KL_UINT64_COUNTER(void *callback_context, struct klvanc_context_s *ctx,
+				struct klvanc_packet_kl_u64le_counter_s *pkt)
+{
+	return klvanc_dump_KL_U64LE_COUNTER(ctx, pkt);
+}
+
+static int cb_SDP(void *callback_context, struct klvanc_context_s *ctx,
+		  struct klvanc_packet_sdp_s *pkt)
+{
+	return klvanc_dump_SDP(ctx, pkt);
+}
+
+static int enable_logging(struct klvanc_callbacks_s *callbacks, enum klvanc_packet_type_e type)
+{
+	switch(type) {
+	case VANC_TYPE_EIA_608:
+		callbacks->eia_608 = cb_EIA_608;
+		break;
+	case VANC_TYPE_EIA_708B:
+		callbacks->eia_708b = cb_EIA_708B;
+		break;
+	case VANC_TYPE_SCTE_104:
+		callbacks->scte_104 = cb_SCTE_104;
+		break;
+	case VANC_TYPE_AFD:
+		callbacks->afd = cb_AFD;
+		break;
+	case VANC_TYPE_SMPTE_S12_2:
+		callbacks->smpte_12_2 = cb_SMPTE_12M;
+		break;
+	case VANC_TYPE_KL_UINT64_COUNTER:
+		callbacks->kl_i64le_counter = cb_KL_UINT64_COUNTER;
+		break;
+	case VANC_TYPE_SDP:
+		callbacks->sdp = cb_SDP;
+		break;
+	default:
+		return -1;
+	}
+	return 0;
 }
 
 static int _main(int argc, char *argv[])
@@ -302,12 +390,14 @@ static int _main(int argc, char *argv[])
 	ctx->running = 1;
 	ctx->pid = DEFAULT_PID;
 	ctx->verbose = 0;
+	char *dtype;
 	enum {
 		IT_UDP = 0,
 		IT_FILE
 	} inputType = IT_UDP;
+	static struct klvanc_callbacks_s callbacks;
 
-	while ((opt = getopt(argc, argv, "?ghi:P:v")) != -1) {
+	while ((opt = getopt(argc, argv, "?ghi:P:vt:")) != -1) {
 		switch (opt) {
 		case 'g':
 			doGenerateSample = 1;
@@ -329,6 +419,27 @@ static int _main(int argc, char *argv[])
                         break;
 		case 'v':
 			ctx->verbose++;
+			break;
+		case 't':
+			ctx->decode_types = optarg;
+			while( (dtype = strsep(&ctx->decode_types, ",")) != NULL ) {
+				int found = 0;
+				if (strcmp("all", dtype) == 0) {
+					for (int j = 0; j < (sizeof(valid_decode_types) / sizeof(struct decode_types)); j++)
+						enable_logging(&callbacks, valid_decode_types[j].type);
+					found = 1;
+					break;
+				}
+				for (int j = 0; j < (sizeof(valid_decode_types) / sizeof(struct decode_types)); j++)
+				{
+					if (strcmp(valid_decode_types[j].name, dtype) == 0) {
+						if (enable_logging(&callbacks, valid_decode_types[j].type) == 0)
+							found = 1;
+					}
+				}
+				if (found == 0)
+					_usage(argv[0], 1);
+			}
 			break;
 		case '?':
 		case 'h':
@@ -357,6 +468,9 @@ static int _main(int argc, char *argv[])
 		exit(1);
 	}
 	ctx->vanchdl->verbose = 1;
+
+	/* Define callbacks which dump out the structures */
+	ctx->vanchdl->callbacks = &callbacks;
 
 	if (inputType == IT_UDP) {
       	  int fs = DEFAULT_FIFOSIZE;
