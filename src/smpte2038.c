@@ -166,13 +166,17 @@ static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klv
 		/* Clock in any stuffing bits */
 		klbs_read_byte_stuff(bs);
 
+		rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
+
 		/* If we were already aligned BEFORE we call klbs_read_byte_stuff(),
 		 * to enture the reader was byte aligned, and we have remaining data then
 		 * Flush stuffing bits if they exist.
 		 */
 		if (byteAligned && rem) {
-			while (klbs_peek_bits(bs, 1) == 1)
+			while (rem && klbs_peek_bits(bs, 1) == 1) {
+				rem = klbs_get_buffer_size(bs) - klbs_get_byte_count(bs);
 				klbs_read_bit(bs);
+			}
 		}
 	}
 	return 0;
