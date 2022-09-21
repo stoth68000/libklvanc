@@ -35,7 +35,7 @@ static int isValidHeader(struct klvanc_context_s *ctx, const unsigned short *arr
 			ret = 1;
 	}
 
-	if (ctx->verbose > 1)
+	if (ctx->verbose > 2)
 		PRINT_DEBUG("%04x %04x %04x %s\n", *(arr + 0), *(arr + 1), *(arr + 2), ret ? "valid": "invalid");
 	return ret;
 }
@@ -255,7 +255,7 @@ int klvanc_packet_parse(struct klvanc_context_s *ctx, unsigned int lineNr, const
 			void *decodedPacket = NULL;
 			ret = parseByType(ctx, hdr, &decodedPacket);
 			if (ret == KLAPI_OK) {
-				if (ctx->verbose == 2) {
+				if (ctx->verbose == 2 && decodedPacket) {
 					ret = dumpByType(ctx, decodedPacket);
 					if (ret < 0) {
 						PRINT_ERR("Failed to dump by type, missing dumper function?\n");
