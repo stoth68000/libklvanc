@@ -61,3 +61,16 @@ regressions).
 To run the tests after compilation, run the following command:
 
         make test
+
+## Compilation with meson
+
+Meson can be used as an alternative to autotools:
+
+        meson build
+        ninja -C build
+
+The documentation will be built automatically if Doxygen is available
+
+## Running tests with meson
+
+        meson test -C build
