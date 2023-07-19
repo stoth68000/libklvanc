@@ -49,6 +49,7 @@ enum klvanc_packet_type_e
 	VANC_TYPE_KL_UINT64_COUNTER,
 	VANC_TYPE_SDP,
 	VANC_TYPE_SMPTE_S12_2,
+	VANC_TYPE_SMPTE_S2108_1,
 };
 
 /**

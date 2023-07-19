@@ -12,6 +12,7 @@ commonly found in SDI, including:
 - SMPTE ST 2038 arbitrary VANC encapsulation
 - SMPTE ST 12-2 Timecodes
 - SMPTE RDD 8 Subtitle Distribution packets
+- SMPTE ST 2108-1 HDR/WCG Metadata Packing and Signaling
 
 By providing both encoders and decoders, the library can be used for common
 use cases involving both capture of SDI (and subsequent decoding) as well as
