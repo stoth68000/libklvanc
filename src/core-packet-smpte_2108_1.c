@@ -94,8 +94,10 @@ int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header
 		PRINT_DEBUG("%s()\n", __func__);
 
 	struct klvanc_packet_smpte_2108_1_s *pkt = calloc(1, sizeof(*pkt));
-	if (!pkt)
+	if (!pkt) {
+		klbs_free(bs);
 		return -ENOMEM;
+        }
 
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 
