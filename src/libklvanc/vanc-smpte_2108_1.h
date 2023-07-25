@@ -23,7 +23,7 @@
  * @file	vanc-smpte_2108_1.h
  * @author	Devin Heitmueller <dheitmueller@kernellabs.com>
  * @copyright	Copyright (c) 2023 Kernel Labs Inc. All Rights Reserved.
- * @brief	SMPTE ST 12-2 Timecode over VANC
+ * @brief	SMPTE ST 2108-1 HDR/WCG over VANC
  */
 
 #ifndef _VANC_SMPTE_2108_1_H
@@ -74,7 +74,7 @@ struct klvanc_packet_smpte_2108_1_s
 {
 	struct klvanc_packet_header_s hdr;
 
-	unsigned char payload[256];
+	uint8_t payload[256];
 	unsigned int payloadLengthBytes;
 
 	uint8_t num_frames;
@@ -83,7 +83,7 @@ struct klvanc_packet_smpte_2108_1_s
 
 /**
  * @brief       Create SMPTE ST 2108_1 HDR metadata
- * @param[in]	struct vanc_context_s *ctx, void *p - Brief description goes here.
+ * @param[in]	struct klvanc_packet_smpte_2108_1_s **pkt - Pointer to the newly created structure
  * @return	0 - Success
  * @return	< 0 - Error
  */
