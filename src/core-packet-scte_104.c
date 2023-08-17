@@ -787,11 +787,10 @@ static int dump_mom(struct klvanc_context_s *ctx, struct klvanc_packet_scte_104_
 			PRINT_DEBUG_MEMBER_INT(d->event_cancel_indicator);
 			PRINT_DEBUG_MEMBER_INT(d->duration);
 			PRINT_DEBUG("    duration = %d (seconds)\n", d->duration);
-			PRINT_DEBUG_MEMBER_INT(d->upid_type);
 			PRINT_DEBUG(" d->upid_type = 0x%02x (%s)\n", d->upid_type, seg_upid_type(d->upid_type));
 			PRINT_DEBUG_MEMBER_INT(d->upid_length);
 			for (int j = 0; j < d->upid_length; j++) {
-				PRINT_DEBUG( "d->upid[%d] = 0x%02x (%c)\n", j, d->upid[j], isprint(d->upid[j]) ? d->upid[j] : '?');
+				PRINT_DEBUG( "  d->upid[%d] = 0x%02x (%c)\n", j, d->upid[j], isprint(d->upid[j]) ? d->upid[j] : '?');
 			}
 			PRINT_DEBUG(" d->type_id = 0x%02x (%s)\n", d->type_id, seg_type_id(d->type_id));
 			PRINT_DEBUG_MEMBER_INT(d->segment_num);
