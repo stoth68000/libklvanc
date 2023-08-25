@@ -26,6 +26,7 @@ klvanc_headers = files(
   'libklvanc/vanc-eia_608.h',
   'libklvanc/vanc-scte_104.h',
   'libklvanc/vanc-smpte_12_2.h',
+  'libklvanc/vanc-smpte_2108_1.h',
   'libklvanc/vanc-packets.h',
   'libklvanc/vanc-lines.h',
   'libklvanc/vanc-afd.h',
