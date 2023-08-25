@@ -6,6 +6,7 @@ klvanc_sources = files(
   'core-packet-afd.c',
   'core-packet-sdp.c',
   'core-packet-smpte_12_2.c',
+  'core-packet-smpte_2108_1.c',
   'core-packets.c',
   'core-lines.c',
   'core-did.c',
