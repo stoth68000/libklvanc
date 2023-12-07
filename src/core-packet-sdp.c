@@ -13,10 +13,12 @@ int klvanc_dump_SDP(struct klvanc_context_s *ctx, void *p)
 {
 	if (ctx->verbose)
 		PRINT_DEBUG("%s()\n", __func__);
+
 	struct klvanc_packet_sdp_s *pkt = p;
 	PRINT_DEBUG("Subtitle Description Packet struct\n");
 	PRINT_DEBUG_MEMBER_INT(pkt->identifier)
 	    PRINT_DEBUG_MEMBER_INT(pkt->format_code);
+
 	for (int i = 0; i < 5; ++i) {
 		PRINT_DEBUG_MEMBER_INT(pkt->descriptors[i].line);
 		PRINT_DEBUG_MEMBER_INT(pkt->descriptors[i].field);
@@ -25,8 +27,10 @@ int klvanc_dump_SDP(struct klvanc_context_s *ctx, void *p)
 		}
 		PRINT_DEBUG("\n");
 	}
+
 	PRINT_DEBUG_MEMBER_INT(pkt->sequence_counter);
 	PRINT_DEBUG("\n");
+
 	return KLAPI_OK;
 }
 
@@ -54,12 +58,14 @@ int parse_SDP(struct klvanc_context_s *ctx,
 	struct klvanc_packet_sdp_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
+
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
 	uint8_t length = hdr->payload[2] & 0x00ff;
 
 	pkt->identifier =
 	    ((uint16_t) (hdr->payload[0] & 0xff)) << 8 | (hdr->
 							  payload[1] & 0xff);
+
 	pkt->format_code = hdr->payload[3] & 0xff;
 	for (i = 0; (i < length - 4 - 4) && (i < 5); ++i) {
 		pkt->descriptors[i].line = hdr->payload[4 + i] & 0x1f;
@@ -71,6 +77,7 @@ int parse_SDP(struct klvanc_context_s *ctx,
 			payloadBIndex++;
 		}
 	}
+	
 	pkt->sequence_counter =
 	    ((uint16_t) (hdr->payload[9 + (45 * payloadBIndex) + 1] & 0xff) <<
 	     8) | (hdr->payload[9 + (45 * payloadBIndex) + 2] & 0xff);
