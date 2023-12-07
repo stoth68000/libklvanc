@@ -58,10 +58,6 @@ int klvanc_create_SDP(struct klvanc_packet_sdp_s **pkt);
  */
 void klvanc_destroy_SDP(struct klvanc_packet_sdp_s *pkt);
 
-int klvanc_convert_SDP_to_words(struct klvanc_packet_sdp_s *pkt, uint16_t **words, uint16_t *wordCount);
-
-int klvanc_convert_SDP_to_packetBytes(struct klvanc_packet_sdp_s *pkt, uint8_t **bytes, uint16_t *byteCount);
-
 #ifdef __cplusplus
 };
 #endif
