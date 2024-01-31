@@ -69,7 +69,7 @@ int parse_SDP(struct klvanc_context_s *ctx,
 	pkt->format_code = hdr->payload[3] & 0xff;
 	for (i = 0; (i < length - 4 - 4) && (i < 5); ++i) {
 		pkt->descriptors[i].line = hdr->payload[4 + i] & 0x1f;
-		pkt->descriptors[i].field = hdr->payload[4 + i] & 0x80;
+		pkt->descriptors[i].field = (hdr->payload[4 + i] & 0x80) >> 7;
 		if ((hdr->payload[4 + i] & 0xff) != 0x00) {
 			for (int j = 0; j < 45; ++j)
 				pkt->descriptors[i].data[j] =
