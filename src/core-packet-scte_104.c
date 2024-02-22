@@ -1075,15 +1075,6 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	pkt->following_pkt         = (pkt->payloadDescriptorByte >> 1) & 0x01;
 	pkt->duplicate_msg         = pkt->payloadDescriptorByte & 0x01;
 
-	/* We only support SCTE104 messages of type
-	 * single_operation_message() that are completely
-	 * self containined with a single VANC line, and
-	 * are not continuation messages.
-	 * Eg. payloadDescriptor value 0x08.
-	 * 
-	 * Duplicate message flags are not supported.
-	 */
-
 	if (pkt->duplicate_msg) {
 		printf("%s() pkt->duplicate_msg is unsupported, parse aborted.\n", __func__);
 		free(pkt);
