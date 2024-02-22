@@ -1159,6 +1159,7 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		/* hdr->payload is defined as 16384 shorts */
 		pkt->payload[i] = hdr->payload[1 + i];
 	}
+	pkt->payloadLengthBytes = hdr->payloadLengthWords - 1;
 
 	struct klvanc_single_operation_message *m = &pkt->so_msg;
 	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
@@ -1210,6 +1211,12 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	} else
 #endif
 	if (m->opID == 0xFFFF /* Multiple Operation Message */) {
+		if (pkt->payloadLengthBytes < 10) {
+			PRINT_ERR("%s() packet too short size=%d\n", __func__, pkt->payloadLengthBytes);
+			free(pkt);
+			return -1;
+		}
+
 		mom->rsvd                    = pkt->payload[0] << 8 | pkt->payload[1];
 		mom->messageSize             = pkt->payload[2] << 8 | pkt->payload[3];
 		mom->protocol_version        = pkt->payload[4];
@@ -1217,6 +1224,12 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		mom->message_number          = pkt->payload[6];
 		mom->DPI_PID_index           = pkt->payload[7] << 8 | pkt->payload[8];
 		mom->SCTE35_protocol_version = pkt->payload[9];
+
+		if (mom->messageSize > pkt->payloadLengthBytes) {
+			PRINT_ERR("%s() MOM packet too short MOM=%d pkt=%d\n", __func__, mom->messageSize, pkt->payloadLengthBytes);
+			free(pkt);
+			return -1;
+		}
 
 		unsigned char *p = &pkt->payload[10];
 		p = parse_mom_timestamp(ctx, p, &mom->timestamp);
@@ -1233,6 +1246,15 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 			struct klvanc_multiple_operation_message_operation *o = &mom->ops[i];
 			o->opID = *(p + 0) << 8 | *(p + 1);
 			o->data_length = *(p + 2) << 8 | *(p + 3);
+			if ((p + o->data_length) > pkt->payload + pkt->payloadLengthBytes) {
+				PRINT_ERR("%s() Not enough data remaining to process op. op=%d len=%d\n",
+					  __func__, i, o->data_length);
+				for (int j = 0; j < i; j++)
+					free(mom->ops[j].data);
+				free(mom->ops);
+				free(pkt);
+				return -1;
+			}
 			o->data = malloc(o->data_length);
 			if (!o->data) {
 				PRINT_ERR("%s() Unable to allocate memory for mom op, error.\n", __func__);
