@@ -957,6 +957,11 @@ static void messageFragmentReset(struct klvanc_context_s *ctx)
 	ctx->scte104_fragment_count = 0;
 }
 
+void cleanup_SCTE_104(struct klvanc_context_s *ctx)
+{
+	messageFragmentReset(ctx);
+}
+
 static int messageFragmentContinued(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr)
 {
 	if (ctx->verbose)
