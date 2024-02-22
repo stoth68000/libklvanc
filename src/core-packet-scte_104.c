@@ -134,6 +134,9 @@ static const char *mom_operationName(unsigned short opID)
 	case 0x010e: return "schedule_definition_data_request";
 	case 0x010f: return "insert_tier_data";
 	case 0x0110: return "insert_time_descriptor";
+	case 0x0111: return "insert_audio_descriptor request";
+	case 0x0112: return "insert_audio_provisioning request";
+	case 0x0113: return "insert_alternate_break_duration() request";
 	case 0x0300: return "delete_controlword_data_request";
 	case 0x0301: return "update_controlword_data_request";
 	default:     return "Reserved";
@@ -142,7 +145,7 @@ static const char *mom_operationName(unsigned short opID)
 
 static const char *seg_type_id(unsigned char type_id)
 {
-	/* Values come from SCTE 35 2019, Sec 10.3.3.1 (Table 22) */
+	/* Values come from SCTE 35 2022b, Sec 10.3.3.1 (Table 23) */
 	switch (type_id) {
 	case 0x00: return "Not Indicated";
 	case 0x01: return "Content Identification";
@@ -178,6 +181,12 @@ static const char *seg_type_id(unsigned char type_id)
 	case 0x3B: return "Distributor Overlay Placement End";
 	case 0x40: return "Unscheduled Event Start";
 	case 0x41: return "Unscheduled Event End";
+	case 0x42: return "Alternate Content Opportunity Start";
+	case 0x43: return "Alternate Content Opportunity End";
+	case 0x44: return "Provider Ad Block Start";
+	case 0x45: return "Provider Ad Block End";
+	case 0x46: return "Distributor Ad Block Start";
+	case 0x47: return "Distributor Ad Block End";
 	case 0x50: return "Network Start";
 	case 0x51: return "Network End";
 	default:   return "Unknown";
@@ -186,7 +195,7 @@ static const char *seg_type_id(unsigned char type_id)
 
 static const char *seg_upid_type(unsigned char upid_type)
 {
-	/* Values come from SCTE 35 2016, Sec 10.3.3.1, Table 21 */
+	/* Values come from SCTE 35 2022b, Sec 10.3.3.1, Table 22 */
 	switch (upid_type) {
 	case 0x00: return "Not Used";
 	case 0x01: return "User Defined (Deprecated)";
@@ -204,6 +213,8 @@ static const char *seg_upid_type(unsigned char upid_type)
 	case 0x0d: return "MID()";
 	case 0x0e: return "ADS Information";
 	case 0x0f: return "URI";
+	case 0x10: return "UUID";
+	case 0x11: return "SCR";
 	default:   return "Reserved";
 	}
 }
