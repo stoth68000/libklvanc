@@ -1236,6 +1236,9 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 			o->data = malloc(o->data_length);
 			if (!o->data) {
 				PRINT_ERR("%s() Unable to allocate memory for mom op, error.\n", __func__);
+				for (int j = 0; j < i; j++)
+					free(mom->ops[j].data);
+				free(mom->ops);
 				free(pkt);
 				return -1;
 			} else {
