@@ -71,6 +71,8 @@ int klvanc_context_destroy(struct klvanc_context_s *ctx)
 
 	klvanc_cache_free(ctx);
 
+	cleanup_SCTE_104(ctx);
+
 	memset(ctx, 0, sizeof(*ctx));
 	free(ctx);
 
