@@ -234,7 +234,8 @@ unsigned char test13[] = {
 	0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x03, 0x01, 0x26
 };
 
-static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize)
+static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_t bufSize,
+			 int expected_pass)
 {
 	int numWords = bufSize / 2;
 	int mismatch = 0;
@@ -282,7 +283,11 @@ static int test_scte_104(struct klvanc_context_s *ctx, const uint8_t *buf, size_
 	
 	free(arr);
 
-	if (mismatch) {
+	if (expected_pass == 0) {
+		/* Test contains some malformed data and is expected to fail */
+		printf("Parsing failed as expected!\n");
+		passCount++;
+	} else if (mismatch) {
 		fprintf(stderr, "Printing mismatched structure:\n");
 		failCount++;
 		ret = klvanc_packet_parse(ctx, 13, vancResult, vancResultCount);
@@ -309,59 +314,59 @@ int scte104_main(int argc, char *argv[])
 	ctx->callbacks = &callbacks;
 	printf("Library initialized.\n");
 
-	ret = test_scte_104(ctx, __0_vancentry, sizeof(__0_vancentry));
+	ret = test_scte_104(ctx, __0_vancentry, sizeof(__0_vancentry), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test1, sizeof(test1));
+	ret = test_scte_104(ctx, test1, sizeof(test1), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test2, sizeof(test2));
+	ret = test_scte_104(ctx, test2, sizeof(test2), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test3, sizeof(test3));
+	ret = test_scte_104(ctx, test3, sizeof(test3), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test4, sizeof(test4));
+	ret = test_scte_104(ctx, test4, sizeof(test4), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test5, sizeof(test5));
+	ret = test_scte_104(ctx, test5, sizeof(test5), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test6, sizeof(test6));
+	ret = test_scte_104(ctx, test6, sizeof(test6), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test7, sizeof(test7));
+	ret = test_scte_104(ctx, test7, sizeof(test7), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test8, sizeof(test8));
+	ret = test_scte_104(ctx, test8, sizeof(test8), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test9, sizeof(test9));
+	ret = test_scte_104(ctx, test9, sizeof(test9), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test10, sizeof(test10));
+	ret = test_scte_104(ctx, test10, sizeof(test10), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test11, sizeof(test11));
+	ret = test_scte_104(ctx, test11, sizeof(test11), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test12, sizeof(test12));
+	ret = test_scte_104(ctx, test12, sizeof(test12), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
-	ret = test_scte_104(ctx, test13, sizeof(test13));
+	ret = test_scte_104(ctx, test13, sizeof(test13), 1);
 	if (ret < 0)
 		fprintf(stderr, "SCTE-104 failed to parse\n");
 
