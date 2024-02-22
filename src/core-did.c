@@ -55,6 +55,7 @@ static struct did_s {
 	{ 0x41, 0x0A,  "S2068", "Stereoscopic 3D Frame Compatible Packing and Signaling"},
 	{ 0x41, 0x0B,"S2064-2", "Lip Sync data as specified by ST 2064-1"},
 	{ 0x41, 0x0C,"S2108-1", "Extended HDR/WCG for SDI"},
+	{ 0x41, 0x0D,"S2108-2", "Vertical Ancillary Data Mapping of KLV Formatted HDR/WCG Metadata"},
 	{ 0x43, 0x01,"ITU-R BT.1685", "Structure of inter-station control data"},
 	{ 0x43, 0x02,   "RDD8", "Subtitling Distribution packet (SDP)"},
 	{ 0x43, 0x03,   "RDD8", "Transport of ANC packet in an ANC Multipacket"},
