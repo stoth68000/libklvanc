@@ -356,6 +356,15 @@ int klvanc_smpte2038_packetizer_begin(struct klvanc_smpte2038_packetizer_s *ctx)
 	return 0;
 }
 
+/* Add the parity bits if they are absent */
+static uint16_t add_parity(uint16_t val)
+{
+	if (val & 0x300)
+		return val;
+	else
+		return val | (__builtin_parity(val) ? 0x100 : 0x200);
+}
+
 int klvanc_smpte2038_packetizer_append(struct klvanc_smpte2038_packetizer_s *ctx, struct klvanc_packet_header_s *pkt)
 {
 #if KLVANC_SMPTE2038_PACKETIZER_DEBUG
@@ -374,9 +383,9 @@ int klvanc_smpte2038_packetizer_append(struct klvanc_smpte2038_packetizer_s *ctx
         klbs_write_bits(ctx->bs, 0, 1);				/* c_not_y_channel_flag */
         klbs_write_bits(ctx->bs, pkt->lineNr, 11);		/* line_number */
         klbs_write_bits(ctx->bs, offset, 12);			/* horizontal_offset */
-        klbs_write_bits(ctx->bs, pkt->did, 10);			/* DID */
-        klbs_write_bits(ctx->bs, pkt->dbnsdid, 10);		/* SDID */
-        klbs_write_bits(ctx->bs, pkt->payloadLengthWords, 10);	/* data_count */
+        klbs_write_bits(ctx->bs, add_parity(pkt->did), 10);	/* DID */
+        klbs_write_bits(ctx->bs, add_parity(pkt->dbnsdid), 10);	/* SDID */
+        klbs_write_bits(ctx->bs, add_parity(pkt->payloadLengthWords), 10); /* data_count */
 	for (int i = 0; i < pkt->payloadLengthWords; i++)
         	klbs_write_bits(ctx->bs, pkt->payload[i], 10);	/* user_data_word */
        	klbs_write_bits(ctx->bs, pkt->checksum, 10);		/* checksum_word */
@@ -479,20 +488,9 @@ int klvanc_smpte2038_convert_line_to_words(struct klvanc_smpte2038_anc_data_line
 	   parity computation).  It also avoids cases where we might turn a bad parity into
 	   a good parity value (e.g. the input is malformed and recomputing the parity would
 	   result in bad data having a good parity). */
-	if (l->DID & 0x300)
-		arr[i++] = l->DID;
-	else
-		arr[i++] = l->DID | (__builtin_parity(l->DID) ? 0x100 : 0x200);
-
-	if (l->SDID & 0x300)
-		arr[i++] = l->SDID;
-	else
-		arr[i++] = l->SDID | (__builtin_parity(l->SDID) ? 0x100 : 0x200);
-
-	if (l->data_count & 0x300)
-		arr[i++] = l->data_count;
-	else
-		arr[i++] = l->data_count | (__builtin_parity(l->data_count) ? 0x100 : 0x200);
+	arr[i++] = add_parity(l->DID);
+	arr[i++] = add_parity(l->SDID);
+	arr[i++] = add_parity(l->data_count);
 
 	for (int j = 0; j < VANC8(l->data_count); j++)
 		arr[i++] = l->user_data_words[j];
