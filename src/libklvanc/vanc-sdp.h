@@ -60,6 +60,39 @@ int klvanc_create_SDP(struct klvanc_packet_sdp_s **pkt);
  */
 void klvanc_destroy_SDP(struct klvanc_packet_sdp_s *pkt);
 
+/**
+ * @brief	Finalize a packet and prepare to serialize to output
+ * @param[in]	struct klvanc_packet_sdp_s *pkt - A SDP VANC entry, received from the SDP parser
+ * @param[in]	uint16_t seqNum - Sequence Number.  This value should increment with each packet output over the final SDI link.
+ */
+void klvanc_finalize_SDP(struct klvanc_packet_sdp_s *pkt, uint16_t seqNum);
+
+/**
+ * @brief	Convert type struct klvanc_packet_sdp_s into a more traditional line of\n
+ *              vanc words, so that we may push out as VANC data.
+ *              On success, caller MUST free the resulting *words array.
+ * @param[in]	struct klvanc_packet_sdp_s *pkt - A SDP VANC entry
+ * @param[out]	uint16_t **words - An array of words representing a fully formed vanc line.
+ * @param[out]	uint16_t *wordCount - Number of words in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_SDP_to_words(struct klvanc_packet_sdp_s *pkt, uint16_t **words, uint16_t *wordCount);
+
+/**
+ * @brief	Convert type struct klvanc_packet_sdp_s into a block of bytes which represents\n
+ *              an SDP packet
+ *              On success, caller MUST free the resulting *bytes array.
+ * @param[in]	struct klvanc_packet_sdp_s *pkt - A SDP VANC entry, received from the SDP parser
+ * @param[out]	uint8_t **bytes - An array of bytes representing the serialized SDP packet
+ * @param[out]	uint16_t *byteCount - Number of bytes in the array.
+ * @return        0 - Success
+ * @return      < 0 - Error
+ * @return      -ENOMEM - Not enough memory to satisfy request
+ */
+int klvanc_convert_SDP_to_packetBytes(struct klvanc_packet_sdp_s *pkt, uint8_t **bytes, uint16_t *byteCount);
+
 #ifdef __cplusplus
 };
 #endif
