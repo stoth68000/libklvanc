@@ -29,6 +29,9 @@ int klvanc_dump_SDP(struct klvanc_context_s *ctx, void *p)
 	}
 
 	PRINT_DEBUG_MEMBER_INT(pkt->sequence_counter);
+	PRINT_DEBUG(" pkt->checksum = 0x%02x (%s)\n",
+		    pkt->checksum,
+		    pkt->checksum_valid == 1 ? "VALID" : "INVALID");
 	PRINT_DEBUG("\n");
 
 	return KLAPI_OK;
@@ -81,6 +84,17 @@ int parse_SDP(struct klvanc_context_s *ctx,
 	pkt->sequence_counter =
 	    ((uint16_t) (hdr->payload[9 + (45 * payloadBIndex) + 1] & 0xff) <<
 	     8) | (hdr->payload[9 + (45 * payloadBIndex) + 2] & 0xff);
+	pkt->checksum = hdr->payload[length - 1];
+
+	/* Validate checksum */
+	uint8_t sum = 0;
+	for (int i = 0; i < hdr->payloadLengthWords; i++) {
+		sum += hdr->payload[i];
+	}
+	if (sum == 0)
+		pkt->checksum_valid = 1;
+	else
+		pkt->checksum_valid = 0;
 
 	ctx->callbacks->sdp(ctx->callback_context, ctx, pkt);
 

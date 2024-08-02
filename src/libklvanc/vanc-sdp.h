@@ -40,6 +40,8 @@ struct klvanc_packet_sdp_s
 	enum klvanc_sdp_format_code_e format_code;
 	struct klvanc_sdp_desc_s descriptors[5];
 	uint16_t sequence_counter;
+	uint8_t checksum;
+	uint8_t checksum_valid;
 };
 
 int klvanc_dump_SDP(struct klvanc_context_s *ctx, void *p);
