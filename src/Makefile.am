@@ -1,6 +1,9 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libklvanc.pc
+
 lib_LTLIBRARIES = libklvanc.la
 
 libklvanc_la_SOURCES  = core.c

@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 AM_SILENT_RULES([yes])
+AC_CONFIG_FILES([src/libklvanc.pc:src/libklvanc.pc.in])
 
 # Checks for programs.
 AC_PROG_CC
