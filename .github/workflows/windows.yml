@@ -1,0 +1,27 @@
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            autotools
+            mingw-w64-x86_64-gcc
+
+      - shell: msys2 {0}
+        run: |
+          ./autogen.sh --build
+          ./configure
+          make
+          make test
+
