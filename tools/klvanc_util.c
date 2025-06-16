@@ -23,6 +23,8 @@
 #include <string.h>
 #include <libgen.h>
 
+#include "platform.h"
+
 /* External tool hooks */
 extern int demo_main(int argc, char *argv[]);
 extern int parse_main(int argc, char *argv[]);
@@ -54,6 +56,9 @@ int main(int argc, char *argv[])
 		{ 0, 0 },
 	};
 	char *appname = basename(argv[0]);
+	char *extension = strcasestr_(appname, ".exe");
+	if (extension)
+		*extension = '\0';
 
 	int i = 0;
 	struct app_s *app = &apps[i++];

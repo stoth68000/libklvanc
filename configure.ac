@@ -58,6 +58,15 @@ AM_COND_IF(DEBUG,
     AC_DEFINE(DEBUG, 1, [Define to 0 if this is a release build]),
     AC_DEFINE(DEBUG, 0, [Define to 1 or higher if this is a debug build]))
 
+on_windows=no
+case "${host_os}" in
+  mingw*|windows*)
+    on_windows=yes
+    ;;
+esac
+
+AM_CONDITIONAL([WINDOWS], [test $on_windows = yes])
+
 AC_CONFIG_FILES([Makefile src/Makefile tools/Makefile])
 AC_OUTPUT
 

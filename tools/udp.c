@@ -20,12 +20,15 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
+
+// TODO: implement UDP on Windows
+#ifndef _WIN32
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/poll.h>
-#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
@@ -33,7 +36,11 @@
 #include <net/if.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#endif
+
 #include "udp.h"
+
+#ifndef _WIN32
 
 /* Compilation issues on centos, trouble headers won't include
  *  * even with reasonable #defines.
@@ -107,6 +114,8 @@ static int modifyMulticastInterfaces(int skt, struct sockaddr_in *sin, char *ipa
 		return -1;
 }
 
+#endif
+
 int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	unsigned int socket_buffer_size,
 	const char *ip_addr,
@@ -115,6 +124,10 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	void *userContext,
 	int stripRTPHeader)
 {
+#ifdef _WIN32
+	fprintf(stderr, "UDP is not yet implemented on Windows\n");
+	return -1;
+#else
 	if (!ip_addr)
 		return -1;
 
@@ -179,10 +192,14 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	pthread_mutex_init(&ctx->fh_mutex, NULL);
 	*p = ctx;
 	return 0;
+#endif
 }
 
 void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 {
+#ifdef _WIN32
+	*p = NULL;
+#else
 	struct iso13818_udp_receiver_s *ctx = (struct iso13818_udp_receiver_s *)*p;
 
 	ctx->thread_terminate = 1;
@@ -200,26 +217,36 @@ void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 	free(ctx->rxbuffer);
 	free(ctx);
 	*p = 0;
+#endif
 }
 
 int iso13818_udp_receiver_join_multicast(struct iso13818_udp_receiver_s *ctx, char *ifname)
 {
 	assert(ctx && ifname);
+#ifdef _WIN32
+	return -1;
+#else
 	if (!IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 		return -1;
 
 	return modifyMulticastInterfaces(ctx->skt, &ctx->sin, ctx->ip_addr, ctx->ip_port, IP_ADD_MEMBERSHIP, ifname);
+#endif
 }
 
 int iso13818_udp_receiver_drop_multicast(struct iso13818_udp_receiver_s *ctx, char *ifname)
 {
 	assert(ctx && ifname);
+#ifdef _WIN32
+	return -1;
+#else
 	if (!IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 		return -1;
 
 	return modifyMulticastInterfaces(ctx->skt, &ctx->sin, ctx->ip_addr, ctx->ip_port, IP_DROP_MEMBERSHIP, ifname);
+#endif
 }
 
+#ifndef _WIN32
 static void *udp_receiver_threadfunc(void *p)
 {
 	struct iso13818_udp_receiver_s *ctx = (struct iso13818_udp_receiver_s *)p;
@@ -264,12 +291,18 @@ static void *udp_receiver_threadfunc(void *p)
 	ctx->thread_running = 0;
 	pthread_exit(0);
 }
+#endif
 
 int iso13818_udp_receiver_thread_start(struct iso13818_udp_receiver_s *ctx)
 {
+#ifdef _WIN32
+	return -ENOSYS;
+#else
+
 	assert(ctx);
 	assert(ctx->threadId == 0);
 	return pthread_create(&ctx->threadId, 0, udp_receiver_threadfunc, ctx);
+#endif
 }
 
 /* UDP Transmitter ... */

@@ -14,6 +14,7 @@ sources = files(
   'ts_packetizer.c',
   'klringbuffer.c',
   'pes_extractor.c',
+  'platform.c',
 )
 
 thread_dep = dependency('threads')

@@ -1,4 +1,8 @@
 *.o
+*.pc
+*.exe
+*.dll
+.cache/
 .deps/
 .libs/
 Makefile.in
@@ -11,6 +15,7 @@ config.log
 config.status
 config.sub
 configure
+configure~
 depcomp
 install-sh
 libtool
@@ -20,3 +25,4 @@ missing
 libklvanc.la
 src/libklvanc_la-*.lo
 doxygen/html
+compile_commands.json

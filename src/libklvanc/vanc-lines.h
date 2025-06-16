@@ -38,7 +38,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {

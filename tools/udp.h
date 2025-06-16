@@ -27,9 +27,14 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#define SOCKET int
+#endif
 #include <sys/time.h>
 
 #ifdef __cplusplus
@@ -37,9 +42,8 @@ extern "C" {
 #endif
 
 typedef void (*tsudp_receiver_callback)(void *userContext, unsigned char *buf, int byteCount);
-struct iso13818_udp_receiver_s
-{
-	int skt;
+struct iso13818_udp_receiver_s {
+	SOCKET skt;
 
 	struct sockaddr_in sin;
 	unsigned int ip_port;

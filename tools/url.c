@@ -19,12 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <regex.h>
 
 #include "url.h"
+#include "platform.h"
 
 static int url_argsplit(char *arg, char **tag, char **value)
 {
@@ -36,7 +38,7 @@ static int url_argsplit(char *arg, char **tag, char **value)
 	strcpy(tmp, arg);
 	char *str = tmp;
 
-	char *p = strsep(&str, "=");
+	char *p = strsep_(&str, "=");
 	if (!p || !str) {
 		free(tmp);
 		return -2;
@@ -47,7 +49,7 @@ static int url_argsplit(char *arg, char **tag, char **value)
 		return -1;
 	}
 
-	p = strsep(&str, "=");
+	p = strsep_(&str, "=");
 	/* Strip any trailing args */
 	for (int i = 0; i < strlen(p); i++) {
 		if ((*(p + i) == '?') || (*(p + i) == '&')) {
@@ -63,23 +65,6 @@ static int url_argsplit(char *arg, char **tag, char **value)
 
 	free(tmp);
 	return 0;
-}
-
-static int regex_match(const char *str, const char *pattern)
-{
-	int ret = -1;
-        regex_t rex;
-	if (regcomp(&rex, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE) == 0) {
-
-		if (regexec(&rex, str, 0, 0, 0) == REG_NOMATCH) {
-			ret = -1;
-		} else {
-			ret = 0;
-		}
-	}
-
-	regfree(&rex);
-	return ret;
 }
 
 void url_print(struct url_opts_s *url)
@@ -113,17 +98,51 @@ void url_print(struct url_opts_s *url)
 	}
 }
 
-static int has_url_argname(const char *url, const char *argname)
+static bool has_url_argname(const char *url, const char *argname)
 {
-	char tmp[256];
-	sprintf(tmp, "\\?%s=", argname);
-	if (regex_match(url, tmp) < 0) {
-		tmp[1] = '&';
-		if (regex_match(url, tmp) < 0) {
-			return 0;
-		}
+	char pattern[64];
+	snprintf(pattern, sizeof(pattern), "?%s=", argname);
+	pattern[sizeof(pattern) - 1] = '\0'; // null terminate if necessary
+	if (strcasestr_(url, pattern))
+		return true;
+	pattern[0] = '&';
+	return strcasestr_(url, pattern);
+}
+
+static bool has_known_protocol(const char *url)
+{
+	static const char *const patterns[] = { "udp://", "rtp://" };
+	for (size_t i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
+		const char *pat = patterns[i];
+		// check if the prefix matches pat
+		if (strncasecmp_(url, pat, strlen(pat)) == 0)
+			return true;
 	}
-	return 1;
+	return false;
+}
+
+static bool has_good_url_shape(const char *url)
+{
+	// based off the original regex `://[0-9a-zA-Z].*:[0-9]*`
+	// but adjusted to be slightly more sane.
+	bool part_empty = true;
+	for (; isalpha((unsigned char)*url); url++)
+		part_empty = false;
+	if (part_empty)
+		return false;
+	if (*url++ != ':')
+		return false;
+	if (*url++ != '/')
+		return false;
+	if (*url++ != '/')
+		return false;
+	if (!isalnum((unsigned char)*url++))
+		return false;
+	while (*url && *url != ':')
+		url++;
+	if (*url++ != ':')
+		return false;
+	return isdigit((unsigned char)*url);
 }
 
 int url_parse(const char *url, struct url_opts_s **result)
@@ -134,7 +153,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 	strncpy(opts->url, url, sizeof(opts->url) - 1);
 
 	/* Check the protocol */
-	if (regex_match(url, "^(udp|rtp)://") < 0) {
+	if (!has_known_protocol(url)) {
 		ret = -1;
 		goto err;
 	}
@@ -161,56 +180,57 @@ int url_parse(const char *url, struct url_opts_s **result)
 	}
 
 	/* Validate the basic shape of the URL */
-	if (regex_match(url, "://[0-9a-zA-Z].*:[0-9]*") < 0) {
+	if (!has_good_url_shape(url)) {
 		free(opts);
 		return -1;
 	}
 
-        /* Clone the string into a tmp buffer as strsep will want to modify it */
-        char tmp[256];
-        memset(tmp, 0, sizeof(tmp));
-        strncpy(tmp, url, sizeof(tmp) - 1);
+	/* Clone the string into a tmp buffer as strsep_ will want to modify it */
+	char tmp[256];
+	memset(tmp, 0, sizeof(tmp));
+	strncpy(tmp, url, sizeof(tmp) - 1);
 
-        char *str = &tmp[0];
-        char *p = strsep(&str, ":");
-        if (!p || !str) {
+	char *str = &tmp[0];
+	char *p = strsep_(&str, ":");
+	if (!p || !str) {
 		free(opts);
-                return -1;
+		return -1;
 	}
 
-        strncpy(opts->protocol, p, sizeof(opts->protocol) - 1);
+	strncpy(opts->protocol, p, sizeof(opts->protocol) - 1);
 	if (strcasecmp(opts->protocol, "udp") == 0)
 		opts->protocol_type = P_UDP;
 	else
 	if (strcasecmp(opts->protocol, "rtp") == 0)
 		opts->protocol_type = P_RTP;
 
-        /* Skip the "//" after the : */
-        if ((*(str + 0) == '/') && *(str + 1) == '/')
-            str += 2;
+	/* Skip the "//" after the : */
+	if ((*(str + 0) == '/') && *(str + 1) == '/')
+		str += 2;
 
-        /* ip address */
-        p = strsep(&str, ":");
-        if (!p) {
+	/* ip address */
+	p = strsep_(&str, ":");
+	if (!p) {
 		/* No hostname */
 		free(opts);
-                return -2;
+		return -2;
 	}
 
-	if (regex_match(p, "^\[0-9].*.$") == 0)
+	// based off the original regex: `^[0-9].*.$`
+	if (*p >= '0' && *p <= '9' && strlen(p) >= 2)
 		opts->has_ipaddress = 1;
 
-        strncpy(opts->hostname, p, sizeof(opts->hostname) - 1);
+	strncpy(opts->hostname, p, sizeof(opts->hostname) - 1);
 
-        /* ip port */
-        p = strsep(&str, ":");
-        if (!p) {
+	/* ip port */
+	p = strsep_(&str, ":");
+	if (!p) {
 		/* No port */
 		free(opts);
-                return -2;
+		return -2;
 	}
 
-        opts->port = atoi(p);
+	opts->port = atoi(p);
 	if (opts->port <= 65535)
 		opts->has_port = 1;
 
@@ -219,10 +239,9 @@ int url_parse(const char *url, struct url_opts_s **result)
 	strncpy(tmp2, url, sizeof(tmp2) - 1);
 	char *str2 = &tmp2[0];
 
-	char *q = strsep(&str2, "?&");
+	char *q = strsep_(&str2, "?&");
 	while (q && has_args) {
-
-		q = strsep(&str2, "?&");
+		q = strsep_(&str2, "?&");
 		if (!q)
 			break;
 
@@ -230,7 +249,7 @@ int url_parse(const char *url, struct url_opts_s **result)
 		if (url_argsplit(q, &tag, &value) < 0) {
 			printf("split error\n");
 		}
-                //printf("tag = [%s] = [%s]\n", tag, value);
+		//printf("tag = [%s] = [%s]\n", tag, value);
 		if (tag) {
 			if (strcasecmp(tag, "ifname") == 0)
 				strncpy(opts->ifname, value, sizeof(opts->ifname) - 1);
@@ -263,11 +282,11 @@ int url_parse(const char *url, struct url_opts_s **result)
 err:
 	*result = 0;
 	free(opts);
-        return ret;
+	return ret;
 }
 
 void url_free(struct url_opts_s *arg)
 {
-        free(arg);
+	free(arg);
 }
 

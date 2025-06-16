@@ -36,6 +36,7 @@
 #include "pes_extractor.h"
 #include "version.h"
 #include "hexdump.h"
+#include "platform.h"
 
 #define DEFAULT_FIFOSIZE 1048576
 #define DEFAULT_PID 0x80
@@ -268,16 +269,16 @@ static int _main(int argc, char *argv[])
 			} else
 				inputType = IT_UDP;
 			break;
-                case 'P':
-                        if ((sscanf(optarg, "0x%x", &ctx->pid) != 1) || (ctx->pid > 0x1fff))
+		case 'P':
+			if ((sscanf(optarg, "0x%x", &ctx->pid) != 1) || (ctx->pid > 0x1fff))
 				_usage(argv[0], 1);
-                        break;
+			break;
 		case 'v':
 			ctx->verbose++;
 			break;
 		case 't':
 			ctx->decode_types = optarg;
-			while( (dtype = strsep(&ctx->decode_types, ",")) != NULL ) {
+			while ((dtype = strsep_(&ctx->decode_types, ",")) != NULL) {
 				int found = 0;
 				if (strcmp("all", dtype) == 0) {
 					for (int j = 0; j < (sizeof(valid_decode_types) / sizeof(struct decode_types)); j++)
@@ -320,7 +321,7 @@ static int _main(int argc, char *argv[])
 	ctx->vanchdl->callbacks = &callbacks;
 
 	if (inputType == IT_UDP) {
-      	  int fs = DEFAULT_FIFOSIZE;
+		int fs = DEFAULT_FIFOSIZE;
 		if (ctx->i_url->has_fifosize)
 			fs = ctx->i_url->fifosize;
 
