@@ -9,6 +9,7 @@ sources = files(
   'eia708.c',
   'smpte12_2.c',
   'afd.c',
+  'sdp.c',
   'udp.c',
   'url.c',
   'ts_packetizer.c',
@@ -28,6 +29,7 @@ foreach exe_name: [
   'klvanc_eia708',
   'klvanc_smpte12_2',
   'klvanc_afd',
+  'klvanc_sdp',
 ]
   exe = executable(exe_name,
     sources,
@@ -41,7 +43,8 @@ foreach exe_name: [
     'klvanc_scte104',
     'klvanc_smpte12_2',
     'klvanc_gensmpte2038',
-    'klvanc_afd']
+    'klvanc_afd',
+    'klvanc_sdp']
     test_name = 'test_' + exe_name
     test(test_name, exe)
   elif exe_name == 'klvanc_smpte2038'
