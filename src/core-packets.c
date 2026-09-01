@@ -153,6 +153,19 @@ static int parse(struct klvanc_context_s *ctx, const unsigned short *arr, unsign
 		return -ENOMEM;
 	}
 
+	/* payloadLengthWords (the wire "data count" byte) is attacker/hardware
+	   controlled and, until now, was never checked against `len` -- the
+	   number of words actually available starting at `arr`. Reading
+	   payload[0..payloadLengthWords-1] plus the trailing checksum word
+	   below requires 6 (header) + payloadLengthWords + 1 (checksum)
+	   words to genuinely be present; without this check a short/
+	   truncated line whose data count byte overstates its own length
+	   causes an out-of-bounds read past the caller's buffer. */
+	if ((unsigned int)(6 + p->payloadLengthWords + 1) > len) {
+		free(p);
+		return -EINVAL;
+	}
+
 	int i;
 	for (i = 0; i < p->payloadLengthWords; i++) {
 		p->payload[i] = *(arr + 6 + i);
@@ -296,6 +309,8 @@ int klvanc_sdi_create_payload(uint8_t sdid, uint8_t did,
 
 	int header_length = 6 + 1; /* Header 6 and checksum footer 1 */
 	uint16_t *arr = calloc(2, srcByteCount + header_length);
+	if (!arr)
+		return -ENOMEM;
 
 	uint16_t *v = arr;
 

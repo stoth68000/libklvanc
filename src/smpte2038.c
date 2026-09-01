@@ -45,8 +45,11 @@ void klvanc_smpte2038_anc_data_packet_free(struct klvanc_smpte2038_anc_data_pack
 
 	for (int i = 0; i < pkt->lineCount; i++) {
 		struct klvanc_smpte2038_anc_data_line_s *l = pkt->lines + i;
-		if (VANC8(l->data_count))
-			free(l->user_data_words);
+		/* user_data_words is always calloc'd (even for data_count == 0,
+		   which still allocates a 1-element buffer for the checksum
+		   slot), so it must always be freed -- gating this on
+		   VANC8(l->data_count) leaked the data_count == 0 case. */
+		free(l->user_data_words);
 	}
 	if (pkt->lineCount)
 		free(pkt->lines);
@@ -107,7 +110,11 @@ static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klv
 	int byteAligned = 0;
 
 	while (rem > 4) {
-		h->lines = realloc(h->lines, (h->lineCount + 1) * sizeof(struct klvanc_smpte2038_anc_data_line_s));
+		struct klvanc_smpte2038_anc_data_line_s *newlines = realloc(h->lines,
+			(h->lineCount + 1) * sizeof(struct klvanc_smpte2038_anc_data_line_s));
+		if (newlines == NULL)
+			goto err;
+		h->lines = newlines;
 
 		struct klvanc_smpte2038_anc_data_line_s *l = h->lines + h->lineCount;
 		memset(l, 0, sizeof(*l));
@@ -134,11 +141,19 @@ static int smpte2038_parse_pes_payload_int(struct klbs_context_s *bs, struct klv
 		 * into the checksum field later, it makes for easier processing.
 		 */
 		l->user_data_words = calloc(sizeof(uint16_t), VANC8(l->data_count) + 1);
+		if (l->user_data_words == NULL)
+			goto err;
 
 		udwByteCount = (((VANC8(l->data_count) + 1) * 10) / 8);
 
 		/* Ensure we not overrunning because of bad data. */
 		if (udwByteCount > (klbs_get_buffer_size(bs) - klbs_get_byte_count(bs))) {
+			/* This line's user_data_words was allocated above but
+			   h->lineCount hasn't been incremented for it yet, so
+			   klvanc_smpte2038_anc_data_packet_free() (which only walks
+			   [0, lineCount)) would never free it -- free it here. */
+			free(l->user_data_words);
+			l->user_data_words = NULL;
 			goto err;
 		}
 		for (uint16_t i = 0; i < VANC8(l->data_count); i++)
@@ -305,6 +320,11 @@ int klvanc_smpte2038_packetizer_alloc(struct klvanc_smpte2038_packetizer_s **ctx
 		return -1;
 	}
 	p->bs = klbs_alloc();
+	if (!p->bs) {
+		free(p->buf);
+		free(p);
+		return -1;
+	}
 
 	*ctx = p;
 	return 0;
@@ -315,21 +335,28 @@ static __inline void klvanc_smpte2038_buffer_recalc(struct klvanc_smpte2038_pack
 	ctx->buffree = ctx->buflen - ctx->bufused;
 }
 
-static void klvanc_smpte2038_buffer_adjust(struct klvanc_smpte2038_packetizer_s *ctx, uint32_t newsizeBytes)
+static int klvanc_smpte2038_buffer_adjust(struct klvanc_smpte2038_packetizer_s *ctx, uint32_t newsizeBytes)
 {
 #if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("%s(%d)\n", __func__, newsizeBytes);
 #endif
 	if (newsizeBytes > (128 * 1024)) {
+		/* This used to abort() the whole process on oversized input --
+		   a caller-triggerable denial of service. Fail the operation
+		   instead and let the caller decide how to handle it. */
 		fprintf(stderr, "%s() buffer exceeds impossible limit, with %d additional bytes\n", __func__, newsizeBytes);
-		abort();
+		return -1;
 	}
-	ctx->buf = realloc(ctx->buf, newsizeBytes);
+	uint8_t *newbuf = realloc(ctx->buf, newsizeBytes);
+	if (newbuf == NULL)
+		return -1;
+	ctx->buf = newbuf;
 	ctx->buflen = newsizeBytes;
 	if (ctx->bufused > ctx->buflen)
 		ctx->bufused = ctx->buflen;
 
 	klvanc_smpte2038_buffer_recalc(ctx);
+	return 0;
 }
 
 void klvanc_smpte2038_packetizer_free(struct klvanc_smpte2038_packetizer_s **ctx)
@@ -345,6 +372,7 @@ void klvanc_smpte2038_packetizer_free(struct klvanc_smpte2038_packetizer_s **ctx
 	klbs_free(p->bs);
 	memset(p, 0, sizeof(struct klvanc_smpte2038_packetizer_s));
 	free(p);
+	*ctx = NULL;
 }
 
 int klvanc_smpte2038_packetizer_begin(struct klvanc_smpte2038_packetizer_s *ctx)
@@ -370,11 +398,16 @@ int klvanc_smpte2038_packetizer_append(struct klvanc_smpte2038_packetizer_s *ctx
 #if KLVANC_SMPTE2038_PACKETIZER_DEBUG
 	printf("%s()\n", __func__);
 #endif
+	if (!ctx || !pkt)
+		return -1;
+
 	uint16_t offset = 0; /* TODO: Horizontal offset */
 	uint32_t reqd = pkt->payloadLengthWords * sizeof(uint16_t);
 
-	if ((reqd + 64 /* PES fields - headroom */) > ctx->buffree)
-		klvanc_smpte2038_buffer_adjust(ctx, ctx->buflen + 16384);
+	if ((reqd + 64 /* PES fields - headroom */) > ctx->buffree) {
+		if (klvanc_smpte2038_buffer_adjust(ctx, ctx->buflen + 16384) < 0)
+			return -1;
+	}
 
 	/* Prepare a new 2038 line and add it to the existing buffer */
 

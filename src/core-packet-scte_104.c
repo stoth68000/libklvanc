@@ -240,8 +240,15 @@ static void hexdump(struct klvanc_context_s *ctx, unsigned char *buf, unsigned i
 }
 
 static unsigned char *parse_splice_request_data(struct klvanc_context_s *ctx, unsigned char *p,
-						struct klvanc_splice_request_data *d)
+						struct klvanc_splice_request_data *d,
+						unsigned int len)
 {
+	/* Fixed-format record is 14 bytes; p points into a heap buffer that's
+	   exactly `len` bytes long, so reading unconditionally below would be a
+	   heap buffer over-read for a short/malformed op. */
+	if (len < 14)
+		return p;
+
 	d->splice_insert_type  = *(p++);
 	d->splice_event_id     = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->unique_program_id   = *(p + 0) << 8 | *(p + 1); p += 2;
@@ -323,8 +330,12 @@ static int gen_splice_null_request_data(unsigned char **outBuf, uint16_t *outSiz
 }
 
 static unsigned char *parse_time_signal_request_data(unsigned char *p,
-						     struct klvanc_time_signal_request_data *d)
+						     struct klvanc_time_signal_request_data *d,
+						     unsigned int len)
 {
+	if (len < 2)
+		return p;
+
 	d->pre_roll_time = *(p + 0) << 8 | *(p + 1);
 	p += 2;
 	return p;
@@ -360,8 +371,16 @@ static int gen_time_signal_request_data(const struct klvanc_time_signal_request_
 
 static unsigned char *parse_descriptor_request_data(unsigned char *p,
 						    struct klvanc_insert_descriptor_request_data *d,
-						    unsigned int descriptor_size)
+						    unsigned int len)
 {
+	/* len is the full op data length; the descriptor_count byte is read
+	   first, so len == 0 would read past the end of the (exactly len byte)
+	   heap allocation, and would also underflow `len - 1` below. */
+	if (len < 1)
+		return p;
+
+	unsigned int descriptor_size = len - 1;
+
 	d->descriptor_count = *(p++);
 	d->total_length = descriptor_size;
 
@@ -406,12 +425,20 @@ static int gen_descriptor_request_data(const struct klvanc_insert_descriptor_req
 
 
 static unsigned char *parse_dtmf_request_data(unsigned char *p,
-					      struct klvanc_dtmf_descriptor_request_data *d)
+					      struct klvanc_dtmf_descriptor_request_data *d,
+					      unsigned int len)
 {
+	if (len < 2)
+		return p;
+
 	d->pre_roll_time = *(p++);
 	d->dtmf_length = *(p++);
 	memset(d->dtmf_char, 0, sizeof(d->dtmf_char));
-	if (d->dtmf_length <= sizeof(d->dtmf_char)) {
+	/* dtmf_length is attacker-controlled (0-255); it must fit both the
+	   destination array and the bytes actually remaining in the source
+	   buffer (len - 2), otherwise the memcpy below reads past the heap
+	   allocation at `p`. */
+	if (d->dtmf_length <= sizeof(d->dtmf_char) && d->dtmf_length <= (len - 2)) {
 		memcpy(d->dtmf_char, p, d->dtmf_length);
 	}
 	p += d->dtmf_length;
@@ -451,12 +478,24 @@ static int gen_dtmf_request_data(const struct klvanc_dtmf_descriptor_request_dat
 }
 
 static unsigned char *parse_avail_request_data(unsigned char *p,
-					       struct klvanc_avail_descriptor_request_data *d)
+					       struct klvanc_avail_descriptor_request_data *d,
+					       unsigned int len)
 {
+	if (len < 1)
+		return p;
+
 	d->num_provider_avails = *(p++);
 	memset(d->provider_avail_id, 0, sizeof(d->provider_avail_id));
 
-	for (int i = 0; i < d->num_provider_avails; i++) {
+	/* num_provider_avails (0-255) fits provider_avail_id[255], but that
+	   doesn't mean the source buffer actually has num_provider_avails*4
+	   bytes remaining -- clip to what's left of the len-byte allocation. */
+	unsigned int avail_max = (len - 1) / 4;
+	unsigned int count = d->num_provider_avails;
+	if (count > avail_max)
+		count = avail_max;
+
+	for (unsigned int i = 0; i < count; i++) {
 		d->provider_avail_id[i] = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	}
 
@@ -493,8 +532,15 @@ static int gen_avail_request_data(const struct klvanc_avail_descriptor_request_d
 }
 
 static unsigned char *parse_segmentation_request_data(unsigned char *p,
-						      struct klvanc_segmentation_descriptor_request_data *d)
+						      struct klvanc_segmentation_descriptor_request_data *d,
+						      unsigned int len)
 {
+	/* Fixed header (event_id..upid_length) is 9 bytes; must be validated
+	   before upid_length (attacker-controlled) is used to size the
+	   variable-length upid read/copy below. */
+	if (len < 9)
+		return p;
+
 	d->event_id = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->event_cancel_indicator = *(p++);
 	d->duration = (p[0] << 8) | p[1];
@@ -504,8 +550,16 @@ static unsigned char *parse_segmentation_request_data(unsigned char *p,
 
 	memset(d->upid, 0, sizeof(d->upid));
 
+	/* Fixed trailer after upid (type_id..device_restrictions) is 9 more
+	   bytes; upid_length must fit both d->upid and the bytes actually
+	   remaining, and there must be room left for the trailer too. */
 	if (d->upid_length > sizeof(d->upid))
-		return NULL;
+		return p;
+	if (d->upid_length > (len - 9))
+		return p;
+	if ((len - 9 - d->upid_length) < 9)
+		return p;
+
 	memcpy(d->upid, p, d->upid_length);
 	p += d->upid_length;
 	d->type_id = *(p++);
@@ -572,9 +626,23 @@ static unsigned char *parse_proprietary_command_request_data(unsigned char *p,
 {
 	memset(d->proprietary_data, 0, sizeof(d->proprietary_data));
 
+	/* Fixed header (proprietary_id + proprietary_command) is 5 bytes;
+	   descriptor_size < 5 would underflow `descriptor_size - 5` (unsigned)
+	   into a huge value used as a memcpy length below -- a heap buffer
+	   overflow WRITE into the fixed 255-byte proprietary_data array. */
+	if (descriptor_size < 5) {
+		d->data_length = 0;
+		return p;
+	}
+
 	d->proprietary_id = *(p + 0) << 24 | *(p + 1) << 16 | *(p + 2) <<  8 | *(p + 3); p += 4;
 	d->proprietary_command = *(p++);
 	d->data_length = descriptor_size - 5;
+
+	/* Also clamp against the destination array size -- descriptor_size
+	   can be up to 65535 (data_length is uint16_t). */
+	if (d->data_length > sizeof(d->proprietary_data))
+		d->data_length = sizeof(d->proprietary_data);
 
 	memcpy(d->proprietary_data, p, d->data_length);
 	p+= d->data_length;
@@ -614,8 +682,11 @@ static int gen_proprietary_command_request_data(const struct klvanc_proprietary_
 	return 0;
 }
 
-static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data *d)
+static unsigned char *parse_tier_data(unsigned char *p, struct klvanc_tier_data *d, unsigned int len)
 {
+	if (len < 2)
+		return p;
+
 	d->tier_data = *(p + 0) << 8 | *(p + 1); p += 2;
 
 	/* SCTE 104:2015 Sec 9.8.9.1 says the top four bits must be zero */
@@ -652,8 +723,11 @@ static int gen_tier_data(const struct klvanc_tier_data *d, unsigned char **outBu
 	return 0;
 }
 
-static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time_descriptor_data *d)
+static unsigned char *parse_time_descriptor(unsigned char *p, struct klvanc_time_descriptor_data *d, unsigned int len)
 {
+	if (len < 12)
+		return p;
+
 	struct klbs_context_s *bs = klbs_alloc();
 	if (bs == NULL)
 		return NULL;
@@ -1052,6 +1126,7 @@ static int messageFragmentFinal(struct klvanc_context_s *ctx, struct klvanc_pack
 		}
 
 		if (klvanc_packet_payload_append(dst, ctx->scte104_fragments[i], offset) < 0) {
+			klvanc_packet_free(dst);
 			messageFragmentReset(ctx);
 			return -1;
 		}
@@ -1162,6 +1237,18 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	 * ST: Subsequently extended this to support much larger messages, up to 2000
 	 *     as ser ST2010-2008 Section 5.
 	 */
+	if (hdr->payloadLengthWords < 1) {
+		/* payloadLengthWords - 1 below is unsigned; a value of 0 would
+		   underflow to a huge payloadLengthBytes, which defeats every
+		   bounds check later in this function that's expressed as
+		   `... > pkt->payloadLengthBytes` (they'd never trigger). */
+		PRINT_ERR("%s() packet too short, no payload\n", __func__);
+		free(pkt);
+		if (fullhdr)
+			klvanc_packet_free(fullhdr);
+		return -EINVAL;
+	}
+
 	for (int i = 0; i < sizeof(pkt->payload); i++) {
 		/* hdr->payload is defined as 16384 shorts */
 		pkt->payload[i] = hdr->payload[1 + i];
@@ -1221,6 +1308,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		if (pkt->payloadLengthBytes < 10) {
 			PRINT_ERR("%s() packet too short size=%d\n", __func__, pkt->payloadLengthBytes);
 			free(pkt);
+			if (fullhdr)
+				klvanc_packet_free(fullhdr);
 			return -1;
 		}
 
@@ -1235,6 +1324,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		if (mom->messageSize > pkt->payloadLengthBytes) {
 			PRINT_ERR("%s() MOM packet too short MOM=%d pkt=%d\n", __func__, mom->messageSize, pkt->payloadLengthBytes);
 			free(pkt);
+			if (fullhdr)
+				klvanc_packet_free(fullhdr);
 			return -1;
 		}
 
@@ -1246,6 +1337,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 		if (!mom->ops) {
 			PRINT_ERR("%s() unable to allocate momo ram, error.\n", __func__);
 			free(pkt);
+			if (fullhdr)
+				klvanc_packet_free(fullhdr);
 			return -1;
 		}
 
@@ -1260,6 +1353,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 					free(mom->ops[j].data);
 				free(mom->ops);
 				free(pkt);
+				if (fullhdr)
+					klvanc_packet_free(fullhdr);
 				return -1;
 			}
 			o->data = malloc(o->data_length);
@@ -1269,33 +1364,41 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 					free(mom->ops[j].data);
 				free(mom->ops);
 				free(pkt);
+				if (fullhdr)
+					klvanc_packet_free(fullhdr);
 				return -1;
 			} else {
 				memcpy(o->data, p + 4, o->data_length);
 			}
 			p += (4 + o->data_length);
 
+			/* Every parse_*_request_data() call below trusts o->data to be at
+			   least as long as its fixed-format record and reads unconditionally
+			   -- but o->data is malloc'd to exactly o->data_length bytes (above),
+			   so a short/malformed op would read past the end of that heap
+			   allocation. Each parser is passed o->data_length and validates it
+			   internally before reading. */
 			if (o->opID == MO_SPLICE_REQUEST_DATA)
-				parse_splice_request_data(ctx, o->data, &o->sr_data);
+				parse_splice_request_data(ctx, o->data, &o->sr_data, o->data_length);
 			else if (o->opID == MO_TIME_SIGNAL_REQUEST_DATA)
-				parse_time_signal_request_data(o->data, &o->timesignal_data);
+				parse_time_signal_request_data(o->data, &o->timesignal_data, o->data_length);
 			else if (o->opID == MO_INSERT_DESCRIPTOR_REQUEST_DATA)
 				parse_descriptor_request_data(o->data, &o->descriptor_data,
-					o->data_length - 1);
+					o->data_length);
 			else if (o->opID == MO_INSERT_AVAIL_DESCRIPTOR_REQUEST_DATA)
 				parse_avail_request_data(o->data,
-							 &o->avail_descriptor_data);
+							 &o->avail_descriptor_data, o->data_length);
 			else if (o->opID == MO_INSERT_DTMF_REQUEST_DATA)
-				parse_dtmf_request_data(o->data, &o->dtmf_data);
+				parse_dtmf_request_data(o->data, &o->dtmf_data, o->data_length);
 			else if (o->opID == MO_INSERT_SEGMENTATION_REQUEST_DATA)
-				parse_segmentation_request_data(o->data, &o->segmentation_data);
+				parse_segmentation_request_data(o->data, &o->segmentation_data, o->data_length);
 			else if (o->opID == MO_PROPRIETARY_COMMAND_REQUEST_DATA)
 				parse_proprietary_command_request_data(o->data, &o->proprietary_data,
 								       o->data_length);
 			else if (o->opID == MO_INSERT_TIER_DATA)
-				parse_tier_data(o->data, &o->tier_data);
+				parse_tier_data(o->data, &o->tier_data, o->data_length);
 			else if (o->opID == MO_INSERT_TIME_DESCRIPTOR)
-				parse_time_descriptor(o->data, &o->time_data);
+				parse_time_descriptor(o->data, &o->time_data, o->data_length);
 
 #if 0
 			PRINT_DEBUG("PARSED: opID = 0x%04x [%s], length = 0x%04x : ", o->opID, mom_operationName(o->opID), o->data_length);
@@ -1311,6 +1414,8 @@ int parse_SCTE_104(struct klvanc_context_s *ctx,
 	else {
 		PRINT_ERR("%s() Unsupported opID = %x, error.\n", __func__, m->opID);
 		free(pkt);
+		if (fullhdr)
+			klvanc_packet_free(fullhdr);
 		return -1;
 	}
 
@@ -1527,9 +1632,20 @@ int klvanc_SCTE_104_Add_MOM_Op(struct klvanc_packet_scte_104_s *pkt, uint16_t op
 			       struct klvanc_multiple_operation_message_operation **op)
 {
 	struct klvanc_multiple_operation_message *mom = &pkt->mo_msg;
+
+	/* num_ops is unsigned char (wire field is a single byte); incrementing
+	   past 255 would wrap to 0, and mom->ops[mom->num_ops - 1] with
+	   num_ops == 0 indexes ops[-1] (negative index, undefined behavior). */
+	if (mom->num_ops >= 255)
+		return -1;
+
+	struct klvanc_multiple_operation_message_operation *newops = realloc(mom->ops,
+			   (mom->num_ops + 1) * sizeof(struct klvanc_multiple_operation_message_operation));
+	if (newops == NULL)
+		return -ENOMEM;
+	mom->ops = newops;
 	mom->num_ops++;
-	mom->ops = realloc(mom->ops,
-			   mom->num_ops * sizeof(struct klvanc_multiple_operation_message_operation));
+
 	*op = &mom->ops[mom->num_ops - 1];
 	memset(*op, 0, sizeof(struct klvanc_multiple_operation_message_operation));
 	(*op)->opID = opId;

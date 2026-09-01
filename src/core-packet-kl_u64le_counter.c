@@ -83,6 +83,9 @@ int parse_KL_U64LE_COUNTER(struct klvanc_context_s *ctx, struct klvanc_packet_he
 int klvanc_convert_KL_U64LE_COUNTER_to_words(struct klvanc_packet_kl_u64le_counter_s *pkt,
 					     uint16_t **words, uint16_t *wordCount)
 {
+	if (!pkt || !words || !wordCount)
+		return -1;
+
 	uint8_t buf[8];
 	buf[0] = pkt->counter >> 56;
 	buf[1] = pkt->counter >> 48;

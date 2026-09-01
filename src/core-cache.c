@@ -29,24 +29,50 @@
  * a user may ask "what message types have I seen on what lines?".
  */
 
+#define KLVANC_CACHE_ENTRIES 0x10000
+
 int klvanc_cache_alloc(struct klvanc_context_s *ctx)
 {
-	ctx->cacheLines = calloc(0x10000, sizeof(struct klvanc_cache_s));
-    if (!ctx->cacheLines)
-        return -1;
+	struct klvanc_cache_s *lines = calloc(KLVANC_CACHE_ENTRIES, sizeof(struct klvanc_cache_s));
+	if (!lines)
+		return -1;
 
-    return 0;
+	/* Every entry's mutex must be pthread_mutex_init()'d before use --
+	   calloc() only zero-fills the memory, which is not a valid
+	   pthread_mutex_t on every platform (confirmed: pthread_mutex_lock()
+	   on a zeroed-but-never-initialized mutex returns EINVAL rather than
+	   actually locking anything). If any individual init fails partway
+	   through, unwind the ones already initialized rather than leaving a
+	   partially-initialized array behind. */
+	int i;
+	for (i = 0; i < KLVANC_CACHE_ENTRIES; i++) {
+		if (pthread_mutex_init(&lines[i].mutex, NULL) != 0)
+			break;
+	}
+	if (i != KLVANC_CACHE_ENTRIES) {
+		for (int j = 0; j < i; j++)
+			pthread_mutex_destroy(&lines[j].mutex);
+		free(lines);
+		return -1;
+	}
+
+	ctx->cacheLines = lines;
+	return 0;
 }
 
 void klvanc_cache_free(struct klvanc_context_s *ctx)
 {
-    /* Free any cached lines otherwise we'll memory leak. */
-    klvanc_cache_reset(ctx);
+	if (!ctx->cacheLines)
+		return;
 
-    if (ctx->cacheLines) {
-	    free(ctx->cacheLines);
-        ctx->cacheLines = 0;
-    }
+	/* Free any cached lines otherwise we'll memory leak. */
+	klvanc_cache_reset(ctx);
+
+	for (int i = 0; i < KLVANC_CACHE_ENTRIES; i++)
+		pthread_mutex_destroy(&ctx->cacheLines[i].mutex);
+
+	free(ctx->cacheLines);
+	ctx->cacheLines = 0;
 }
 
 struct klvanc_cache_s * klvanc_cache_lookup(struct klvanc_context_s *ctx, uint8_t didnr, uint8_t sdidnr)
@@ -61,10 +87,10 @@ struct klvanc_cache_s * klvanc_cache_lookup(struct klvanc_context_s *ctx, uint8_
 
 int klvanc_cache_update(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *pkt)
 {
-    if (!ctx)
-        return -1;
-    if (!ctx->cacheLines)
-        return -1;
+	if (!ctx)
+		return -1;
+	if (!ctx->cacheLines)
+		return -1;
 	if (pkt->did > 0xff)
 		return -1;
 	if (pkt->dbnsdid > 0xff)
@@ -73,6 +99,14 @@ int klvanc_cache_update(struct klvanc_context_s *ctx, struct klvanc_packet_heade
 		return -1;
 
 	struct klvanc_cache_s *s = klvanc_cache_lookup(ctx, pkt->did, pkt->dbnsdid);
+
+	/* Every field touched below (including each line's active/count/pkt)
+	   is shared, mutable state that klvanc_cache_lookup() hands a raw
+	   pointer to -- take the entry's mutex for the whole update, not
+	   just the pkt copy/free, so a concurrent reader/updater never
+	   observes a half-updated entry. */
+	pthread_mutex_lock(&s->mutex);
+
 	if (s->activeCount == 0) {
 		s->did = pkt->did;
 		s->sdid = pkt->dbnsdid;
@@ -85,32 +119,35 @@ int klvanc_cache_update(struct klvanc_context_s *ctx, struct klvanc_packet_heade
 	line->active = 1;
 	s->activeCount++;
 
-	pthread_mutex_lock(&line->mutex);
 	if (line->pkt) {
 		klvanc_packet_free(line->pkt);
 		line->pkt = 0;
 	}
 	klvanc_packet_copy(&line->pkt, pkt);
-	pthread_mutex_unlock(&line->mutex);
-
 	line->count++;
+
+	pthread_mutex_unlock(&s->mutex);
 
 	return 0;
 }
 
 void klvanc_cache_reset(struct klvanc_context_s *ctx)
 {
-    if (!ctx)
-        return;
-    if (!ctx->cacheLines)
-        return;
+	if (!ctx)
+		return;
+	if (!ctx->cacheLines)
+		return;
 
 	for (int d = 0; d <= 0xff; d++) {
 		for (int s = 0; s <= 0xff; s++) {
 			struct klvanc_cache_s *e = klvanc_cache_lookup(ctx, d, s);
 
-			if (e->activeCount == 0)
+			pthread_mutex_lock(&e->mutex);
+
+			if (e->activeCount == 0) {
+				pthread_mutex_unlock(&e->mutex);
 				continue;
+			}
 			e->activeCount = 0;
 
 			for (int l = 0; l < 2048; l++) {
@@ -121,13 +158,13 @@ void klvanc_cache_reset(struct klvanc_context_s *ctx)
 				line->active = 0;
 				line->count = 0;
 
-				pthread_mutex_lock(&line->mutex);
 				if (line->pkt) {
 					klvanc_packet_free(line->pkt);
 					line->pkt = 0;
 				}
-				pthread_mutex_unlock(&line->mutex);
 			}
+
+			pthread_mutex_unlock(&e->mutex);
 		}
 	}
 }

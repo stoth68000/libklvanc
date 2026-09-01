@@ -79,6 +79,31 @@ int klvanc_dump_SMPTE_2108_1(struct klvanc_context_s *ctx, void *p)
 	return KLAPI_OK;
 }
 
+/* Declared in vanc-smpte_2108_1.h but, until now, never defined anywhere
+   in this library -- any caller linking against klvanc_alloc_SMPTE_2108_1()/
+   klvanc_free_SMPTE_2108_1() would fail at link time. Implemented here to
+   match the sibling klvanc_alloc_SMPTE_12_2()/klvanc_free_SMPTE_12_2()
+   pattern. */
+int klvanc_alloc_SMPTE_2108_1(struct klvanc_packet_smpte_2108_1_s **outPkt)
+{
+	struct klvanc_packet_smpte_2108_1_s *pkt = calloc(1, sizeof(*pkt));
+	if (pkt == NULL)
+		return -1;
+
+	*outPkt = pkt;
+	return 0;
+}
+
+void klvanc_free_SMPTE_2108_1(void *p)
+{
+	struct klvanc_packet_smpte_2108_1_s *pkt = p;
+
+	if (pkt == NULL)
+		return;
+
+	free(pkt);
+}
+
 int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr, void **pp)
 {
 	struct klbs_context_s *bs;
@@ -111,6 +136,14 @@ int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header
 	klbs_read_set_buffer(bs, pkt->payload, pkt->payloadLengthBytes);
 
 	while (klbs_get_byte_count_free(bs) > 0) {
+		/* num_frames must never reach MAX_S2108_1_FRAMES before we index
+		   frames[num_frames] below -- otherwise a line with enough small
+		   frames writes past the end of the fixed-size frames[] array. */
+		if (pkt->num_frames >= MAX_S2108_1_FRAMES) {
+			/* Too many frames for this struct to hold; stop parsing
+			   rather than overflow frames[]. */
+			break;
+		}
 		struct klvanc_s2108_1_frame *frame = &pkt->frames[pkt->num_frames];
 		if (klbs_get_byte_count_free(bs) < 2) {
 			/* Not enough to read type and length?  malformed */
@@ -119,6 +152,15 @@ int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header
 
 		frame->frame_type = klbs_read_bits(bs, 8);
 		frame->frame_length = klbs_read_bits(bs, 8);
+
+		/* frame_length must cover at least the 2-byte SEI payload type/
+		   length that's unconditionally read next -- a value of 0 or 1
+		   would otherwise underflow `frame_length - 2` below (an
+		   unsigned computation used as a bit count), reading an
+		   enormous number of bits far past this buffer. */
+		if (frame->frame_length < 2) {
+			break;
+		}
 
 		if (klbs_get_byte_count_free(bs) < frame->frame_length) {
 			/* Not enough to read payload?  malformed */
@@ -129,6 +171,15 @@ int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header
 		klbs_read_bits(bs, 16);
 
 		if (frame->frame_type == KLVANC_HDR_STATIC1) {
+			/* 24 bytes: 3x(x,y) 16-bit primaries + white point x/y (16
+			   bits each) + min/max luminance (32 bits each). The
+			   frame_length check above only guarantees frame_length
+			   bytes are available, not that frame_length itself is
+			   large enough for this fixed-size payload -- check
+			   directly against the buffer's true remaining size too. */
+			if (klbs_get_byte_count_free(bs) < 24) {
+				break;
+			}
 			for (int i = 0; i < 3; i++) {
 				frame->static1.display_primaries_x[i] = klbs_read_bits(bs, 16);
 				frame->static1.display_primaries_y[i] = klbs_read_bits(bs, 16);
@@ -138,9 +189,15 @@ int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header
 			frame->static1.max_display_mastering_luminance = klbs_read_bits(bs, 32);
 			frame->static1.min_display_mastering_luminance = klbs_read_bits(bs, 32);
 		} else if (frame->frame_type == KLVANC_HDR_STATIC2) {
+			if (klbs_get_byte_count_free(bs) < 4) {
+				break;
+			}
 			frame->static2.max_content_light_level = klbs_read_bits(bs, 16);
 			frame->static2.max_pic_average_light_level = klbs_read_bits(bs, 16);
 		} else {
+			if (klbs_get_byte_count_free(bs) < (uint32_t)(frame->frame_length - 2)) {
+				break;
+			}
 			klbs_read_bits(bs, 8 * (frame->frame_length - 2));
 		}
 		pkt->num_frames++;

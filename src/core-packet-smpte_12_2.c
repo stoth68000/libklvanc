@@ -433,7 +433,7 @@ int klvanc_SMPTE_12_2_preferred_line(int dbb1, int lineCount, int interlaced)
 	    }
     }
 
-    if (dbb1 != KLVANC_ATC_VITC1 && dbb1 != KLVANC_ATC_VITC1 &&
+    if (dbb1 != KLVANC_ATC_VITC1 && dbb1 != KLVANC_ATC_VITC2 &&
         dbb1 != KLVANC_ATC_LTC) {
 	    /* Table 7 says any line except 9, 10, and 571, so we choose
 	       line 11 */

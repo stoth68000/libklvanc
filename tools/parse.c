@@ -341,6 +341,7 @@ static int usage(const char *progname, int status)
 int parse_main(int argc, char *argv[])
 {
 	int ch;
+	int ret = 0;
 	bool wantHelp = false;
 
 	while ((ch = getopt(argc, argv, "?hf:o:p:vxI:d:s:")) != -1) {
@@ -392,7 +393,11 @@ int parse_main(int argc, char *argv[])
 	}
 
 	if (g_vancInputFilename != NULL) {
-		return AnalyzeVANC(g_vancInputFilename);
+		/* This used to `return AnalyzeVANC(...)` directly, which skipped
+		   the cleanup below entirely -- leaking the klvanc context (never
+		   destroyed) and, if -o was also given, the still-open
+		   vancOutputFile (never closed/flushed). */
+		ret = AnalyzeVANC(g_vancInputFilename);
 	}
 
 	klvanc_context_destroy(vanchdl);
@@ -402,5 +407,5 @@ bail:
 	if (vancOutputFile != NULL)
 		fclose(vancOutputFile);
 
-	return 0;
+	return ret;
 }

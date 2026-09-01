@@ -52,14 +52,35 @@ static int rb_grow(KLRingBuffer *buf, size_t increment)
 	if ((rb_size(buf) + increment) > buf->size_max)
 		return -2;
 
-	buf->data = realloc(buf->data, buf->size + increment);
-	buf->size += increment;
+	size_t old_size = buf->size;
+	unsigned char *newdata = realloc(buf->data, old_size + increment);
+	if (!newdata)
+		return -3;
+	buf->data = newdata;
+
+	/* realloc() preserves the existing bytes at their old offsets but
+	   doesn't know about the ring topology. If the valid data currently
+	   wraps around the end of the (old, smaller) buffer, the portion
+	   physically sitting at the start must be relocated into the newly
+	   appended space so it stays contiguous relative to head -- otherwise
+	   later reads/writes recompute offsets modulo the new (larger)
+	   buf->size and land on uninitialized memory instead of the actual
+	   wrapped bytes. */
+	if (buf->head + buf->fill > old_size) {
+		size_t wrapped_len = (buf->head + buf->fill) - old_size;
+		memmove(buf->data + old_size, buf->data, wrapped_len);
+	}
+
+	buf->size = old_size + increment;
 	return 0;
 }
 
 static void rb_shrink_reset(KLRingBuffer *buf)
 {
-	buf->data = realloc(buf->data, buf->size_initial);
+	unsigned char *newdata = realloc(buf->data, buf->size_initial);
+	if (!newdata)
+		return; /* Keep the existing (larger) buffer rather than lose it. */
+	buf->data = newdata;
 	buf->size = buf->size_initial;
 	buf->head = buf->fill = 0;
 }
@@ -79,19 +100,22 @@ size_t rb_write(KLRingBuffer *buf, const char *from, size_t bytes)
 			return 0;
 	}
 
-	unsigned char *tail = buf->data + ((buf->head + buf->fill) % buf->size);
-	unsigned char *write_end = buf->data + ((buf->head + buf->fill + bytes) % buf->size);
+	/* Deciding whether to wrap by comparing tail/write_end pointers (both
+	   already reduced mod buf->size) is ambiguous: a write of exactly
+	   buf->size bytes brings write_end back around to equal tail, which
+	   this used to treat as "no wrap needed" and copy `bytes` starting at
+	   `tail` in one shot -- a heap buffer overflow whenever tail != 0.
+	   Deriving the wrap decision from the contiguous space actually
+	   available ahead of tail avoids the ambiguity entirely. */
+	size_t offset = (buf->head + buf->fill) % buf->size;
+	unsigned char *tail = buf->data + offset;
+	size_t contiguous = buf->size - offset;
 
-	if (tail <= write_end) {
+	if (bytes <= contiguous) {
 		memcpy(tail, from, bytes);
 	} else {
-		unsigned char *end = buf->data + buf->size;
-        
-		size_t first_write = end - tail;
-		memcpy(tail, from, first_write);
-        
-		size_t second_write = bytes - first_write;
-		memcpy(buf->data, from + first_write, second_write);
+		memcpy(tail, from, contiguous);
+		memcpy(buf->data, from + contiguous, bytes - contiguous);
 	}
 
 	advance_tail(buf, bytes);

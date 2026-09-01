@@ -689,17 +689,24 @@ int genscte104_main(int argc, char *argv[])
 
 	for (int i = 0; i < NUM_TESTCASES; i++) {
 		printf("Running test case %d: %s\n", i, testcases[i].name);
+		/* A testcase that fails before reaching klvanc_convert_SCTE_104_to_words()
+		   never touches the words/wordCount outputs, so without resetting them
+		   here the code below would read/free whatever was left over from the
+		   previous iteration (stale pointer -> double free) or uninitialized
+		   stack garbage (first iteration). */
+		words = NULL;
+		wordCount = 0;
 		ret = testcases[i].test(ctx, &words, &wordCount);
 		if (ret != 0) {
 			failCount++;
 			fprintf(stderr, "SCTE-104 failed to generate\n");
-		} else {
-			passCount++;
+			continue;
 		}
+		passCount++;
 
 		printf("Final Output\n");
-		for (int i = 0; i < wordCount; i++) {
-			printf("%02x %02x ", words[i] >> 8, words[i] & 0xff);
+		for (int j = 0; j < wordCount; j++) {
+			printf("%02x %02x ", words[j] >> 8, words[j] & 0xff);
 		}
 		printf("\n");
 		free(words);

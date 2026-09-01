@@ -969,10 +969,12 @@ static void test_cache(void)
 /* the library never checks that return value, so the cache's locking    */
 /* is silently a complete no-op. This test calls the real public API     */
 /* (enable_cache + lookup) and then directly locks/unlocks the resulting */
-/* cache line's mutex -- exactly the field klvanc_cache_update()/_reset()*/
-/* rely on -- and asserts the lock actually succeeds. Not memory-unsafe  */
-/* by itself, so this one runs without isolation, but is kept in this    */
-/* section since it's a direct regression test for a CRITICAL finding.  */
+/* cache entry's mutex (one per did/sdid, guarding all 2048 of its lines */
+/* -- see the comment on struct klvanc_cache_s in cache.h) -- exactly    */
+/* the field klvanc_cache_update()/_reset() rely on -- and asserts the   */
+/* lock actually succeeds. Not memory-unsafe by itself, so this one runs */
+/* without isolation, but is kept in this section since it's a direct    */
+/* regression test for a CRITICAL finding. */
 static void test_critical_cache_mutex_not_initialized(void)
 {
 	SECTION("CRITICAL cache: pthread_mutex_t must be initialized before use");
@@ -984,11 +986,11 @@ static void test_critical_cache_mutex_not_initialized(void)
 	struct klvanc_cache_s *s = klvanc_cache_lookup(ctx, 0x41, 0x07);
 	CHECK(s != NULL, "cache_lookup returns a valid entry");
 	if (s) {
-		int ret = pthread_mutex_lock(&s->lines[13].mutex);
-		CHECK(ret == 0, "locking a cache line's mutex succeeds (got errno-style %d; "
+		int ret = pthread_mutex_lock(&s->mutex);
+		CHECK(ret == 0, "locking a cache entry's mutex succeeds (got errno-style %d; "
 		      "EINVAL means it was never pthread_mutex_init()'d)", ret);
 		if (ret == 0)
-			pthread_mutex_unlock(&s->lines[13].mutex);
+			pthread_mutex_unlock(&s->mutex);
 	}
 
 	klvanc_context_destroy(ctx);

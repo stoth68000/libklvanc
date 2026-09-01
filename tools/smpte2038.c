@@ -337,7 +337,11 @@ static int _main(int argc, char *argv[])
 		}
 
 		/* Start UDP receive and wait for CTRL-C */
-		iso13818_udp_receiver_thread_start(ctx->udprx);
+		if (iso13818_udp_receiver_thread_start(ctx->udprx) < 0) {
+			fprintf(stderr, "Unable to start UDP receiver thread\n");
+			iso13818_udp_receiver_free(&ctx->udprx);
+			goto no_mem;
+		}
 		while (ctx->running) {
 			usleep(100 * 1000);
 		}

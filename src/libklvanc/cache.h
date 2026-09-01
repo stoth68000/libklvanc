@@ -39,7 +39,6 @@ struct klvanc_cache_line_s
 {
 	int             active;
 	uint64_t        count;
-	pthread_mutex_t mutex;
 	struct klvanc_packet_header_s *pkt;
 };
 
@@ -52,6 +51,18 @@ struct klvanc_cache_s
 	int            expandUI;
 	int            save;
 	uint32_t       activeCount;
+	/* Guards every field below it (activeCount, and each line's active/
+	   count/pkt) against concurrent klvanc_cache_update()/_reset()/
+	   lookup-and-read calls. One mutex per did/sdid entry rather than
+	   one per line: with 0x10000 possible did/sdid entries, a per-line
+	   mutex (2048 lines each) would mean over 130 million pthread_mutex_t
+	   objects and, at ~64 bytes apiece on some platforms, multiple
+	   gigabytes just for locks. Callers that need to read a line's
+	   fields (e.g. via klvanc_cache_lookup()) while update()/reset() may
+	   be running concurrently on another thread must hold this mutex for
+	   the duration of that read -- see klvanc_cache_lookup()'s doc
+	   comment. */
+	pthread_mutex_t mutex;
 	struct klvanc_cache_line_s lines[2048];
 };
 

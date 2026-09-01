@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/poll.h>
-#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
@@ -33,6 +32,7 @@
 #include <net/if.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <errno.h>
 #include "udp.h"
 
 /* Compilation issues on centos, trouble headers won't include
@@ -56,7 +56,7 @@ static int modifyMulticastInterfaces(int skt, struct sockaddr_in *sin, char *ipa
 	if (result >= 0) {
 		const struct ifaddrs *cursor = addrs;
 		while (cursor != NULL) {
-			if ((cursor->ifa_flags & IFF_BROADCAST) && (cursor->ifa_flags & IFF_UP) &&
+			if (cursor->ifa_addr && (cursor->ifa_flags & IFF_BROADCAST) && (cursor->ifa_flags & IFF_UP) &&
 				(cursor->ifa_addr->sa_family == AF_INET)) {
 
 				char host[NI_MAXHOST];
@@ -86,6 +86,7 @@ static int modifyMulticastInterfaces(int skt, struct sockaddr_in *sin, char *ipa
 								option == IP_ADD_MEMBERSHIP ? "join" : "leave",
 								cursor->ifa_name
 								);
+							freeifaddrs(addrs);
 							return -1;
 						} else {
 							didModify++;
@@ -99,6 +100,7 @@ static int modifyMulticastInterfaces(int skt, struct sockaddr_in *sin, char *ipa
 			}
 			cursor = cursor->ifa_next;
 		}
+		freeifaddrs(addrs);
 	}
 
 	if (didModify)
@@ -119,6 +121,8 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 		return -1;
 
 	struct iso13818_udp_receiver_s *ctx = (struct iso13818_udp_receiver_s *)calloc(1, sizeof(*ctx));
+	if (!ctx)
+		return -ENOMEM;
 
 	ctx->ip_port = ip_port;
 	ctx->rxbuffer_size = 2048;
@@ -139,12 +143,14 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	int n = socket_buffer_size;
 	if (setsockopt(ctx->skt, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n)) == -1) {
 		perror("so_rcvbuf");
+		close(ctx->skt);
 		free(ctx);
 		return -1;
 	}
 
 	int reuse = 1;
 	if (setsockopt(ctx->skt, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+		close(ctx->skt);
 		free(ctx);
 		return -1;
 	}
@@ -154,6 +160,7 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	ctx->sin.sin_addr.s_addr = inet_addr(ctx->ip_addr);
 	if (bind(ctx->skt, (struct sockaddr *)&ctx->sin, sizeof(ctx->sin)) < 0) {
 		perror("bind");
+		close(ctx->skt);
 		free(ctx);
 		return -1;
 	}
@@ -166,12 +173,14 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 	int fl = fcntl(ctx->skt, F_GETFL, 0);
 	if (fcntl(ctx->skt, F_SETFL, fl | O_NONBLOCK) < 0) {
 		perror("fcntl");
+		close(ctx->skt);
 		free(ctx);
 		return -1;
 	}
 
 	ctx->rxbuffer = malloc(ctx->rxbuffer_size);
 	if (!ctx->rxbuffer) {
+		close(ctx->skt);
 		free(ctx);
 		return -1;
 	}
@@ -183,12 +192,23 @@ int iso13818_udp_receiver_alloc(struct iso13818_udp_receiver_s **p,
 
 void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 {
+	if (!p || !*p)
+		return;
+
 	struct iso13818_udp_receiver_s *ctx = (struct iso13818_udp_receiver_s *)*p;
 
 	ctx->thread_terminate = 1;
-	if (ctx->thread_running) {
-		while (!ctx->thread_complete)
-			usleep(50 * 1000);
+	if (ctx->threadId) {
+		/* Join rather than busy-poll on thread_complete: reading
+		   thread_running here race against the new thread's very first
+		   statement (thread_running = 1), so a free() that lands between
+		   pthread_create() returning and that first store would see
+		   thread_running == 0 and skip waiting entirely, then proceed to
+		   close the socket and free ctx while the thread is still
+		   starting up and about to touch it -- a use-after-free. Joining
+		   on threadId (which is set synchronously by thread_start()
+		   before this can run) doesn't have that race. */
+		pthread_join(ctx->threadId, NULL);
 	}
 
 	if (ctx->skt != -1) {
@@ -197,6 +217,7 @@ void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 		close(ctx->skt);
 	}
 
+	pthread_mutex_destroy(&ctx->fh_mutex);
 	free(ctx->rxbuffer);
 	free(ctx);
 	*p = 0;
@@ -204,7 +225,11 @@ void iso13818_udp_receiver_free(struct iso13818_udp_receiver_s **p)
 
 int iso13818_udp_receiver_join_multicast(struct iso13818_udp_receiver_s *ctx, char *ifname)
 {
-	assert(ctx && ifname);
+	/* assert() compiles out entirely under NDEBUG, silently turning a
+	   missing-argument bug into a NULL deref instead of a controlled
+	   error -- these are trust-boundary checks, not internal invariants. */
+	if (!ctx || !ifname)
+		return -1;
 	if (!IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 		return -1;
 
@@ -213,7 +238,8 @@ int iso13818_udp_receiver_join_multicast(struct iso13818_udp_receiver_s *ctx, ch
 
 int iso13818_udp_receiver_drop_multicast(struct iso13818_udp_receiver_s *ctx, char *ifname)
 {
-	assert(ctx && ifname);
+	if (!ctx || !ifname)
+		return -1;
 	if (!IN_MULTICAST(ntohl(ctx->sin.sin_addr.s_addr)))
 		return -1;
 
@@ -246,7 +272,20 @@ static void *udp_receiver_threadfunc(void *p)
 		 * packets via the tool_realign_callback callback, which are
 		 * then pushed directly into the core.
 		 */
-		size_t rxbytes = recv(ctx->skt, ctx->rxbuffer, ctx->rxbuffer_size, 0);
+		/* MSG_TRUNC makes recv() return the full datagram length even when
+		   it exceeds rxbuffer_size, so truncation (a datagram larger than
+		   our buffer, silently dropping bytes we'd otherwise process as
+		   if complete) can be detected instead of processing partial
+		   packet data unknowingly. */
+		ssize_t rxbytes = recv(ctx->skt, ctx->rxbuffer, ctx->rxbuffer_size, MSG_TRUNC);
+		if (rxbytes < 0) {
+			continue;
+		}
+		if ((size_t)rxbytes > ctx->rxbuffer_size) {
+			fprintf(stderr, "%s() truncated datagram of %zd bytes exceeds rxbuffer_size %u, dropping\n",
+				__func__, rxbytes, ctx->rxbuffer_size);
+			continue;
+		}
 		if (rxbytes && ctx->cb && !ctx->stripRTPHeader) {
 			ctx->cb(ctx->userContext, ctx->rxbuffer, rxbytes);
 		}
@@ -267,8 +306,8 @@ static void *udp_receiver_threadfunc(void *p)
 
 int iso13818_udp_receiver_thread_start(struct iso13818_udp_receiver_s *ctx)
 {
-	assert(ctx);
-	assert(ctx->threadId == 0);
+	if (!ctx || ctx->threadId != 0)
+		return -1;
 	return pthread_create(&ctx->threadId, 0, udp_receiver_threadfunc, ctx);
 }
 

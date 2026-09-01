@@ -35,10 +35,18 @@ int ts_packetizer(uint8_t *buf, unsigned int byteCount, uint8_t **pkts, uint32_t
 	unsigned int offset = 0;
 
 	int max = packetSize - 4;
-	int packets = ((byteCount / max) + 1) * packetSize;
+	/* Number of TS packets needed to carry byteCount bytes of payload, at
+	   `max` payload bytes per packet (rounded up). This used to be
+	   multiplied by packetSize here *and* passed as calloc()'s nmemb
+	   argument (which multiplies by packetSize again), over-allocating by
+	   a further factor of packetSize (~188x). Using size_t and casting
+	   byteCount also avoids overflowing a plain `int` for large inputs. */
+	size_t packets = ((size_t)byteCount / max) + 1;
 	int cnt = 0;
 
 	uint8_t *arr = calloc(packets, packetSize);
+	if (!arr)
+		return -1;
 
 	unsigned int rem = byteCount - offset;
 	while (rem) {

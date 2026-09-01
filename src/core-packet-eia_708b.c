@@ -90,7 +90,18 @@ static int gcd (int a, int b)
 
 int klvanc_set_framerate_EIA_708B(struct klvanc_packet_eia_708b_s *pkt, int num, int den)
 {
+	if (num == 0 || den == 0)
+		return -EINVAL;
+
 	int gcd_val = gcd(num, den);
+	/* gcd(a, 0) == a for any a, so gcd_val can only be 0 here if both num
+	   and den were already 0 -- excluded above. Kept as a defensive
+	   check regardless, since dividing by 0 below would otherwise be
+	   undefined behavior (silently evaluates to 0 on ARM64, where
+	   integer division by zero doesn't trap; expected to raise SIGFPE
+	   on x86). */
+	if (gcd_val == 0)
+		return -EINVAL;
 	num /= gcd_val;
 	den /= gcd_val;
 	if (num == 1001 && den == 24000)
@@ -254,7 +265,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	if (klbs_get_byte_count_free(bs) < 7) {
 		free(pkt);
 		klbs_free(bs);
-		return -ENOMEM;
+		return -EINVAL;
 	}
 	pkt->header.cdp_identifier = klbs_read_bits(bs, 16);
 	pkt->header.cdp_length = klbs_read_bits(bs, 8);
@@ -273,7 +284,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 	if (klbs_get_byte_count_free(bs) < 1) {
 		free(pkt);
 		klbs_free(bs);
-		return -ENOMEM;
+		return -EINVAL;
 	}
 	next_section_id = klbs_read_bits(bs, 8);
 
@@ -281,7 +292,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		if (klbs_get_byte_count_free(bs) < 5) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 		/* timecode_section (Sec 11.2.3) */
 		pkt->tc.time_code_section_id = next_section_id;
@@ -307,17 +318,28 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		if (klbs_get_byte_count_free(bs) < 2) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 		/* cc_data_section (Sec 11.2.4) */
 		pkt->ccdata.ccdata_id = next_section_id;
 		klbs_read_bits(bs, 3); /* Marker Bits */
 		pkt->ccdata.cc_count = klbs_read_bits(bs, 5);
 
+		/* cc_count is a 5-bit field (0-31), but cc[] is only
+		   KLVANC_MAX_CC_COUNT (30) entries -- 31 would write one
+		   element past the end of the array below. The byte-count
+		   check that already existed here only validated stream
+		   availability, not this array bound. */
+		if (pkt->ccdata.cc_count > KLVANC_MAX_CC_COUNT) {
+			free(pkt);
+			klbs_free(bs);
+			return -EINVAL;
+		}
+
 		if (klbs_get_byte_count_free(bs) < (pkt->ccdata.cc_count * 3)) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 		for (int i = 0; i < pkt->ccdata.cc_count; i++) {
 			klbs_read_bits(bs, 5); /* Marker Bits */
@@ -333,7 +355,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		if (klbs_get_byte_count_free(bs) < 3) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 		/* ccsvcinfo_section (Sec 11.2.5) */
 		pkt->ccsvc.ccsvcinfo_id = next_section_id;
@@ -347,7 +369,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		if (klbs_get_byte_count_free(bs) < pkt->ccsvc.svc_count * 7) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 
 		for (int i = 0; i < pkt->ccsvc.svc_count; i++) {
@@ -381,7 +403,7 @@ int parse_EIA_708B(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *
 		if (klbs_get_byte_count_free(bs) < 3) {
 			free(pkt);
 			klbs_free(bs);
-			return -ENOMEM;
+			return -EINVAL;
 		}
 		pkt->footer.cdp_footer_id = next_section_id;
 		pkt->footer.cdp_ftr_sequence_cntr = klbs_read_bits(bs, 16);

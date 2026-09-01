@@ -52,8 +52,12 @@ int pe_alloc(struct pes_extractor_s **pe, void *user_context, pes_extractor_call
 
 void pe_free(struct pes_extractor_s **pe)
 {
+	if (!pe || !*pe)
+		return;
+
 	rb_free((*pe)->rb);
 	free(*pe);
+	*pe = NULL;
 }
 
 /* Take a single transport packet.
@@ -84,6 +88,21 @@ static void pe_processPacket(struct pes_extractor_s *pe, unsigned char *pkt, int
                         offset++;
                 offset += *(pkt + 4);
         }
+
+	if (offset > pe->packet_size) {
+		/* adaptation_field_length (the *(pkt+4) byte above) is fully
+		   attacker-controlled (0-255); a value that pushes offset past
+		   the end of this packet_size-byte packet would make
+		   `packet_size - offset` (size_t, unsigned) underflow to an
+		   enormous value, used below both as a read length from pkt
+		   (out-of-bounds read) and as the rb_write() length. Drop the
+		   malformed packet instead. */
+#if LOCAL_DEBUG
+		printf("%s() adaptation field pushes offset %d past packet_size %d, dropping\n",
+		       __func__, offset, pe->packet_size);
+#endif
+		return;
+	}
 
 	/* Regardless, append all packete data from offset to end of packet into the buffer */
 	size_t wlen = pe->packet_size - offset;

@@ -41,6 +41,9 @@ struct klvanc_line_s *klvanc_line_create(int line_number)
 
 void klvanc_line_free(struct klvanc_line_s *line)
 {
+	if (line == NULL)
+		return;
+
 	for (int i = 0; i < KLVANC_MAX_VANC_ENTRIES; i++) {
 		if (line->p_entries[i] != NULL) {
 			free(line->p_entries[i]->payload);

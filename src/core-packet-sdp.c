@@ -58,12 +58,20 @@ int parse_SDP(struct klvanc_context_s *ctx,
 		return -EINVAL;
 	}
 
+	uint8_t length = hdr->payload[2] & 0x00ff;
+	/* length is used below as both a loop bound and, via `length - 1`, a
+	   direct payload[] index -- length == 0 would make that a negative
+	   index (undefined behavior), and any length claiming more data than
+	   was actually received should be rejected rather than read as
+	   zero-filled/stale bytes from the oversized payload[] buffer. */
+	if (length < 1 || length > hdr->payloadLengthWords)
+		return -EINVAL;
+
 	struct klvanc_packet_sdp_s *pkt = calloc(1, sizeof(*pkt));
 	if (!pkt)
 		return -ENOMEM;
 
 	memcpy(&pkt->hdr, hdr, sizeof(*hdr));
-	uint8_t length = hdr->payload[2] & 0x00ff;
 
 	pkt->identifier =
 	    ((uint16_t) (hdr->payload[0] & 0xff)) << 8 | (hdr->

@@ -33,7 +33,13 @@ static int url_argsplit(char *arg, char **tag, char **value)
 
 	/* Dup the string as we may want to modify it */
 	char *tmp = calloc(1, 256);
-	strcpy(tmp, arg);
+	if (!tmp)
+		return -1;
+	/* arg is caller/URL-controlled and of unbounded length; strcpy() into
+	   this fixed 256-byte buffer would overflow it. strncpy() to 255
+	   bytes leaves tmp[255] as the zero terminator calloc() already gave
+	   us, safely truncating anything longer instead. */
+	strncpy(tmp, arg, 255);
 	char *str = tmp;
 
 	char *p = strsep(&str, "=");
@@ -69,13 +75,16 @@ static int regex_match(const char *str, const char *pattern)
 {
 	int ret = -1;
         regex_t rex;
-	if (regcomp(&rex, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE) == 0) {
+	/* regfree() on a regex_t that regcomp() failed to initialize is
+	   undefined behavior (POSIX: the object's contents are undefined on
+	   failure) -- only call it on the success path. */
+	if (regcomp(&rex, pattern, REG_EXTENDED | REG_NOSUB | REG_ICASE) != 0)
+		return -1;
 
-		if (regexec(&rex, str, 0, 0, 0) == REG_NOMATCH) {
-			ret = -1;
-		} else {
-			ret = 0;
-		}
+	if (regexec(&rex, str, 0, 0, 0) == REG_NOMATCH) {
+		ret = -1;
+	} else {
+		ret = 0;
 	}
 
 	regfree(&rex);
@@ -116,7 +125,7 @@ void url_print(struct url_opts_s *url)
 static int has_url_argname(const char *url, const char *argname)
 {
 	char tmp[256];
-	sprintf(tmp, "\\?%s=", argname);
+	snprintf(tmp, sizeof(tmp), "\\?%s=", argname);
 	if (regex_match(url, tmp) < 0) {
 		tmp[1] = '&';
 		if (regex_match(url, tmp) < 0) {
@@ -131,6 +140,8 @@ int url_parse(const char *url, struct url_opts_s **result)
 	int ret;
 	int has_args = 0;
 	struct url_opts_s *opts = calloc(1, sizeof(*opts));
+	if (!opts)
+		return -1;
 	strncpy(opts->url, url, sizeof(opts->url) - 1);
 
 	/* Check the protocol */
@@ -211,7 +222,10 @@ int url_parse(const char *url, struct url_opts_s **result)
 	}
 
         opts->port = atoi(p);
-	if (opts->port <= 65535)
+	/* atoi() on malformed/negative input (or garbage that doesn't parse
+	   as a number at all) returns values that are trivially <= 65535,
+	   which used to be accepted as a valid port. */
+	if (opts->port >= 0 && opts->port <= 65535)
 		opts->has_port = 1;
 
 	char tmp2[256];
