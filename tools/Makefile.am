@@ -30,6 +30,7 @@ SRC += url.c
 SRC += ts_packetizer.c
 SRC += klringbuffer.c
 SRC += pes_extractor.c
+SRC += test_api.c
 
 bin_PROGRAMS  = klvanc_util
 bin_PROGRAMS += klvanc_parse
@@ -41,6 +42,7 @@ bin_PROGRAMS += klvanc_eia708
 bin_PROGRAMS += klvanc_smpte12_2
 bin_PROGRAMS += klvanc_afd
 bin_PROGRAMS += klvanc_sdp
+bin_PROGRAMS += klvanc_test_api
 
 klvanc_util_SOURCES = $(SRC)
 klvanc_parse_SOURCES = $(SRC)
@@ -52,6 +54,7 @@ klvanc_eia708_SOURCES = $(SRC)
 klvanc_smpte12_2_SOURCES = $(SRC)
 klvanc_afd_SOURCES = $(SRC)
 klvanc_sdp_SOURCES = $(SRC)
+klvanc_test_api_SOURCES = $(SRC)
 
 libklvanc_noinst_includedir = $(includedir)
 
@@ -63,7 +66,7 @@ noinst_HEADERS += udp.h
 noinst_HEADERS += url.h
 noinst_HEADERS += version.h
 
-test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd klvanc_sdp klvanc_smpte2038 klvanc_sdp klvanc_gensmpte2038
+test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd klvanc_sdp klvanc_smpte2038 klvanc_sdp klvanc_gensmpte2038 klvanc_test_api
 	./klvanc_eia708
 	./klvanc_genscte104
 	./klvanc_scte104
@@ -72,3 +75,4 @@ test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd
 	./klvanc_afd
 	./klvanc_sdp
 	./klvanc_smpte2038 -i ../samples/smpte2038-sample-pid-01e9.ts -P 0x1e9
+	./klvanc_test_api
