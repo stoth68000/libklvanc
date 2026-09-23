@@ -42,11 +42,17 @@ https://github.com/stoth68000/klvanc-tools
 ## Dependencies
 * Doxygen (if generation of API documentation is desired)
 
-## Compilation
+## Compiling from source (Make)
 
         ./autogen.sh --build
         ./configure --enable-shared=no
         make
+
+## Using Homebrew (macOS/Linux)
+
+If you use [Homebrew](hhtps://brew.sh), getting started is straightforward:
+
+        brew install libklvanc
 
 ## Making Documentation:
 To make doxygen documentation in the doxygen folder, run the following command:
