@@ -60,4 +60,3 @@ AM_COND_IF(DEBUG,
 
 AC_CONFIG_FILES([Makefile src/Makefile tools/Makefile])
 AC_OUTPUT
-

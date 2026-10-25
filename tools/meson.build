@@ -8,6 +8,7 @@ sources = files(
   'gensmpte2038.c',
   'eia708.c',
   'smpte12_2.c',
+  'smpte12_3.c',
   'afd.c',
   'sdp.c',
   'udp.c',
@@ -15,6 +16,7 @@ sources = files(
   'ts_packetizer.c',
   'klringbuffer.c',
   'pes_extractor.c',
+  'test_api.c',
 )
 
 thread_dep = dependency('threads')
@@ -28,6 +30,7 @@ foreach exe_name: [
   'klvanc_gensmpte2038',
   'klvanc_eia708',
   'klvanc_smpte12_2',
+  'klvanc_smpte12_3',
   'klvanc_afd',
   'klvanc_sdp',
 ]
@@ -42,6 +45,7 @@ foreach exe_name: [
     'klvanc_genscte104',
     'klvanc_scte104',
     'klvanc_smpte12_2',
+    'klvanc_smpte12_3',
     'klvanc_gensmpte2038',
     'klvanc_afd',
     'klvanc_sdp']

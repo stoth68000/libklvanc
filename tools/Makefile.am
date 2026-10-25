@@ -23,6 +23,7 @@ SRC += genscte104.c
 SRC += gensmpte2038.c
 SRC += eia708.c
 SRC += smpte12_2.c
+SRC += smpte12_3.c
 SRC += afd.c
 SRC += sdp.c
 SRC += udp.c
@@ -40,6 +41,7 @@ bin_PROGRAMS += klvanc_genscte104
 bin_PROGRAMS += klvanc_gensmpte2038
 bin_PROGRAMS += klvanc_eia708
 bin_PROGRAMS += klvanc_smpte12_2
+bin_PROGRAMS += klvanc_smpte12_3
 bin_PROGRAMS += klvanc_afd
 bin_PROGRAMS += klvanc_sdp
 bin_PROGRAMS += klvanc_test_api
@@ -52,6 +54,7 @@ klvanc_genscte104_SOURCES = $(SRC)
 klvanc_gensmpte2038_SOURCES = $(SRC)
 klvanc_eia708_SOURCES = $(SRC)
 klvanc_smpte12_2_SOURCES = $(SRC)
+klvanc_smpte12_3_SOURCES = $(SRC)
 klvanc_afd_SOURCES = $(SRC)
 klvanc_sdp_SOURCES = $(SRC)
 klvanc_test_api_SOURCES = $(SRC)
@@ -66,11 +69,12 @@ noinst_HEADERS += udp.h
 noinst_HEADERS += url.h
 noinst_HEADERS += version.h
 
-test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_afd klvanc_sdp klvanc_smpte2038 klvanc_sdp klvanc_gensmpte2038 klvanc_test_api
+test: klvanc_eia708 klvanc_genscte104 klvanc_scte104 klvanc_smpte12_2 klvanc_smpte12_3 klvanc_afd klvanc_sdp klvanc_smpte2038 klvanc_sdp klvanc_gensmpte2038 klvanc_test_api
 	./klvanc_eia708
 	./klvanc_genscte104
 	./klvanc_scte104
 	./klvanc_smpte12_2
+	./klvanc_smpte12_3
 	./klvanc_gensmpte2038
 	./klvanc_afd
 	./klvanc_sdp
