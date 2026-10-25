@@ -11,6 +11,7 @@ commonly found in SDI, including:
 - SCTE-104 Ad triggers
 - SMPTE ST 2038 arbitrary VANC encapsulation
 - SMPTE ST 12-2 Timecodes
+- SMPTE ST 12-3 High Frame Rate Timecodes
 - SMPTE RDD 8 Subtitle Distribution packets
 - SMPTE ST 2108-1 HDR/WCG Metadata Packing and Signaling
 
