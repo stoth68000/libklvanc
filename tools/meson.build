@@ -9,6 +9,7 @@ sources = files(
   'eia708.c',
   'smpte12_2.c',
   'smpte12_3.c',
+  'smpte299.c',
   'afd.c',
   'sdp.c',
   'udp.c',
@@ -31,6 +32,7 @@ foreach exe_name: [
   'klvanc_eia708',
   'klvanc_smpte12_2',
   'klvanc_smpte12_3',
+  'klvanc_smpte299',
   'klvanc_afd',
   'klvanc_sdp',
   'klvanc_test_api',
@@ -47,6 +49,7 @@ foreach exe_name: [
     'klvanc_scte104',
     'klvanc_smpte12_2',
     'klvanc_smpte12_3',
+    'klvanc_smpte299',
     'klvanc_gensmpte2038',
     'klvanc_afd',
     'klvanc_sdp']

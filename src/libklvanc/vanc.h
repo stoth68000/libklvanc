@@ -100,6 +100,7 @@ struct klvanc_packet_smpte_12_3_s;
  */
 struct klvanc_packet_smpte_2108_1_s;
 struct klvanc_packet_smpte_352_s;
+struct klvanc_packet_smpte_299_control_s;
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -117,6 +118,7 @@ struct klvanc_callbacks_s
 	int (*smpte_12_3)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_12_3_s *);
 	int (*smpte_2108_1)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_2108_1_s *);
 	int (*smpte_352)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_352_s *);
+	int (*smpte_299_control)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_299_control_s *);
 };
 
 struct klvanc_cache_s;
