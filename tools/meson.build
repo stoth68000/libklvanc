@@ -33,6 +33,7 @@ foreach exe_name: [
   'klvanc_smpte12_3',
   'klvanc_afd',
   'klvanc_sdp',
+  'klvanc_test_api',
 ]
   exe = executable(exe_name,
     sources,
@@ -59,5 +60,7 @@ foreach exe_name: [
         '-P 0x1e9'
       ]
     )
+  elif exe_name == 'klvanc_test_api'
+    test('test_' + exe_name, exe)
   endif
 endforeach

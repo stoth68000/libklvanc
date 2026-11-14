@@ -51,6 +51,7 @@ enum klvanc_packet_type_e
 	VANC_TYPE_SMPTE_S12_2,
 	VANC_TYPE_SMPTE_S12_3,
 	VANC_TYPE_SMPTE_S2108_1,
+	VANC_TYPE_SMPTE_S352,
 };
 
 /**

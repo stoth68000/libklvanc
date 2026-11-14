@@ -697,6 +697,60 @@ static void test_smpte2108_1(void)
 }
 
 /* ------------------------------------------------------------------- */
+/* SMPTE ST 352 video payload identification                           */
+/* ------------------------------------------------------------------- */
+static int g_smpte352_fired;
+static struct klvanc_packet_smpte_352_s g_smpte352_packet;
+
+static int cb_smpte352(void *uctx, struct klvanc_context_s *ctx,
+		struct klvanc_packet_smpte_352_s *pkt)
+{
+	g_smpte352_fired = 1;
+	memcpy(&g_smpte352_packet, pkt, sizeof(*pkt));
+	return 0;
+}
+
+static void test_smpte352(void)
+{
+	SECTION("SMPTE ST 352: decode an ST 292-1 1080i60 payload ID");
+	const uint8_t payload[] = { 0x85, 0x07, 0x00, 0x01 };
+	uint16_t *words = NULL;
+	uint16_t wordCount = 0;
+	CHECK(build_vanc_line(0x41, 0x01, payload, sizeof(payload),
+			&words, &wordCount) == 0, "build a payload ID packet");
+	if (!words)
+		return;
+
+	struct klvanc_context_s *ctx;
+	CHECK(klvanc_context_create(&ctx) == 0, "context_create succeeds");
+	struct klvanc_callbacks_s cb = { .smpte_352 = cb_smpte352 };
+	ctx->callbacks = &cb;
+	g_smpte352_fired = 0;
+	memset(&g_smpte352_packet, 0, sizeof(g_smpte352_packet));
+	CHECK(klvanc_packet_parse(ctx, 10, words, wordCount) >= 0,
+	      "packet_parse succeeds");
+	CHECK(g_smpte352_fired == 1, "SMPTE ST 352 callback fired");
+	CHECK(g_smpte352_packet.payload_id == 0x85,
+	      "ST 292-1 1080-line payload identified");
+	CHECK(g_smpte352_packet.progressive_transport == 0 &&
+	      g_smpte352_packet.progressive_picture == 0,
+	      "interlaced transport and picture decoded");
+	CHECK(g_smpte352_packet.picture_rate_numerator == 30 &&
+	      g_smpte352_packet.picture_rate_denominator == 1,
+	      "30 fps picture rate decoded");
+	CHECK(g_smpte352_packet.sampling_structure == 0 &&
+	      g_smpte352_packet.bit_depth == 10 &&
+	      g_smpte352_packet.horizontal_pixels == 1920,
+	      "1920-pixel 4:2:2 10-bit payload fields decoded");
+	CHECK(g_smpte352_packet.transfer_characteristic ==
+	      KLVANC_S352_TRANSFER_SDR,
+	      "SDR transfer characteristic decoded");
+
+	free(words);
+	klvanc_context_destroy(ctx);
+}
+
+/* ------------------------------------------------------------------- */
 /* SDP (OP-47)                                                          */
 /* ------------------------------------------------------------------- */
 static int g_sdp_fired;
@@ -1389,6 +1443,7 @@ int test_api_main(int argc, char *argv[])
 	test_scte104();
 	test_smpte12_2();
 	test_smpte2108_1();
+	test_smpte352();
 	test_sdp();
 
 	test_smpte2038();

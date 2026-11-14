@@ -99,6 +99,7 @@ struct klvanc_packet_smpte_12_3_s;
  * @brief       Structure describing an SMPTE 2108-1 HDR metadata packet
  */
 struct klvanc_packet_smpte_2108_1_s;
+struct klvanc_packet_smpte_352_s;
 
 /**
  * @brief       TODO - Brief description goes here.
@@ -115,6 +116,7 @@ struct klvanc_callbacks_s
 	int (*smpte_12_2)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_12_2_s *);
 	int (*smpte_12_3)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_12_3_s *);
 	int (*smpte_2108_1)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_2108_1_s *);
+	int (*smpte_352)(void *user_context, struct klvanc_context_s *, struct klvanc_packet_smpte_352_s *);
 };
 
 struct klvanc_cache_s;
@@ -221,6 +223,7 @@ void klvanc_dump_words_console(struct klvanc_context_s *ctx, uint16_t *vanc, int
 #include <libklvanc/vanc-smpte_12_2.h>
 #include <libklvanc/vanc-smpte_12_3.h>
 #include <libklvanc/vanc-smpte_2108_1.h>
+#include <libklvanc/vanc-smpte_352.h>
 #include <libklvanc/did.h>
 #include <libklvanc/pixels.h>
 #include <libklvanc/vanc-checksum.h>

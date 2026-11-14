@@ -88,6 +88,10 @@ int dump_SMPTE_2108_1(struct klvanc_context_s *ctx, void *p);
 int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr,
 		       void **pp);
 
+/* core-packet-smpte_352.c */
+int parse_SMPTE_352(struct klvanc_context_s *ctx,
+		    struct klvanc_packet_header_s *hdr, void **pp);
+
 
 /* We don't expect anything outside of the VANC framework to need toascii
  * call these, so we'll keep them private / internal calls.
