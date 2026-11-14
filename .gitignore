@@ -1,4 +1,9 @@
 *.o
+*~
+*.pc
+*.exe
+*.dll
+.cache/
 .deps/
 .libs/
 Makefile.in
@@ -21,3 +26,4 @@ libklvanc.la
 src/libklvanc_la-*.lo
 src/libklvanc.pc
 doxygen/html
+compile_commands.json

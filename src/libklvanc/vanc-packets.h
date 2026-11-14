@@ -30,7 +30,7 @@
 #define _VANC_PACKETS_H
 
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {

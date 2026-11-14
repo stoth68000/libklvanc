@@ -25,7 +25,7 @@
 #define vanc_PRIVATE_H
 
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 /* We'll have a mutex and a list of items */
 #include <pthread.h>
