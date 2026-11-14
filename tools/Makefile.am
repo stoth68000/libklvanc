@@ -8,7 +8,7 @@ AM_CPPFLAGS = -DVERSION=\"$(VERSION)\" -DPROG="\"$(PACKAGE)\"" -D_FILE_OFFSET_BI
 
 AM_CFLAGS = -Wall -O3
 
-LDADD = ../src/libklvanc.la -lpthread -ldl
+LDADD = ../src/libklvanc.la -lpthread
 
 if DEBUG
 	CFLAGS += -g
