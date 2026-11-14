@@ -5,6 +5,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libklvanc.pc
 
 lib_LTLIBRARIES = libklvanc.la
+libklvanc_la_LDFLAGS = -no-undefined
+libklvanc_la_LIBADD = -lpthread
 
 libklvanc_la_SOURCES  = core.c
 libklvanc_la_SOURCES += core-packet-eia_708b.c

@@ -2,7 +2,6 @@ sources = files(
   'klvanc_util.c',
   'demo.c',
   'parse.c',
-  'smpte2038.c',
   'scte104.c',
   'genscte104.c',
   'gensmpte2038.c',
@@ -12,20 +11,32 @@ sources = files(
   'smpte299.c',
   'afd.c',
   'sdp.c',
-  'udp.c',
-  'url.c',
   'ts_packetizer.c',
-  'klringbuffer.c',
-  'pes_extractor.c',
-  'test_api.c',
 )
+
+is_windows = host_machine.system() == 'windows'
+tool_c_args = []
+if is_windows
+  tool_c_args += [
+    '-DKLVANC_DISABLE_SMPTE2038_TOOL',
+    '-DKLVANC_DISABLE_TEST_API_TOOL',
+  ]
+else
+  sources += files(
+    'smpte2038.c',
+    'udp.c',
+    'url.c',
+    'klringbuffer.c',
+    'pes_extractor.c',
+    'test_api.c',
+  )
+endif
 
 thread_dep = dependency('threads')
 
-foreach exe_name: [
+exe_names = [
   'klvanc_util',
   'klvanc_parse',
-  'klvanc_smpte2038',
   'klvanc_scte104',
   'klvanc_genscte104',
   'klvanc_gensmpte2038',
@@ -35,10 +46,16 @@ foreach exe_name: [
   'klvanc_smpte299',
   'klvanc_afd',
   'klvanc_sdp',
-  'klvanc_test_api',
 ]
+
+if not is_windows
+  exe_names += ['klvanc_smpte2038', 'klvanc_test_api']
+endif
+
+foreach exe_name: exe_names
   exe = executable(exe_name,
     sources,
+    c_args: tool_c_args,
     install: true,
     install_tag: 'bin',
     dependencies: [libklvanc_dep, thread_dep]
@@ -55,7 +72,7 @@ foreach exe_name: [
     'klvanc_sdp']
     test_name = 'test_' + exe_name
     test(test_name, exe)
-  elif exe_name == 'klvanc_smpte2038'
+  elif not is_windows and exe_name == 'klvanc_smpte2038'
     test_name = 'test_' + exe_name
     test(test_name, exe,
       args : [
