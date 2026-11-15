@@ -127,6 +127,9 @@ int klvanc_generate_vanc_line(struct klvanc_context_s *ctx, struct klvanc_line_s
 	int pixels_used = 0;
 	int i;
 
+	*outbuf = NULL;
+	*out_len = 0;
+
 	/* Sort the VANC entries on the line prior to processing */
 	qsort(line->p_entries, line->num_entries, sizeof(struct klvanc_entry_s *),
 	      vanc_ent_comp);

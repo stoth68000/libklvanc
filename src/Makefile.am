@@ -5,6 +5,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libklvanc.pc
 
 lib_LTLIBRARIES = libklvanc.la
+libklvanc_la_LDFLAGS = -no-undefined
+libklvanc_la_LIBADD = -lpthread
 
 libklvanc_la_SOURCES  = core.c
 libklvanc_la_SOURCES += core-packet-eia_708b.c
@@ -15,6 +17,8 @@ libklvanc_la_SOURCES += core-packet-sdp.c
 libklvanc_la_SOURCES += core-packet-smpte_12_2.c
 libklvanc_la_SOURCES += core-packet-smpte_12_3.c
 libklvanc_la_SOURCES += core-packet-smpte_2108_1.c
+libklvanc_la_SOURCES += core-packet-smpte_352.c
+libklvanc_la_SOURCES += core-packet-smpte_299.c
 libklvanc_la_SOURCES += core-packets.c
 libklvanc_la_SOURCES += core-lines.c
 libklvanc_la_SOURCES += core-did.c
@@ -45,6 +49,8 @@ libklvanc_include_HEADERS += libklvanc/vanc-scte_104.h
 libklvanc_include_HEADERS += libklvanc/vanc-smpte_12_2.h
 libklvanc_include_HEADERS += libklvanc/vanc-smpte_12_3.h
 libklvanc_include_HEADERS += libklvanc/vanc-smpte_2108_1.h
+libklvanc_include_HEADERS += libklvanc/vanc-smpte_352.h
+libklvanc_include_HEADERS += libklvanc/vanc-smpte_299.h
 libklvanc_include_HEADERS += libklvanc/vanc-packets.h
 libklvanc_include_HEADERS += libklvanc/vanc-lines.h
 libklvanc_include_HEADERS += libklvanc/vanc-afd.h

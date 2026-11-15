@@ -54,9 +54,18 @@ static struct type_s
 	{ 0x60, 0x60, VANC_TYPE_SMPTE_S12_2, parse_SMPTE_12_2, klvanc_dump_SMPTE_12_2, free, },
 	{ 0x60, 0x61, VANC_TYPE_SMPTE_S12_3, parse_SMPTE_12_3, klvanc_dump_SMPTE_12_3, free, },
 	{ 0x41, 0x0c, VANC_TYPE_SMPTE_S2108_1, parse_SMPTE_2108_1, klvanc_dump_SMPTE_2108_1, free, },
+	{ 0x41, 0x01, VANC_TYPE_SMPTE_S352, parse_SMPTE_352, klvanc_dump_SMPTE_352, free, },
 	{ 0x61, 0x01, VANC_TYPE_EIA_708B, parse_EIA_708B, klvanc_dump_EIA_708B, free, },
 	{ 0x61, 0x02, VANC_TYPE_EIA_608, parse_EIA_608, klvanc_dump_EIA_608, free, },
 	{ 0x43, 0x02, VANC_TYPE_SDP, parse_SDP, klvanc_dump_SDP, free, },
+	{ 0xe0, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xe1, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xe2, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xe3, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xa0, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xa1, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xa2, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
+	{ 0xa3, 0x00, VANC_TYPE_SMPTE_S299_CONTROL, parse_SMPTE_299_CONTROL, klvanc_dump_SMPTE_299_CONTROL, free, },
 };
 
 static enum klvanc_packet_type_e lookupTypeByDID(unsigned short did, unsigned short sdid)
@@ -305,7 +314,7 @@ int klvanc_sdi_create_payload(uint8_t sdid, uint8_t did,
         uint16_t **dst, uint16_t *dstWordCount,
         uint32_t bitDepth)
 {
-	if ((bitDepth != 10) || (!sdid) || (!did) || (!src) || (!srcByteCount) || (!dst) || (!dstWordCount))
+	if ((bitDepth != 10) || (!did) || (!src) || (!srcByteCount) || (!dst) || (!dstWordCount))
 		return -1;
 
 	int header_length = 6 + 1; /* Header 6 and checksum footer 1 */

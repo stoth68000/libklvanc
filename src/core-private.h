@@ -25,7 +25,7 @@
 #define vanc_PRIVATE_H
 
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 /* We'll have a mutex and a list of items */
 #include <pthread.h>
@@ -88,6 +88,14 @@ int dump_SMPTE_2108_1(struct klvanc_context_s *ctx, void *p);
 int parse_SMPTE_2108_1(struct klvanc_context_s *ctx, struct klvanc_packet_header_s *hdr,
 		       void **pp);
 
+/* core-packet-smpte_352.c */
+int parse_SMPTE_352(struct klvanc_context_s *ctx,
+		    struct klvanc_packet_header_s *hdr, void **pp);
+
+/* core-packet-smpte_299.c */
+int parse_SMPTE_299_CONTROL(struct klvanc_context_s *ctx,
+			    struct klvanc_packet_header_s *hdr, void **pp);
+int klvanc_dump_SMPTE_299_CONTROL(struct klvanc_context_s *ctx, void *p);
 
 /* We don't expect anything outside of the VANC framework to need toascii
  * call these, so we'll keep them private / internal calls.

@@ -12,6 +12,8 @@ commonly found in SDI, including:
 - SMPTE ST 2038 arbitrary VANC encapsulation
 - SMPTE ST 12-2 Timecodes
 - SMPTE ST 12-3 High Frame Rate Timecodes
+- SMPTE ST 352 Payload Identification
+- SMPTE ST 299-1 and ST 299-2 Audio Control packets
 - SMPTE RDD 8 Subtitle Distribution packets
 - SMPTE ST 2108-1 HDR/WCG Metadata Packing and Signaling
 

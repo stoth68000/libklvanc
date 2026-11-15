@@ -26,16 +26,21 @@
 /* External tool hooks */
 extern int demo_main(int argc, char *argv[]);
 extern int parse_main(int argc, char *argv[]);
+#ifndef KLVANC_DISABLE_SMPTE2038_TOOL
 extern int smpte2038_main(int argc, char *argv[]);
+#endif
 extern int scte104_main(int argc, char *argv[]);
 extern int genscte104_main(int argc, char *argv[]);
 extern int gensmpte2038_main(int argc, char *argv[]);
 extern int eia708_main(int argc, char *argv[]);
 extern int smpte12_2_main(int argc, char *argv[]);
 extern int smpte12_3_main(int argc, char *argv[]);
+extern int smpte299_main(int argc, char *argv[]);
 extern int afd_main(int argc, char *argv[]);
 extern int sdp_main(int argc, char *argv[]);
+#ifndef KLVANC_DISABLE_TEST_API_TOOL
 extern int test_api_main(int argc, char *argv[]);
+#endif
 
 typedef int (*func_ptr)(int, char *argv[]);
 
@@ -47,19 +52,31 @@ int main(int argc, char *argv[])
 	} apps[] = {
 		{ "klvanc_util",		demo_main, },
 		{ "klvanc_parse",		parse_main, },
+#ifndef KLVANC_DISABLE_SMPTE2038_TOOL
 		{ "klvanc_smpte2038",		smpte2038_main, },
+#endif
 		{ "klvanc_scte104",		scte104_main, },
 		{ "klvanc_eia708",		eia708_main, },
 		{ "klvanc_genscte104",		genscte104_main, },
 		{ "klvanc_gensmpte2038",	gensmpte2038_main, },
 		{ "klvanc_smpte12_2",		smpte12_2_main, },
 		{ "klvanc_smpte12_3",		smpte12_3_main, },
+		{ "klvanc_smpte299",		smpte299_main, },
 		{ "klvanc_afd",			afd_main, },
 		{ "klvanc_sdp",			sdp_main, },
+#ifndef KLVANC_DISABLE_TEST_API_TOOL
 		{ "klvanc_test_api",		test_api_main, },
+#endif
 		{ 0, 0 },
 	};
 	char *appname = basename(argv[0]);
+#ifdef _WIN32
+	size_t appname_len = strlen(appname);
+	if (appname_len >= 4 && strcmp(appname + appname_len - 4, ".exe") == 0)
+		appname[appname_len - 4] = '\0';
+#endif
+	if (strncmp(appname, "lt-", 3) == 0)
+		appname += 3;
 
 	int i = 0;
 	struct app_s *app = &apps[i++];

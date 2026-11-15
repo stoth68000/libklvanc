@@ -1,0 +1,96 @@
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+        builder: [autotools, meson]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup environment
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install meson automake autoconf ninja-build
+
+      - name: Build & Test (autotools)
+        if: ${{ matrix.builder == 'autotools' }}
+        run: |
+          ./autogen.sh --build
+          ./configure
+          make
+          make test
+
+      - name: Build & Test (meson)
+        if: ${{ matrix.builder == 'meson' }}
+        run: |
+          meson setup build
+          ninja -C build
+          ninja -C build test
+
+  alma-8-8:
+    strategy:
+      fail-fast: false
+      matrix:
+        builder: [autotools, meson]
+
+    runs-on: ubuntu-24.04
+    container:
+      image: almalinux:8.8
+
+    steps:
+      - name: Pin AlmaLinux 8.8 package repositories
+        run: |
+          sed -i \
+            -e 's|^mirrorlist=|# mirrorlist=|' \
+            -e 's|^# baseurl=https://repo.almalinux.org/almalinux/[^/]*/|baseurl=https://repo.almalinux.org/vault/8.8/|' \
+            /etc/yum.repos.d/almalinux*.repo
+          dnf clean all
+
+      - name: Install common build dependencies
+        run: |
+          dnf -y install \
+            gcc \
+            git
+
+      - name: Install Autotools
+        if: ${{ matrix.builder == 'autotools' }}
+        run: |
+          dnf -y install \
+            autoconf \
+            automake \
+            libtool \
+            make
+
+      - name: Install Meson and Ninja
+        if: ${{ matrix.builder == 'meson' }}
+        run: |
+          dnf -y --enablerepo=powertools install \
+            meson \
+            ninja-build
+
+      - uses: actions/checkout@v7
+
+      - name: Build & Test (autotools)
+        if: ${{ matrix.builder == 'autotools' }}
+        run: |
+          ./autogen.sh --build
+          ./configure
+          make
+          make test
+
+      - name: Build & Test (meson)
+        if: ${{ matrix.builder == 'meson' }}
+        run: |
+          meson setup build
+          meson compile -C build
+          meson test -C build --print-errorlogs

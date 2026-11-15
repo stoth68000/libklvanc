@@ -1,0 +1,53 @@
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        builder: [autotools, meson]
+
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            autotools
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build and test with Autotools
+        if: ${{ matrix.builder == 'autotools' }}
+        shell: msys2 {0}
+        run: |
+          ./autogen.sh --build
+          ./configure --enable-shared --disable-static
+          make
+          make test
+          test ! -e tools/klvanc_smpte2038.exe
+          test ! -e tools/klvanc_test_api.exe
+          test -n "$(find src/.libs -maxdepth 1 -name '*.dll' -print -quit)"
+          test -n "$(find src/.libs -maxdepth 1 -name '*.dll.a' -print -quit)"
+
+      - name: Build and test with Meson
+        if: ${{ matrix.builder == 'meson' }}
+        shell: msys2 {0}
+        run: |
+          meson setup build -Ddefault_library=shared
+          meson compile -C build
+          meson test -C build --print-errorlogs
+          test ! -e build/tools/klvanc_smpte2038.exe
+          test ! -e build/tools/klvanc_test_api.exe
+          test -n "$(find build/src -maxdepth 1 -name '*.dll' -print -quit)"
+          test -n "$(find build/src -maxdepth 1 -name '*.dll.a' -print -quit)"

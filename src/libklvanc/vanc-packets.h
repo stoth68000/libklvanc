@@ -30,7 +30,7 @@
 #define _VANC_PACKETS_H
 
 #include <sys/types.h>
-#include <sys/errno.h>
+#include <errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +51,8 @@ enum klvanc_packet_type_e
 	VANC_TYPE_SMPTE_S12_2,
 	VANC_TYPE_SMPTE_S12_3,
 	VANC_TYPE_SMPTE_S2108_1,
+	VANC_TYPE_SMPTE_S352,
+	VANC_TYPE_SMPTE_S299_CONTROL,
 };
 
 /**
