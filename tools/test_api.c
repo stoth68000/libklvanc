@@ -954,11 +954,14 @@ static void test_lines(void)
 		struct klvanc_context_s *ctx;
 		CHECK(klvanc_context_create(&ctx) == 0, "context_create succeeds");
 
-		uint16_t *out_buf = NULL;
-		int out_len = 0;
+		uint16_t sentinel;
+		uint16_t *out_buf = &sentinel;
+		int out_len = -1;
 		int ret = klvanc_generate_vanc_line(ctx, line, &out_buf, &out_len, 1920);
 		CHECK(ret == 0, "generate_vanc_line succeeds on an empty line");
-		if (out_buf)
+		CHECK(out_buf == NULL, "generate_vanc_line clears the output buffer for an empty line");
+		CHECK(out_len == 0, "generate_vanc_line clears the output length for an empty line");
+		if (out_buf && out_buf != &sentinel)
 			free(out_buf);
 
 		klvanc_context_destroy(ctx);
