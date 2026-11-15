@@ -57,7 +57,6 @@ foreach exe_name: exe_names
     sources,
     c_args: tool_c_args,
     install: true,
-    install_tag: 'bin',
     dependencies: [libklvanc_dep, thread_dep]
   )
   if exe_name in [

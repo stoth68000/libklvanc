@@ -1,4 +1,5 @@
 project('libklvanc', 'c',
+  meson_version : '>=0.58.2',
   default_options : ['buildtype=debugoptimized'])
 
 subdir('src')
